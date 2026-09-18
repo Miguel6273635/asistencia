@@ -1,0 +1,162 @@
+<mvc:View
+    controllerName="com.mitsu.monitorasistencia.controller.Centers"
+    xmlns:mvc="sap.ui.core.mvc"
+    xmlns="sap.m"
+    xmlns:core="sap.ui.core"
+    xmlns:l="sap.ui.layout"
+    xmlns:viz="sap.viz.ui5.controls"
+    xmlns:viz.data="sap.viz.ui5.data"
+    xmlns:viz.feeds="sap.viz.ui5.controls.common.feeds">
+    <Page showHeader="false" class="monitorPage">
+        <content>
+            <VBox class="pageContainer compactPage">
+                <Breadcrumbs currentLocationText="Centros de trabajo" class="sapUiTinyMarginBottom">
+                    <Link text="Resumen" press=".onNavOverview" />
+                </Breadcrumbs>
+                <Title text="Centros de trabajo" level="H1" class="pageTitle" />
+                <Text text="Consulta por zona y centro" class="pageSubtitle" />
+
+                <OverflowToolbar class="filterBar sapUiSmallMarginTop sapUiSmallMarginBottom">
+                    <VBox class="filterField">
+                        <Label text="Zona" />
+                        <Select
+                            id="zoneSelect"
+                            width="13rem"
+                            selectedKey="{view>/zoneId}"
+                            change=".onFilterChange"
+                            items="{attendance>/zones}">
+                            <core:Item key="{attendance>id}" text="{attendance>name}" />
+                        </Select>
+                    </VBox>
+                    <VBox class="filterField">
+                        <Label text="Periodo" />
+                        <Select width="9rem" selectedKey="{view>/granularity}" change=".onPeriodChange">
+                            <core:Item key="week" text="Semana" />
+                            <core:Item key="month" text="Mes" />
+                            <core:Item key="year" text="Año" />
+                        </Select>
+                    </VBox>
+                    <VBox class="filterField">
+                        <Label text="Fecha de referencia" />
+                        <DatePicker value="{view>/referenceDate}" valueFormat="yyyy-MM-dd" displayFormat="dd/MM/yyyy" width="12rem" change=".onPeriodChange" />
+                    </VBox>
+                    <ObjectStatus text="{view>/periodLabel}" state="Information" inverted="true" />
+                    <VBox class="filterField">
+                        <Label text="Buscar centro" />
+                        <SearchField width="15rem" placeholder="Nombre o código" liveChange=".onSearch" class="modernSearchField" />
+                    </VBox>
+                    <ToolbarSpacer />
+                    <Button text="Alta de centro" icon="sap-icon://add" type="Emphasized" press=".onOpenCenterDialog" />
+                </OverflowToolbar>
+
+                <FlexBox wrap="Wrap" class="kpiRow">
+                    <VBox class="kpiCard kpiBlue">
+                        <HBox alignItems="Center"><core:Icon src="sap-icon://building" class="kpiIcon blue" /><VBox><Text text="Centros con registros" /><ObjectNumber number="{view>/stats/centers}" /></VBox></HBox>
+                    </VBox>
+                    <VBox class="kpiCard kpiViolet">
+                        <HBox alignItems="Center"><core:Icon src="sap-icon://group" class="kpiIcon blue" /><VBox><Text text="Usuarios con registro" /><ObjectNumber number="{view>/stats/users}" /></VBox></HBox>
+                    </VBox>
+                    <VBox class="kpiCard kpiGreen">
+                        <HBox alignItems="Center"><core:Icon src="sap-icon://sys-enter-2" class="kpiIcon green" /><VBox><Text text="Registros presentes" /><ObjectNumber number="{view>/stats/present}" state="Success" /></VBox></HBox>
+                    </VBox>
+                    <VBox class="kpiCard kpiAmber">
+                        <HBox alignItems="Center"><core:Icon src="sap-icon://alert" class="kpiIcon amber" /><VBox><Text text="Incidencias registradas" /><ObjectNumber number="{view>/stats/incidents}" state="Warning" /></VBox></HBox>
+                    </VBox>
+                </FlexBox>
+
+                <l:Grid defaultSpan="XL9 L8 M12 S12" hSpacing="1" vSpacing="1" class="sapUiSmallMarginTop">
+                    <Panel headerText="Detalle por centro" class="dashboardPanel">
+                        <content>
+                            <ScrollContainer vertical="true" horizontal="false" focusable="true" class="tableScrollContainer centersTableScroll">
+                                <Table
+                                    id="centersTable"
+                                    items="{view>/centers}"
+                                    itemPress=".onCenterPress"
+                                    class="scrollTable"
+                                    noDataText="No hay centros para los filtros seleccionados">
+                                <columns>
+                                    <Column minScreenWidth="Tablet" demandPopin="true"><Text text="Centro de trabajo" /></Column>
+                                    <Column minScreenWidth="Tablet" demandPopin="true"><Text text="Zona" /></Column>
+                                    <Column hAlign="End"><Text text="Usuarios con registro" wrapping="true" /></Column>
+                                    <Column hAlign="End"><Text text="Presentes" /></Column>
+                                    <Column hAlign="End" minScreenWidth="Desktop" demandPopin="true"><Text text="Retardos" /></Column>
+                                    <Column hAlign="End" minScreenWidth="Desktop" demandPopin="true"><Text text="Ausencias" /></Column>
+                                    <Column width="10rem"><Text text="% asistencia" /></Column>
+                                    <Column><Text text="Estatus" /></Column>
+                                    <Column hAlign="Center" width="5rem"><Text text="Acciones" /></Column>
+                                </columns>
+                                <items>
+                                    <ColumnListItem type="Navigation">
+                                        <cells>
+                                            <ObjectIdentifier title="{view>name}" text="{view>code}" />
+                                            <Text text="{view>zone}" />
+                                            <ObjectNumber number="{view>users}" />
+                                            <ObjectNumber number="{view>present}" state="Success" />
+                                            <ObjectNumber number="{view>late}" state="Warning" />
+                                            <ObjectNumber number="{view>absent}" state="Error" />
+                                            <ProgressIndicator percentValue="{view>attendance}" displayValue="{view>attendance}%" state="{path:'view>attendance', formatter:'.formatter.percentState'}" />
+                                            <ObjectStatus text="{path:'view>active', formatter:'.formatter.activeText'}" state="{path:'view>active', formatter:'.formatter.activeState'}" />
+                                            <Button
+                                                icon="{= ${view>active} ? 'sap-icon://decline' : 'sap-icon://accept'}"
+                                                type="Transparent"
+                                                tooltip="Activar o dar de baja"
+                                                press=".onToggleCenterStatus" />
+                                        </cells>
+                                    </ColumnListItem>
+                                </items>
+                                </Table>
+                            </ScrollContainer>
+                            <HBox alignItems="Center" class="chartHint">
+                                <core:Icon src="sap-icon://hint" class="sapUiTinyMarginEnd" />
+                                <Text text="Selecciona un centro para consultar sus usuarios." />
+                            </HBox>
+                        </content>
+                    </Panel>
+
+                    <Panel headerText="Asistencia por centro" class="dashboardPanel">
+                        <layoutData><l:GridData span="XL3 L4 M12 S12" /></layoutData>
+                        <content>
+                            <viz:VizFrame id="centerRankingChart" vizType="bar" width="100%" height="19rem" selectData=".onCenterChartSelect">
+                                <viz:dataset>
+                                    <viz.data:FlattenedDataset data="{view>/centers}">
+                                        <viz.data:dimensions>
+                                            <viz.data:DimensionDefinition name="Centro" value="{view>name}" />
+                                        </viz.data:dimensions>
+                                        <viz.data:measures>
+                                            <viz.data:MeasureDefinition name="Asistencia" value="{view>attendance}" />
+                                        </viz.data:measures>
+                                    </viz.data:FlattenedDataset>
+                                </viz:dataset>
+                                <viz:feeds>
+                                    <viz.feeds:FeedItem uid="valueAxis" type="Measure" values="Asistencia" />
+                                    <viz.feeds:FeedItem uid="categoryAxis" type="Dimension" values="Centro" />
+                                </viz:feeds>
+                            </viz:VizFrame>
+                        </content>
+                    </Panel>
+                </l:Grid>
+            </VBox>
+        </content>
+
+        <dependents>
+            <Dialog id="centerDialog" title="Alta de centro de trabajo" contentWidth="32rem" stretchOnPhone="true">
+                <content>
+                    <VBox class="sapUiMediumMargin">
+                        <Label text="Nombre del centro" required="true" labelFor="newCenterName" />
+                        <Input id="newCenterName" placeholder="Ej. Naucalpan" class="sapUiSmallMarginBottom" />
+                        <Label text="Código" required="true" labelFor="newCenterCode" />
+                        <Input id="newCenterCode" placeholder="Ej. OES-005" class="sapUiSmallMarginBottom" />
+                        <Label text="Zona" required="true" labelFor="newCenterZone" />
+                        <Select id="newCenterZone" width="100%" items="{attendance>/zones}">
+                            <core:Item key="{attendance>id}" text="{attendance>name}" enabled="{= ${attendance>id} !== 'all'}" />
+                        </Select>
+                        <Label text="Ubicación" labelFor="newCenterLocation" class="sapUiSmallMarginTop" />
+                        <Input id="newCenterLocation" placeholder="Municipio, estado" />
+                    </VBox>
+                </content>
+                <beginButton><Button text="Guardar" type="Emphasized" press=".onSaveCenter" /></beginButton>
+                <endButton><Button text="Cancelar" press=".onCloseCenterDialog" /></endButton>
+            </Dialog>
+        </dependents>
+    </Page>
+</mvc:View>

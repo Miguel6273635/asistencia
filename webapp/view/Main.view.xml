@@ -1,0 +1,66 @@
+<mvc:View
+    controllerName="com.mitsu.monitorasistencia.controller.Main"
+    height="100%"
+    xmlns:mvc="sap.ui.core.mvc"
+    xmlns="sap.m"
+    xmlns:tnt="sap.tnt">
+    <tnt:ToolPage id="toolPage" class="monitorToolPage">
+        <tnt:header>
+            <tnt:ToolHeader visible="{ui>/showAppHeader}" class="monitorHeader">
+                <Button
+                    icon="sap-icon://menu2"
+                    type="Transparent"
+                    tooltip="Expandir o contraer menú"
+                    press=".onToggleSideNavigation" />
+                <ToolbarSeparator />
+                <Avatar
+                    displayShape="Circle"
+                    displaySize="XS"
+                    icon="sap-icon://history"
+                    class="brandAvatar" />
+                <Title text="Monitor de Asistencia" level="H2" class="monitorBrandTitle" />
+                <ToolbarSpacer />
+                <ObjectStatus
+                    text="Datos de demostración"
+                    icon="sap-icon://database"
+                    state="Information"
+                    class="sapUiSmallMarginEnd" />
+                <Button icon="sap-icon://bell" type="Transparent" tooltip="Notificaciones" />
+                <Avatar initials="AD" displaySize="XS" class="sapUiTinyMarginBegin sapUiTinyMarginEnd" />
+                <Text text="Administrador" />
+            </tnt:ToolHeader>
+        </tnt:header>
+
+        <tnt:sideContent>
+            <tnt:SideNavigation
+                id="sideNavigation"
+                expanded="{ui>/sideExpanded}"
+                itemSelect=".onNavigationItemSelect">
+                <tnt:item>
+                    <tnt:NavigationList id="navigationList" selectedKey="overview">
+                        <tnt:NavigationListItem
+                            id="navToggleItem"
+                            key="toggleMenu"
+                            text="{= ${ui>/sideExpanded} ? 'Contraer menú' : 'Expandir menú' }"
+                            icon="sap-icon://menu2" />
+                        <tnt:NavigationListItem id="navOverviewItem" key="overview" text="Resumen" icon="sap-icon://home" />
+                        <tnt:NavigationListItem id="navShiftsItem" key="shifts" text="Turnos y horarios" icon="sap-icon://appointment-2" />
+                        <tnt:NavigationListItem id="navRecordsItem" key="records" text="Registros" icon="sap-icon://table-view" />
+                        <tnt:NavigationListItem id="navMapItem" key="map" text="Mapa de personal" icon="sap-icon://map-2" />
+                        <tnt:NavigationListItem id="navUsersItem" key="users" text="Usuarios" icon="sap-icon://group" />
+                        <tnt:NavigationListItem id="navCentersItem" key="centers" text="Centros de trabajo" icon="sap-icon://building" />
+                    </tnt:NavigationList>
+                </tnt:item>
+                <tnt:fixedItem>
+                    <tnt:NavigationList id="fixedNavigationList">
+                        <tnt:NavigationListItem id="navSettingsItem" key="settings" text="Configuración" icon="sap-icon://action-settings" />
+                    </tnt:NavigationList>
+                </tnt:fixedItem>
+            </tnt:SideNavigation>
+        </tnt:sideContent>
+
+        <tnt:mainContents>
+            <App id="app" busyIndicatorDelay="0" />
+        </tnt:mainContents>
+    </tnt:ToolPage>
+</mvc:View>

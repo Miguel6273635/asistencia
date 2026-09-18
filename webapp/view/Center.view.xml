@@ -1,0 +1,180 @@
+<mvc:View
+    controllerName="com.mitsu.monitorasistencia.controller.Center"
+    xmlns:mvc="sap.ui.core.mvc"
+    xmlns="sap.m"
+    xmlns:core="sap.ui.core"
+    xmlns:l="sap.ui.layout"
+    xmlns:viz="sap.viz.ui5.controls"
+    xmlns:viz.data="sap.viz.ui5.data"
+    xmlns:viz.feeds="sap.viz.ui5.controls.common.feeds">
+    <Page showHeader="false" class="monitorPage">
+        <content>
+            <VBox class="pageContainer compactPage centerPage">
+                <Breadcrumbs currentLocationText="{view>/center/name}" class="sapUiTinyMarginBottom">
+                    <Link text="Resumen" press=".onNavOverview" />
+                    <Link text="{view>/center/zone}" press=".onNavZone" />
+                </Breadcrumbs>
+                <Title text="Centro de trabajo: {view>/center/name}" level="H1" class="pageTitle" />
+                <Text text="{view>/center/zone} • {view>/center/location}" class="pageSubtitle" />
+
+                <OverflowToolbar class="filterBar sapUiSmallMarginTop sapUiSmallMarginBottom">
+                    <VBox class="filterField">
+                        <Label text="Periodo" />
+                        <Select width="9rem" selectedKey="{view>/periodType}" change=".onPeriodChange">
+                            <core:Item key="week" text="Semana" />
+                            <core:Item key="month" text="Mes" />
+                            <core:Item key="year" text="Año" />
+                        </Select>
+                    </VBox>
+                    <VBox class="filterField">
+                        <Label text="Fecha de referencia" />
+                        <DatePicker
+                            value="{view>/referenceDate}"
+                            valueFormat="yyyy-MM-dd"
+                            displayFormat="dd/MM/yyyy"
+                            width="11rem"
+                            change=".onReferenceDateChange" />
+                    </VBox>
+                    <VBox class="filterField periodAppliedField">
+                        <Label text="Rango aplicado" />
+                        <ObjectStatus text="{view>/rangeLabel}" state="Information" />
+                    </VBox>
+                    <VBox class="filterField">
+                        <Label text="Horario" />
+                        <ComboBox
+                            width="18rem"
+                            selectedKey="{view>/scheduleId}"
+                            placeholder="Todos los horarios"
+                            items="{attendance>/schedules}"
+                            showSecondaryValues="true"
+                            filterSecondaryValues="true"
+                            selectionChange=".onFilterChange"
+                            change=".onFilterChange">
+                            <core:ListItem
+                                key="{attendance>id}"
+                                text="{attendance>name}"
+                                additionalText="{attendance>shortDescription}" />
+                        </ComboBox>
+                    </VBox>
+                    <VBox class="filterField">
+                        <Label text="Estatus" />
+                        <Select width="12rem" selectedKey="{view>/status}" change=".onFilterChange">
+                            <core:Item key="all" text="Todos" />
+                            <core:Item key="Presente" text="Presente" />
+                            <core:Item key="Retardo" text="Retardo" />
+                            <core:Item key="Ausente" text="Ausente" />
+                            <core:Item key="Incompleto" text="Incompleto" />
+                            <core:Item key="Viaje de trabajo" text="Viaje de trabajo" />
+                            <core:Item key="Vacaciones" text="Vacaciones" />
+                            <core:Item key="Paternidad" text="Paternidad" />
+                            <core:Item key="Home office" text="Home office" />
+                            <core:Item key="Fuera de zona" text="Fuera de zona" />
+                        </Select>
+                    </VBox>
+                    <ToolbarSpacer />
+                    <Button text="Aplicar filtros" type="Emphasized" icon="sap-icon://filter" press=".onFilterChange" />
+                </OverflowToolbar>
+
+                <FlexBox wrap="Wrap" class="kpiRow">
+                    <VBox class="kpiCard kpiBlue"><HBox alignItems="Center"><core:Icon src="sap-icon://group" class="kpiIcon blue" /><VBox><Text text="Usuarios con actividad" /><ObjectNumber number="{view>/stats/users}" /><Text text="{= ${view>/stats/records} + ' registros evaluados'}" class="centerKpiDetail" /></VBox></HBox></VBox>
+                    <VBox class="kpiCard kpiGreen"><HBox alignItems="Center"><core:Icon src="sap-icon://sys-enter-2" class="kpiIcon green" /><VBox><Text text="Asistencia efectiva" /><ObjectNumber number="{view>/stats/attendancePercentage}" unit="%" state="Success" /><Text text="{view>/stats/attendanceDescription}" tooltip="Con entrada ÷ jornadas laborables sin vacaciones ni paternidad" class="centerKpiDetail" /></VBox></HBox></VBox>
+                    <VBox class="kpiCard kpiCyan"><HBox alignItems="Center"><core:Icon src="sap-icon://time-entry-request" class="kpiIcon cyan" /><VBox><Text text="Puntualidad" /><ObjectNumber number="{view>/stats/punctualityPercentage}" unit="%" /><Text text="{view>/stats/punctualityDescription}" tooltip="Asistencias sin retardo ÷ asistencias registradas" class="centerKpiDetail" /></VBox></HBox></VBox>
+                    <VBox class="kpiCard kpiRed"><HBox alignItems="Center"><core:Icon src="sap-icon://alert" class="kpiIcon red" /><VBox><Text text="Registros con incidencia" /><ObjectNumber number="{view>/stats/incidentPercentage}" unit="%" state="Error" /><Text text="{view>/stats/incidentDescription}" tooltip="Retardos + ausencias + fuera de zona ÷ total de registros" class="centerKpiDetail" /></VBox></HBox></VBox>
+                </FlexBox>
+
+                <l:Grid defaultSpan="XL8 L8 M12 S12" hSpacing="1" vSpacing="1" class="sapUiSmallMarginTop centerAnalyticsGrid">
+                    <Panel headerText="Distribución por horario (% de registros)" class="dashboardPanel centerSchedulePanel">
+                        <content>
+                            <viz:VizFrame id="scheduleChart" vizType="stacked_bar" width="100%" height="{view>/layout/scheduleChartHeight}">
+                                <viz:dataset>
+                                    <viz.data:FlattenedDataset data="{view>/scheduleStats}">
+                                        <viz.data:dimensions><viz.data:DimensionDefinition name="Horario" value="{view>scheduleLabel}" /></viz.data:dimensions>
+                                        <viz.data:measures>
+                                            <viz.data:MeasureDefinition name="Presentes (%)" value="{view>presentPercentage}" />
+                                            <viz.data:MeasureDefinition name="Retardos (%)" value="{view>latePercentage}" />
+                                            <viz.data:MeasureDefinition name="Ausencias (%)" value="{view>absentPercentage}" />
+                                            <viz.data:MeasureDefinition name="Otros estatus (%)" value="{view>otherPercentage}" />
+                                        </viz.data:measures>
+                                    </viz.data:FlattenedDataset>
+                                </viz:dataset>
+                                <viz:feeds>
+                                    <viz.feeds:FeedItem uid="valueAxis" type="Measure" values="Presentes (%),Retardos (%),Ausencias (%),Otros estatus (%)" />
+                                    <viz.feeds:FeedItem uid="categoryAxis" type="Dimension" values="Horario" />
+                                </viz:feeds>
+                            </viz:VizFrame>
+                            <HBox alignItems="Center" class="chartHint"><core:Icon src="sap-icon://hint" class="sapUiTinyMarginEnd" /><Text text="Cada barra suma 100% y usa como base todos los registros del horario dentro del periodo filtrado." /></HBox>
+                        </content>
+                    </Panel>
+                    <Panel headerText="Tendencia diaria de incidencias" class="dashboardPanel centerTrendPanel">
+                        <layoutData><l:GridData span="XL4 L4 M12 S12" /></layoutData>
+                        <content>
+                            <viz:VizFrame id="centerTrendChart" vizType="stacked_column" width="100%" height="{view>/layout/statusChartHeight}">
+                                <viz:dataset>
+                                    <viz.data:FlattenedDataset data="{view>/dailyTrend}">
+                                        <viz.data:dimensions><viz.data:DimensionDefinition name="Fecha" value="{view>date}" /></viz.data:dimensions>
+                                        <viz.data:measures>
+                                            <viz.data:MeasureDefinition name="Retardos" value="{view>late}" />
+                                            <viz.data:MeasureDefinition name="Ausencias" value="{view>absent}" />
+                                            <viz.data:MeasureDefinition name="Fuera de zona" value="{view>outside}" />
+                                        </viz.data:measures>
+                                    </viz.data:FlattenedDataset>
+                                </viz:dataset>
+                                <viz:feeds>
+                                    <viz.feeds:FeedItem uid="valueAxis" type="Measure" values="Retardos,Ausencias,Fuera de zona" />
+                                    <viz.feeds:FeedItem uid="categoryAxis" type="Dimension" values="Fecha" />
+                                </viz:feeds>
+                            </viz:VizFrame>
+                            <HBox alignItems="Center" class="chartHint"><core:Icon src="sap-icon://hint" class="sapUiTinyMarginEnd" /><Text text="Muestra cuándo se concentraron retardos, ausencias y marcaciones fuera de zona." /></HBox>
+                        </content>
+                    </Panel>
+                </l:Grid>
+
+                <Panel class="dashboardPanel sapUiSmallMarginTop">
+                    <headerToolbar>
+                        <OverflowToolbar>
+                            <Title text="Registros del centro" level="H3" />
+                            <ToolbarSpacer />
+                            <SearchField width="15rem" placeholder="Buscar usuario" liveChange=".onSearch" class="modernSearchField" />
+                            <Button text="Exportar" icon="sap-icon://download" press=".onExport" />
+                            <Button text="Alta de usuario" icon="sap-icon://add" type="Emphasized" press=".onGoToUsers" />
+                        </OverflowToolbar>
+                    </headerToolbar>
+                    <content>
+                        <ScrollContainer vertical="true" horizontal="false" focusable="true" class="tableScrollContainer centerUsersTableScroll">
+                        <Table items="{view>/employees}" itemPress=".onEmployeePress" class="scrollTable" noDataText="No hay usuarios para los filtros seleccionados">
+                            <columns>
+                                <Column><Text text="Usuario" /></Column>
+                                <Column minScreenWidth="Tablet" demandPopin="true"><Text text="Núm. empleado" /></Column>
+                                <Column width="6.5rem"><Text text="Fecha" /></Column>
+                                <Column width="18rem"><Text text="Horario" /></Column>
+                                <Column hAlign="Center" minScreenWidth="Tablet" demandPopin="true"><Text text="Entrada" /></Column>
+                                <Column hAlign="Center" minScreenWidth="Tablet" demandPopin="true"><Text text="Salida" /></Column>
+                                <Column hAlign="Center" minScreenWidth="Desktop" demandPopin="true"><Text text="Horas" /></Column>
+                                <Column><Text text="Estatus" /></Column>
+                            </columns>
+                            <items>
+                                <ColumnListItem type="Navigation">
+                                    <cells>
+                                        <ObjectIdentifier title="{view>employee}" text="{view>role}" titleActive="true" titlePress=".onOpenUserPerformance" tooltip="Ver desempeño semanal, mensual y anual" />
+                                        <Text text="{view>number}" />
+                                        <Text text="{view>date}" />
+                                        <ObjectIdentifier title="{view>scheduleName}" text="{view>scheduleDescription}" />
+                                        <Text text="{view>entry}" />
+                                        <Text text="{view>exit}" />
+                                        <Text text="{view>hours}" />
+                                        <ObjectStatus text="{view>status}" state="{path:'view>status', formatter:'.formatter.statusState'}" />
+                                    </cells>
+                                </ColumnListItem>
+                            </items>
+                        </Table>
+                        </ScrollContainer>
+                        <HBox alignItems="Center" class="chartHint">
+                            <core:Icon src="sap-icon://hint" class="sapUiTinyMarginEnd" />
+                            <Text text="Selecciona la fila para ver sus registros o pulsa el nombre para abrir su desempeño semanal, mensual y anual." />
+                        </HBox>
+                    </content>
+                </Panel>
+            </VBox>
+        </content>
+    </Page>
+</mvc:View>

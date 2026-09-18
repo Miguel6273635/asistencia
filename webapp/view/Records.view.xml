@@ -1,0 +1,280 @@
+<mvc:View
+    controllerName="com.mitsu.monitorasistencia.controller.Records"
+    xmlns:mvc="sap.ui.core.mvc"
+    xmlns="sap.m"
+    xmlns:core="sap.ui.core"
+    xmlns:l="sap.ui.layout">
+    <Page showHeader="false" class="monitorPage">
+        <content>
+            <VBox class="pageContainer compactPage recordsPage">
+                <Breadcrumbs currentLocationText="Registros" class="sapUiTinyMarginBottom">
+                    <Link text="Resumen" press=".onNavOverview" />
+                    <Link text="{view>/employee/center}" visible="{= !!${view>/employee/center}}" press=".onNavCenter" />
+                </Breadcrumbs>
+                <Title text="{view>/title}" level="H1" class="pageTitle" />
+                <Text text="Consulta detallada de entradas, salidas e incidencias" class="pageSubtitle" />
+
+                <OverflowToolbar class="filterBar sapUiSmallMarginTop sapUiSmallMarginBottom">
+                    <VBox class="filterField">
+                        <Label text="Agrupar periodo" />
+                        <Select width="9rem" selectedKey="{view>/periodType}" change=".onPeriodChange">
+                            <core:Item key="week" text="Semana" />
+                            <core:Item key="month" text="Mes" />
+                            <core:Item key="year" text="Año" />
+                        </Select>
+                    </VBox>
+                    <VBox class="filterField">
+                        <Label text="Fecha de referencia" />
+                        <DatePicker value="{view>/referenceDate}" valueFormat="yyyy-MM-dd" displayFormat="dd/MM/yyyy" width="11rem" change=".onReferenceDateChange" />
+                    </VBox>
+                    <VBox class="filterField periodAppliedField">
+                        <Label text="Rango aplicado" />
+                        <ObjectStatus text="{view>/periodLabel}" state="Information" />
+                    </VBox>
+                    <VBox class="filterField">
+                        <Label text="Centro de trabajo" />
+                        <Select width="14rem" selectedKey="{view>/center}" change=".onFilterChange">
+                            <core:Item key="all" text="Todos" />
+                            <core:Item key="Naucalpan" text="Naucalpan" />
+                            <core:Item key="Tlalnepantla" text="Tlalnepantla" />
+                            <core:Item key="Coyoacán" text="Coyoacán" />
+                            <core:Item key="Texcoco" text="Texcoco" />
+                            <core:Item key="Santa Fe" text="Santa Fe" />
+                        </Select>
+                    </VBox>
+                    <VBox class="filterField">
+                        <Label text="Horario" />
+                        <ComboBox
+                            width="16rem"
+                            selectedKey="{view>/scheduleId}"
+                            placeholder="Todos los horarios"
+                            showSecondaryValues="true"
+                            filterSecondaryValues="true"
+                            items="{attendance>/schedules}"
+                            selectionChange=".onFilterChange"
+                            change=".onFilterChange">
+                            <core:ListItem
+                                key="{attendance>id}"
+                                text="{attendance>name}"
+                                additionalText="{attendance>shortDescription}" />
+                        </ComboBox>
+                    </VBox>
+                    <VBox class="filterField">
+                        <Label text="Estatus" />
+                        <Select width="12rem" selectedKey="{view>/status}" change=".onFilterChange">
+                            <core:Item key="all" text="Todos" />
+                            <core:Item key="Presente" text="Presente" />
+                            <core:Item key="Retardo" text="Retardo" />
+                            <core:Item key="Ausente" text="Ausente" />
+                            <core:Item key="Incompleto" text="Incompleto" />
+                            <core:Item key="Viaje de trabajo" text="Viaje de trabajo" />
+                            <core:Item key="Vacaciones" text="Vacaciones" />
+                            <core:Item key="Paternidad" text="Paternidad" />
+                            <core:Item key="Home office" text="Home office" />
+                            <core:Item key="Fuera de zona" text="Fuera de zona" />
+                        </Select>
+                    </VBox>
+                    <ToolbarSpacer />
+                    <Button text="Exportar" icon="sap-icon://download" press=".onExport" />
+                    <Button text="Nueva incidencia" icon="sap-icon://add" type="Emphasized" press=".onNewIncident" />
+                </OverflowToolbar>
+
+                <FlexBox wrap="Wrap" class="kpiRow">
+                    <VBox class="kpiCard kpiBlue">
+                        <HBox alignItems="Center"><core:Icon src="sap-icon://table-view" class="kpiIcon blue" /><VBox width="100%"><Text text="Registros" /><HBox alignItems="Center" justifyContent="SpaceBetween"><ObjectNumber number="{view>/stats/total}" /><ObjectStatus text="{view>/stats/totalPercentage}" state="Information" class="recordsKpiPercent" /></HBox><Text text="{view>/stats/totalDescription}" class="recordsKpiDescription" /></VBox></HBox>
+                    </VBox>
+                    <VBox class="kpiCard kpiGreen">
+                        <HBox alignItems="Center"><core:Icon src="sap-icon://sys-enter-2" class="kpiIcon green" /><VBox width="100%"><Text text="Presentes" /><HBox alignItems="Center" justifyContent="SpaceBetween"><ObjectNumber number="{view>/stats/present}" state="Success" /><ObjectStatus text="{view>/stats/presentPercentage}" state="Success" class="recordsKpiPercent" /></HBox><Text text="{view>/stats/presentDescription}" tooltip="Porcentaje = presentes ÷ total de registros del periodo × 100" class="recordsKpiDescription" /></VBox></HBox>
+                    </VBox>
+                    <VBox class="kpiCard kpiAmber">
+                        <HBox alignItems="Center"><core:Icon src="sap-icon://lateness" class="kpiIcon amber" /><VBox width="100%"><Text text="Retardos" /><HBox alignItems="Center" justifyContent="SpaceBetween"><ObjectNumber number="{view>/stats/late}" state="Warning" /><ObjectStatus text="{view>/stats/latePercentage}" state="Warning" class="recordsKpiPercent" /></HBox><Text text="{view>/stats/lateDescription}" tooltip="Porcentaje = retardos ÷ total de registros del periodo × 100" class="recordsKpiDescription" /></VBox></HBox>
+                    </VBox>
+                    <VBox class="kpiCard kpiRed">
+                        <HBox alignItems="Center"><core:Icon src="sap-icon://employee-rejections" class="kpiIcon red" /><VBox width="100%"><Text text="Ausencias" /><HBox alignItems="Center" justifyContent="SpaceBetween"><ObjectNumber number="{view>/stats/absent}" state="Error" /><ObjectStatus text="{view>/stats/absentPercentage}" state="Error" class="recordsKpiPercent" /></HBox><Text text="{view>/stats/absentDescription}" tooltip="Porcentaje = ausencias ÷ total de registros del periodo × 100" class="recordsKpiDescription" /></VBox></HBox>
+                    </VBox>
+                </FlexBox>
+
+                <FlexBox wrap="Wrap" items="{view>/statusCards}" class="recordsStatusRow sapUiTinyMarginTop">
+                    <items>
+                        <HBox alignItems="Center" class="recordsStatusCard">
+                            <core:Icon src="{view>icon}" color="{view>color}" class="recordsStatusIcon" />
+                            <VBox width="100%" class="recordsStatusContent">
+                                <HBox justifyContent="SpaceBetween" alignItems="Center">
+                                    <Text text="{view>status}" class="recordsStatusTitle" />
+                                    <Text text="{= ${view>count} + ' de ' + ${view>/stats/total} + ' · ' + ${view>percentage}}" class="recordsStatusMetric" />
+                                </HBox>
+                                <Text text="{view>description}" class="recordsStatusDescription" />
+                            </VBox>
+                        </HBox>
+                    </items>
+                </FlexBox>
+
+                <l:Grid defaultSpan="XL9 L8 M12 S12" hSpacing="1" vSpacing="1" class="sapUiSmallMarginTop">
+                    <Panel headerText="Registros de asistencia" class="dashboardPanel recordsTablePanel">
+                        <content>
+                            <Table
+                                id="recordsTable"
+                                items="{view>/pageRecords}"
+                                mode="SingleSelectMaster"
+                                includeItemInSelection="true"
+                                rememberSelections="false"
+                                selectionChange=".onRecordSelectionChange"
+                                class="recordsTable"
+                                noDataText="No existen registros para los filtros seleccionados">
+                                <columns>
+                                    <Column width="6.2rem"><Text text="Fecha" /></Column>
+                                    <Column width="12rem" minScreenWidth="Tablet" demandPopin="true"><Text text="Colaborador" /></Column>
+                                    <Column width="7rem" minScreenWidth="Desktop" demandPopin="true"><Text text="Centro" /></Column>
+                                    <Column width="11rem" minScreenWidth="Tablet" demandPopin="true"><Text text="Horario asignado" /></Column>
+                                    <Column width="4.8rem" hAlign="Center"><Text text="Entrada" /></Column>
+                                    <Column width="4.8rem" hAlign="Center"><Text text="Salida" /></Column>
+                                    <Column width="7rem" hAlign="Center" minScreenWidth="Desktop" demandPopin="true"><Text text="Comida" /></Column>
+                                    <Column width="4.5rem" hAlign="Center" minScreenWidth="Desktop" demandPopin="true"><Text text="Horas" /></Column>
+                                    <Column width="6rem" hAlign="Center" minScreenWidth="Desktop" demandPopin="true"><Text text="Distancia" /></Column>
+                                    <Column width="8rem"><Text text="Estatus" /></Column>
+                                </columns>
+                                <items>
+                                    <ColumnListItem
+                                        type="Active"
+                                        selected="{= ${view>id} === ${view>/selectedRecord/id} }"
+                                        highlight="{path:'view>status', formatter:'.formatter.statusState'}">
+                                        <cells>
+                                            <Text text="{view>date}" />
+                                            <ObjectIdentifier title="{view>employee}" text="{view>scheduled}" titleActive="true" titlePress=".onOpenUserPerformance" tooltip="Ver desempeño del usuario" />
+                                            <Text text="{view>center}" />
+                                            <ObjectIdentifier
+                                                title="{view>scheduleName}"
+                                                text="{view>shift}"
+                                                tooltip="{view>scheduleDescription}" />
+                                            <Text text="{view>entry}" />
+                                            <Text text="{view>exit}" />
+                                            <Text text="{view>mealRange}" class="recordMealCell" />
+                                            <Text text="{view>hours}" />
+                                            <ObjectStatus text="{view>distanceLabel}" state="{view>geofenceState}" />
+                                            <ObjectStatus text="{view>status}" state="{path:'view>status', formatter:'.formatter.statusState'}" />
+                                        </cells>
+                                    </ColumnListItem>
+                                </items>
+                            </Table>
+                            <OverflowToolbar class="recordsPager">
+                                <Text text="{view>/rangeText}" />
+                                <ToolbarSpacer />
+                                <Button
+                                    icon="sap-icon://navigation-left-arrow"
+                                    type="Transparent"
+                                    enabled="{view>/hasPreviousPage}"
+                                    tooltip="Página anterior"
+                                    press=".onPreviousPage" />
+                                <Text text="Página {view>/currentPage} de {view>/totalPages}" class="pagerCurrent" />
+                                <Button
+                                    icon="sap-icon://navigation-right-arrow"
+                                    type="Transparent"
+                                    enabled="{view>/hasNextPage}"
+                                    tooltip="Página siguiente"
+                                    press=".onNextPage" />
+                            </OverflowToolbar>
+                        </content>
+                    </Panel>
+
+                    <Panel class="dashboardPanel recordDetailPanel">
+                        <layoutData><l:GridData span="XL3 L4 M12 S12" /></layoutData>
+                        <headerToolbar>
+                            <OverflowToolbar class="recordDetailHeader">
+                                <Title text="Detalle del registro" level="H3" />
+                                <ToolbarSpacer />
+                                <Button
+                                    icon="sap-icon://decline"
+                                    type="Transparent"
+                                    visible="{= !!${view>/selectedRecord/id}}"
+                                    tooltip="Cerrar detalle"
+                                    press=".onCloseDetail" />
+                            </OverflowToolbar>
+                        </headerToolbar>
+                        <content>
+                            <VBox visible="{= !!${view>/selectedRecord/id}}" class="recordDetailContent">
+                                <HBox alignItems="Center" justifyContent="SpaceBetween" class="recordProfileHeader">
+                                    <HBox alignItems="Center">
+                                        <Avatar initials="{view>/selectedRecord/initials}" displaySize="S" class="recordAvatar" />
+                                        <VBox class="recordProfileText">
+                                            <Title text="{view>/selectedRecord/employee}" level="H4" />
+                                            <Text text="{= 'Núm. empleado: ' + ${view>/selectedRecord/employeeNumber}}" />
+                                            <Text text="{= 'Centro: ' + ${view>/selectedRecord/center}}" />
+                                        </VBox>
+                                    </HBox>
+                                    <ObjectStatus
+                                        text="{view>/selectedRecord/status}"
+                                        state="{path:'view>/selectedRecord/status', formatter:'.formatter.statusState'}"
+                                        class="detailStatusPill" />
+                                </HBox>
+
+                                <VBox class="recordDetailSection">
+                                    <Title text="Información del horario" level="H5" class="detailSectionTitle" />
+                                    <HBox justifyContent="SpaceBetween" class="detailInfoRow">
+                                        <VBox width="48%"><Label text="Horario asignado" /><Text text="{view>/selectedRecord/scheduleName}" class="detailPrimaryValue" /></VBox>
+                                        <VBox width="48%"><Label text="Fecha" /><Text text="{view>/selectedRecord/date}" class="detailPrimaryValue" /></VBox>
+                                    </HBox>
+                                    <HBox justifyContent="SpaceBetween" class="detailInfoRow">
+                                        <VBox width="48%"><Label text="Turno operativo" /><Text text="{view>/selectedRecord/shift}" class="detailPrimaryValue" /></VBox>
+                                        <VBox width="48%"><Label text="Horario del día" /><Text text="{view>/selectedRecord/scheduled}" class="detailPrimaryValue" /></VBox>
+                                    </HBox>
+                                    <Label text="Regla semanal" />
+                                    <Text text="{view>/selectedRecord/scheduleDescription}" wrapping="true" />
+                                </VBox>
+
+                                <VBox class="recordDetailSection">
+                                    <Title text="Registros de marcación" level="H5" class="detailSectionTitle" />
+                                    <HBox justifyContent="SpaceBetween" class="markingRow">
+                                        <VBox alignItems="Center" class="markingCard markingEntry"><core:Icon src="sap-icon://log" /><Label text="Entrada" /><Text text="{view>/selectedRecord/entry}" /></VBox>
+                                        <VBox alignItems="Center" class="markingCard markingExit"><core:Icon src="sap-icon://log" /><Label text="Salida" /><Text text="{view>/selectedRecord/exit}" /></VBox>
+                                        <VBox alignItems="Center" class="markingCard markingHours"><core:Icon src="sap-icon://history" /><Label text="Horas" /><Text text="{view>/selectedRecord/hours}" /></VBox>
+                                    </HBox>
+                                    <HBox justifyContent="SpaceBetween" class="markingRow mealMarkingRow">
+                                        <VBox alignItems="Center" class="markingCard markingMealOut"><core:Icon src="sap-icon://meal" /><Label text="Inicio de comida" /><Text text="{view>/selectedRecord/mealCheckOut}" /></VBox>
+                                        <VBox alignItems="Center" class="markingCard markingMealIn"><core:Icon src="sap-icon://meal" /><Label text="Fin de comida" /><Text text="{view>/selectedRecord/mealCheckIn}" /></VBox>
+                                        <VBox alignItems="Center" class="markingCard markingZone"><core:Icon src="sap-icon://map-2" /><Label text="Distancia" /><ObjectStatus text="{view>/selectedRecord/distanceLabel}" state="{view>/selectedRecord/geofenceState}" /></VBox>
+                                    </HBox>
+                                    <Text text="Inicio de comida: salida temporal · Fin de comida: regreso a la jornada" class="mealMarkingHint" />
+                                </VBox>
+
+                                <VBox class="recordDetailSection">
+                                    <Title text="Observaciones" level="H5" class="detailSectionTitle" />
+                                    <HBox alignItems="Start" class="observationCard">
+                                        <core:Icon src="sap-icon://notes" />
+                                        <Text text="{view>/selectedRecord/observation}" wrapping="true" />
+                                    </HBox>
+                                </VBox>
+
+                                <VBox class="recordDetailSection recordHistorySection">
+                                    <Title text="Historial de estatus" level="H5" class="detailSectionTitle" />
+                                    <HBox alignItems="Center" justifyContent="SpaceBetween">
+                                        <Text text="{view>/selectedRecord/historyDate}" />
+                                        <ObjectStatus
+                                            text="{view>/selectedRecord/status}"
+                                            state="{path:'view>/selectedRecord/status', formatter:'.formatter.statusState'}"
+                                            class="detailStatusPill" />
+                                    </HBox>
+                                    <Text text="Actualizado por: Administrador" class="historyAuthor" />
+                                </VBox>
+
+                                <HBox class="recordDetailActions" justifyContent="End">
+                                    <Button text="Ver desempeño" icon="sap-icon://business-objects-experience" press=".onOpenUserPerformance" />
+                                    <Button text="Editar" icon="sap-icon://edit" press=".onEditRecord" />
+                                    <Button text="Cerrar" type="Emphasized" press=".onCloseDetail" class="sapUiTinyMarginBegin" />
+                                </HBox>
+                            </VBox>
+                            <VBox
+                                visible="{= !${view>/selectedRecord/id}}"
+                                alignItems="Center"
+                                justifyContent="Center"
+                                class="emptyDetail">
+                                <core:Icon src="sap-icon://inspection" size="3rem" class="sapUiSmallMarginBottom" />
+                                <Title text="Selecciona un registro" level="H4" />
+                                <Text text="Aquí se mostrarán sus marcaciones y observaciones." textAlign="Center" wrapping="true" />
+                            </VBox>
+                        </content>
+                    </Panel>
+                </l:Grid>
+            </VBox>
+        </content>
+    </Page>
+</mvc:View>

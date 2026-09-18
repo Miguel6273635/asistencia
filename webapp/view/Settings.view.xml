@@ -1,0 +1,35 @@
+<mvc:View
+    controllerName="com.mitsu.monitorasistencia.controller.Settings"
+    xmlns:mvc="sap.ui.core.mvc"
+    xmlns="sap.m"
+    xmlns:f="sap.ui.layout.form">
+    <Page showHeader="false" class="monitorPage">
+        <content>
+            <VBox class="pageContainer compactPage narrowPage">
+                <Breadcrumbs currentLocationText="Configuración" class="sapUiTinyMarginBottom"><Link text="Inicio" press=".onNavOverview" /></Breadcrumbs>
+                <Title text="Configuración" level="H1" class="pageTitle" />
+                <Text text="Reglas generales para el cálculo de asistencia" class="pageSubtitle" />
+
+                <Panel headerText="Tolerancias y actualización" class="dashboardPanel sapUiSmallMarginTop">
+                    <content>
+                        <f:SimpleForm editable="true" layout="ColumnLayout" columnsM="1" columnsL="2" columnsXL="2">
+                            <Label text="Tolerancia de retardo (minutos)" />
+                            <StepInput value="{attendance>/configuration/lateTolerance}" min="0" max="60" step="1" />
+                            <Label text="Entrada anticipada permitida (minutos)" />
+                            <StepInput value="{attendance>/configuration/earlyEntry}" min="0" max="120" step="5" />
+                            <Label text="Hora para marcar ausencia automática" />
+                            <TimePicker value="{attendance>/configuration/automaticAbsence}" valueFormat="HH:mm" displayFormat="HH:mm" />
+                            <Label text="Frecuencia de actualización (minutos)" />
+                            <StepInput value="{attendance>/configuration/refreshMinutes}" min="1" max="60" step="1" />
+                        </f:SimpleForm>
+                        <OverflowToolbar class="sapUiSmallMarginTop">
+                            <ToolbarSpacer />
+                            <Button text="Restablecer" press=".onReset" />
+                            <Button text="Guardar cambios" type="Emphasized" press=".onSave" />
+                        </OverflowToolbar>
+                    </content>
+                </Panel>
+            </VBox>
+        </content>
+    </Page>
+</mvc:View>

@@ -1,0 +1,174 @@
+<mvc:View
+    controllerName="com.mitsu.monitorasistencia.controller.Shifts"
+    xmlns:mvc="sap.ui.core.mvc"
+    xmlns="sap.m"
+    xmlns:core="sap.ui.core"
+    xmlns:l="sap.ui.layout"
+    xmlns:viz="sap.viz.ui5.controls"
+    xmlns:viz.data="sap.viz.ui5.data"
+    xmlns:viz.feeds="sap.viz.ui5.controls.common.feeds">
+    <Page showHeader="false" class="monitorPage">
+        <content>
+            <VBox class="pageContainer compactPage shiftsPage scheduleCatalogPage">
+                <Breadcrumbs currentLocationText="Turnos y horarios" class="sapUiTinyMarginBottom"><Link text="Inicio" press=".onNavOverview" /></Breadcrumbs>
+                <Title text="Turnos y horarios" level="H1" class="pageTitle" />
+                <Text text="Catálogo semanal, cobertura y asignación de jornadas" class="pageSubtitle" />
+
+                <OverflowToolbar class="filterBar sapUiSmallMarginTop sapUiSmallMarginBottom scheduleFilterBar">
+                    <VBox class="filterField">
+                        <Label text="Periodo" />
+                        <Select width="9rem" selectedKey="{view>/granularity}" change=".onPeriodChange">
+                            <core:Item key="week" text="Semana" />
+                            <core:Item key="month" text="Mes" />
+                            <core:Item key="year" text="Año" />
+                        </Select>
+                    </VBox>
+                    <VBox class="filterField"><Label text="Fecha de referencia" /><DatePicker value="{view>/referenceDate}" valueFormat="yyyy-MM-dd" displayFormat="dd/MM/yyyy" width="12rem" change=".onPeriodChange" /></VBox>
+                    <VBox class="filterField"><Label text="Buscar horario" /><SearchField width="16rem" placeholder="Código, nombre o jornada" liveChange=".onSearchSchedule" /></VBox>
+                    <VBox class="filterField">
+                        <Label text="Tipo de jornada" />
+                        <Select width="12rem" selectedKey="{view>/scheduleType}" change=".onScheduleTypeChange">
+                            <core:Item key="all" text="Todos" />
+                            <core:Item key="Diurno" text="Diurno" />
+                            <core:Item key="Vespertino" text="Vespertino" />
+                            <core:Item key="Nocturno" text="Nocturno" />
+                            <core:Item key="Fin de semana" text="Fin de semana" />
+                            <core:Item key="Mixto" text="Mixto" />
+                        </Select>
+                    </VBox>
+                    <ObjectStatus text="{view>/periodLabel}" state="Information" inverted="true" />
+                    <ToolbarSpacer />
+                    <Button text="Alta de horario" icon="sap-icon://add" type="Emphasized" press=".onOpenShiftDialog" />
+                </OverflowToolbar>
+
+                <FlexBox wrap="Wrap" class="kpiRow scheduleKpiRow">
+                    <VBox class="kpiCard kpiBlue">
+                        <HBox alignItems="Center"><core:Icon src="sap-icon://appointment-2" class="kpiIcon blue" /><VBox><Text text="Horarios activos" /><ObjectNumber number="{view>/stats/active}" /><Text text="Horarios vigentes del catálogo" class="scheduleKpiDetail" /></VBox></HBox>
+                    </VBox>
+                    <VBox class="kpiCard kpiCyan">
+                        <HBox alignItems="Center"><core:Icon src="sap-icon://shield" class="kpiIcon cyan" /><VBox><Text text="Cobertura del periodo" /><ObjectNumber number="{view>/stats/coverage}" unit="%" /><Text text="{view>/stats/coverageDescription}" tooltip="Fórmula: registros presentes ÷ jornadas evaluadas × 100" class="scheduleKpiDetail" /></VBox></HBox>
+                    </VBox>
+                    <VBox class="kpiCard kpiGreen">
+                        <HBox alignItems="Center"><core:Icon src="sap-icon://group" class="kpiIcon green" /><VBox><Text text="Jornadas evaluadas" /><ObjectNumber number="{view>/stats/assigned}" /><Text text="Registros encontrados en el periodo" class="scheduleKpiDetail" /></VBox></HBox>
+                    </VBox>
+                    <VBox class="kpiCard kpiRed">
+                        <HBox alignItems="Center"><core:Icon src="sap-icon://employee-rejections" class="kpiIcon red" /><VBox><Text text="Ausencias del periodo" /><ObjectNumber number="{view>/stats/absentPercentage}" unit="%" state="Error" /><Text text="{view>/stats/absentDescription}" tooltip="Fórmula: ausencias ÷ jornadas evaluadas × 100" class="scheduleKpiDetail" /></VBox></HBox>
+                    </VBox>
+                </FlexBox>
+
+                <l:Grid defaultSpan="XL8 L8 M12 S12" hSpacing="1" vSpacing="1" class="sapUiSmallMarginTop scheduleInsightsGrid">
+                    <Panel headerText="Horarios con menor cobertura" class="dashboardPanel scheduleRiskPanel">
+                        <content>
+                            <viz:VizFrame id="coverageChart" vizType="bar" width="100%" height="11rem" selectData=".onChartSelect">
+                                <viz:dataset>
+                                    <viz.data:FlattenedDataset data="{view>/riskSchedules}">
+                                        <viz.data:dimensions><viz.data:DimensionDefinition name="Horario" value="{view>code}" /></viz.data:dimensions>
+                                    <viz.data:measures><viz.data:MeasureDefinition name="% de cobertura" value="{view>coverage}" /></viz.data:measures>
+                                    </viz.data:FlattenedDataset>
+                                </viz:dataset>
+                                <viz:feeds>
+                                    <viz.feeds:FeedItem uid="valueAxis" type="Measure" values="% de cobertura" />
+                                    <viz.feeds:FeedItem uid="categoryAxis" type="Dimension" values="Horario" />
+                                </viz:feeds>
+                            </viz:VizFrame>
+                            <HBox alignItems="Center" class="chartHint"><core:Icon src="sap-icon://hint" class="sapUiTinyMarginEnd" /><Text text="% de cobertura = registros presentes ÷ jornadas evaluadas × 100. Solo se grafican horarios con datos en el periodo." /></HBox>
+                        </content>
+                    </Panel>
+                    <Panel headerText="Distribución del catálogo" class="dashboardPanel scheduleTypePanel">
+                        <layoutData><l:GridData span="XL4 L4 M12 S12" /></layoutData>
+                        <content>
+                            <l:Grid content="{view>/typeStats}" defaultSpan="XL6 L6 M4 S12" hSpacing="0.5" vSpacing="0.3" class="scheduleTypeList">
+                                <VBox class="scheduleTypeItem">
+                                    <ObjectStatus text="{view>type}" state="Information" inverted="true" class="scheduleTypeName" />
+                                    <Text text="{view>distributionText}" wrapping="true" />
+                                    <ProgressIndicator percentValue="{view>percentage}" displayValue="{view>percentage}%" state="Information" />
+                                </VBox>
+                            </l:Grid>
+                        </content>
+                    </Panel>
+                </l:Grid>
+
+                <Panel class="dashboardPanel compactTablePanel sapUiSmallMarginTop scheduleCatalogPanel">
+                    <headerToolbar>
+                        <OverflowToolbar>
+                            <Title text="Catálogo de horarios" level="H3" />
+                            <ToolbarSpacer />
+                            <ObjectStatus text="{= ${view>/stats/active} + ' horarios activos'}" state="Information" inverted="true" />
+                        </OverflowToolbar>
+                    </headerToolbar>
+                    <content>
+                        <ScrollContainer vertical="true" horizontal="false" focusable="true" class="tableScrollContainer scheduleCatalogScroll">
+                            <Table items="{view>/schedules}" class="shiftConfigTable scheduleCatalogTable" noDataText="No hay horarios para los filtros seleccionados">
+                                <columns>
+                                    <Column width="8rem"><Text text="Horario" /></Column>
+                                    <Column width="8rem"><Text text="Tipo" /></Column>
+                                    <Column><Text text="Jornada semanal" /></Column>
+                                    <Column width="8rem" hAlign="End"><Text text="Jornadas evaluadas" wrapping="true" /></Column>
+                                    <Column width="13rem"><Text text="% cobertura (presentes / evaluadas)" wrapping="true" /></Column>
+                                    <Column width="6rem"><Text text="Estatus" /></Column>
+                                </columns>
+                                <items>
+                                    <ColumnListItem>
+                                        <cells>
+                                            <ObjectIdentifier title="{view>name}" text="{view>code}" />
+                                            <ObjectStatus text="{view>type}" state="Information" />
+                                            <Text text="{view>description}" wrapping="true" maxLines="2" />
+                                            <ObjectNumber number="{view>assigned}" />
+                                            <ProgressIndicator percentValue="{view>coverage}" displayValue="{= ${view>coverage} + '% · ' + ${view>present} + '/' + ${view>assigned}}" state="{= ${view>coverage} >= 90 ? 'Success' : (${view>coverage} >= 85 ? 'Warning' : 'Error')}" tooltip="Porcentaje de personas presentes respecto a las asignadas" />
+                                            <ObjectStatus text="{path:'view>active', formatter:'.formatter.activeText'}" state="{path:'view>active', formatter:'.formatter.activeState'}" />
+                                        </cells>
+                                    </ColumnListItem>
+                                </items>
+                            </Table>
+                        </ScrollContainer>
+                    </content>
+                </Panel>
+            </VBox>
+        </content>
+
+        <dependents>
+            <Dialog id="shiftDialog" title="Alta de horario semanal" contentWidth="42rem" stretchOnPhone="true" class="scheduleDialog">
+                <content>
+                    <VBox class="sapUiMediumMargin scheduleDialogContent">
+                        <HBox class="scheduleDialogRow" justifyContent="SpaceBetween">
+                            <VBox width="58%"><Label text="Nombre del horario" required="true" labelFor="shiftName" /><Input id="shiftName" placeholder="Ej. Horario especial planta" /></VBox>
+                            <VBox width="38%"><Label text="Tipo de jornada" required="true" labelFor="shiftType" /><Select id="shiftType" width="100%" selectedKey="Diurno"><core:Item key="Diurno" text="Diurno" /><core:Item key="Vespertino" text="Vespertino" /><core:Item key="Nocturno" text="Nocturno" /><core:Item key="Fin de semana" text="Fin de semana" /><core:Item key="Mixto" text="Mixto" /></Select></VBox>
+                        </HBox>
+
+                        <Title text="Regla principal" level="H4" class="sapUiSmallMarginTop" />
+                        <Label text="Días laborables" required="true" labelFor="primaryDays" />
+                        <MultiComboBox id="primaryDays" width="100%" placeholder="Selecciona uno o varios días">
+                            <core:Item key="MON" text="Lunes" /><core:Item key="TUE" text="Martes" /><core:Item key="WED" text="Miércoles" /><core:Item key="THU" text="Jueves" /><core:Item key="FRI" text="Viernes" /><core:Item key="SAT" text="Sábado" /><core:Item key="SUN" text="Domingo" />
+                        </MultiComboBox>
+                        <HBox class="scheduleDialogRow sapUiTinyMarginTop" justifyContent="SpaceBetween">
+                            <VBox width="48%"><Label text="Hora de inicio" required="true" labelFor="shiftStart" /><TimePicker id="shiftStart" width="100%" valueFormat="HH:mm" displayFormat="HH:mm" /></VBox>
+                            <VBox width="48%"><Label text="Hora de término" required="true" labelFor="shiftEnd" /><TimePicker id="shiftEnd" width="100%" valueFormat="HH:mm" displayFormat="HH:mm" /></VBox>
+                        </HBox>
+
+                        <Title text="Regla especial (opcional)" level="H4" class="sapUiSmallMarginTop" />
+                        <Text text="Úsala cuando viernes, sábado o domingo tengan horas distintas." class="scheduleDialogHelp" />
+                        <MultiComboBox id="secondaryDays" width="100%" placeholder="Días con una jornada diferente">
+                            <core:Item key="MON" text="Lunes" /><core:Item key="TUE" text="Martes" /><core:Item key="WED" text="Miércoles" /><core:Item key="THU" text="Jueves" /><core:Item key="FRI" text="Viernes" /><core:Item key="SAT" text="Sábado" /><core:Item key="SUN" text="Domingo" />
+                        </MultiComboBox>
+                        <HBox class="scheduleDialogRow sapUiTinyMarginTop" justifyContent="SpaceBetween">
+                            <VBox width="48%"><Label text="Inicio especial" labelFor="secondaryStart" /><TimePicker id="secondaryStart" width="100%" valueFormat="HH:mm" displayFormat="HH:mm" /></VBox>
+                            <VBox width="48%"><Label text="Término especial" labelFor="secondaryEnd" /><TimePicker id="secondaryEnd" width="100%" valueFormat="HH:mm" displayFormat="HH:mm" /></VBox>
+                        </HBox>
+
+                        <Title text="Tercera regla (opcional)" level="H4" class="sapUiSmallMarginTop" />
+                        <Text text="Permite registrar horarios mixtos con una jornada adicional, como el Horario 21." class="scheduleDialogHelp" />
+                        <MultiComboBox id="tertiaryDays" width="100%" placeholder="Días con una tercera jornada">
+                            <core:Item key="MON" text="Lunes" /><core:Item key="TUE" text="Martes" /><core:Item key="WED" text="Miércoles" /><core:Item key="THU" text="Jueves" /><core:Item key="FRI" text="Viernes" /><core:Item key="SAT" text="Sábado" /><core:Item key="SUN" text="Domingo" />
+                        </MultiComboBox>
+                        <HBox class="scheduleDialogRow sapUiTinyMarginTop" justifyContent="SpaceBetween">
+                            <VBox width="48%"><Label text="Inicio adicional" labelFor="tertiaryStart" /><TimePicker id="tertiaryStart" width="100%" valueFormat="HH:mm" displayFormat="HH:mm" /></VBox>
+                            <VBox width="48%"><Label text="Término adicional" labelFor="tertiaryEnd" /><TimePicker id="tertiaryEnd" width="100%" valueFormat="HH:mm" displayFormat="HH:mm" /></VBox>
+                        </HBox>
+                    </VBox>
+                </content>
+                <beginButton><Button text="Guardar horario" type="Emphasized" press=".onSaveShift" /></beginButton>
+                <endButton><Button text="Cancelar" press=".onCloseShiftDialog" /></endButton>
+            </Dialog>
+        </dependents>
+    </Page>
+</mvc:View>

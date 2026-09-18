@@ -1,0 +1,129 @@
+<mvc:View
+    controllerName="com.mitsu.monitorasistencia.controller.Users"
+    xmlns:mvc="sap.ui.core.mvc"
+    xmlns="sap.m"
+    xmlns:core="sap.ui.core">
+    <Page showHeader="false" class="monitorPage">
+        <content>
+            <VBox class="pageContainer compactPage usersPage">
+                <Breadcrumbs currentLocationText="Usuarios" class="sapUiTinyMarginBottom"><Link text="Inicio" press=".onNavOverview" /></Breadcrumbs>
+                <Title text="Administración de usuarios" level="H1" class="pageTitle" />
+                <Text text="Alta, consulta y baja lógica de colaboradores" class="pageSubtitle" />
+
+                <FlexBox wrap="Wrap" class="kpiRow sapUiSmallMarginTop">
+                    <VBox class="kpiCard kpiBlue"><HBox alignItems="Center"><core:Icon src="sap-icon://group" class="kpiIcon blue" /><VBox><Text text="Usuarios" /><ObjectNumber number="{view>/stats/total}" /></VBox></HBox></VBox>
+                    <VBox class="kpiCard kpiGreen"><HBox alignItems="Center"><core:Icon src="sap-icon://accept" class="kpiIcon green" /><VBox><Text text="Activos" /><ObjectNumber number="{view>/stats/active}" state="Success" /></VBox></HBox></VBox>
+                    <VBox class="kpiCard kpiRed"><HBox alignItems="Center"><core:Icon src="sap-icon://decline" class="kpiIcon red" /><VBox><Text text="Inactivos" /><ObjectNumber number="{view>/stats/inactive}" /></VBox></HBox></VBox>
+                    <VBox class="kpiCard kpiCyan"><HBox alignItems="Center"><core:Icon src="sap-icon://building" class="kpiIcon cyan" /><VBox><Text text="Centros" /><ObjectNumber number="{view>/stats/centers}" /></VBox></HBox></VBox>
+                </FlexBox>
+
+                <Panel class="dashboardPanel sapUiSmallMarginTop">
+                    <headerToolbar>
+                        <OverflowToolbar>
+                            <Title text="Usuarios" level="H3" />
+                            <ToolbarSpacer />
+                            <SearchField width="16rem" placeholder="Nombre o número" liveChange=".onSearch" class="modernSearchField" />
+                            <ComboBox
+                                width="14rem"
+                                selectedKey="{view>/scheduleId}"
+                                selectionChange=".onFilterChange"
+                                items="{attendance>/schedules}"
+                                showSecondaryValues="true"
+                                filterSecondaryValues="true"
+                                placeholder="Todos los horarios"
+                                class="modernSelect">
+                                <core:ListItem key="{attendance>id}" text="{attendance>name}" additionalText="{attendance>code}" />
+                            </ComboBox>
+                            <Select width="12rem" selectedKey="{view>/status}" change=".onFilterChange" class="modernSelect">
+                                <core:Item key="all" text="Todos los estatus" />
+                                <core:Item key="active" text="Activos" />
+                                <core:Item key="inactive" text="Inactivos" />
+                            </Select>
+                            <Button text="Exportar" icon="sap-icon://download" press=".onExport" />
+                            <Button text="Alta de usuario" icon="sap-icon://add" type="Emphasized" press=".onOpenUserDialog" />
+                        </OverflowToolbar>
+                    </headerToolbar>
+                    <content>
+                        <ScrollContainer vertical="true" horizontal="false" focusable="true" class="tableScrollContainer usersTableScroll">
+                            <Table items="{view>/employees}" class="scrollTable" noDataText="No hay usuarios para los filtros seleccionados">
+                                <columns>
+                                    <Column><Text text="Usuario" /></Column>
+                                    <Column minScreenWidth="Tablet" demandPopin="true"><Text text="Núm. empleado" /></Column>
+                                    <Column minScreenWidth="Tablet" demandPopin="true"><Text text="Centro de trabajo" /></Column>
+                                    <Column minScreenWidth="Tablet" demandPopin="true"><Text text="Horario asignado" /></Column>
+                                    <Column minScreenWidth="Desktop" demandPopin="true"><Text text="Rol" /></Column>
+                                    <Column><Text text="Estatus" /></Column>
+                                    <Column minScreenWidth="Desktop" demandPopin="true"><Text text="Última actualización" /></Column>
+                                    <Column hAlign="Center" width="6.5rem"><Text text="Acciones" /></Column>
+                                </columns>
+                                <items>
+                                    <ColumnListItem>
+                                        <cells>
+                                            <ObjectIdentifier
+                                                title="{view>name}"
+                                                text="{view>initials}"
+                                                titleActive="true"
+                                                titlePress=".onOpenUserPerformance"
+                                                tooltip="Abrir desempeño semanal, mensual y anual" />
+                                            <Text text="{view>number}" />
+                                            <Text text="{view>center}" />
+                                            <ObjectIdentifier title="{view>scheduleName}" text="{view>scheduleDescription}" tooltip="{view>scheduleDescription}" />
+                                            <Text text="{view>role}" />
+                                            <ObjectStatus text="{path:'view>active', formatter:'.formatter.activeText'}" state="{path:'view>active', formatter:'.formatter.activeState'}" />
+                                            <Text text="{view>lastUpdate}" />
+                                            <HBox justifyContent="Center">
+                                                <Button icon="sap-icon://map-2" type="Transparent" tooltip="Ver ubicación en el mapa" press=".onOpenUserMap" />
+                                                <Button
+                                                    icon="{= ${view>active} ? 'sap-icon://decline' : 'sap-icon://accept'}"
+                                                    type="Transparent"
+                                                    tooltip="Activar o dar de baja"
+                                                    press=".onToggleUserStatus" />
+                                            </HBox>
+                                        </cells>
+                                    </ColumnListItem>
+                                </items>
+                            </Table>
+                        </ScrollContainer>
+                    </content>
+                </Panel>
+            </VBox>
+        </content>
+
+        <dependents>
+            <Dialog id="userDialog" title="Alta de usuario" contentWidth="42rem" stretchOnPhone="true" class="userDialog">
+                <content>
+                    <VBox class="sapUiMediumMargin userDialogContent">
+                        <HBox justifyContent="SpaceBetween" class="userDialogRow">
+                            <VBox width="58%"><Label text="Nombre completo" required="true" labelFor="userName" /><Input id="userName" placeholder="Nombre y apellidos" /></VBox>
+                            <VBox width="38%"><Label text="Número de empleado" required="true" labelFor="userNumber" /><Input id="userNumber" placeholder="EMP-0000" /></VBox>
+                        </HBox>
+                        <HBox justifyContent="SpaceBetween" class="userDialogRow sapUiSmallMarginTop">
+                            <VBox width="48%">
+                                <Label text="Centro de trabajo" required="true" labelFor="userCenter" />
+                                <ComboBox id="userCenter" width="100%" items="{attendance>/centers}" showSecondaryValues="true" filterSecondaryValues="true">
+                                    <core:ListItem key="{attendance>id}" text="{attendance>name}" additionalText="{attendance>code}" />
+                                </ComboBox>
+                            </VBox>
+                            <VBox width="48%">
+                                <Label text="Rol" required="true" labelFor="userRole" />
+                                <Select id="userRole" width="100%" selectedKey="Empleado">
+                                    <core:Item key="Empleado" text="Empleado" /><core:Item key="Supervisor" text="Supervisor" /><core:Item key="Recursos Humanos" text="Recursos Humanos" /><core:Item key="Administrador" text="Administrador" />
+                                </Select>
+                            </VBox>
+                        </HBox>
+                        <VBox class="userScheduleSelector sapUiSmallMarginTop">
+                            <Label text="Horario semanal" required="true" labelFor="userSchedule" />
+                            <ComboBox id="userSchedule" width="100%" items="{attendance>/schedules}" showSecondaryValues="true" filterSecondaryValues="true" placeholder="Busca por número, tipo o jornada">
+                                <core:ListItem key="{attendance>id}" text="{attendance>name}" additionalText="{attendance>shortDescription}" />
+                            </ComboBox>
+                            <Text text="El horario seleccionado se utilizará en registros, filtros, centros de trabajo y reportes." class="userScheduleHelp" />
+                        </VBox>
+                        <HBox alignItems="Center" class="userActiveRow sapUiSmallMarginTop"><Switch id="userActive" state="true" /><VBox class="sapUiTinyMarginBegin"><Text text="Usuario activo" class="userActiveTitle" /><Text text="Permite iniciar registros desde el primer día." class="userScheduleHelp" /></VBox></HBox>
+                    </VBox>
+                </content>
+                <beginButton><Button text="Guardar" type="Emphasized" press=".onSaveUser" /></beginButton>
+                <endButton><Button text="Cancelar" press=".onCloseUserDialog" /></endButton>
+            </Dialog>
+        </dependents>
+    </Page>
+</mvc:View>

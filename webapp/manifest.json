@@ -1,0 +1,167 @@
+{
+  "_version": "1.70.0",
+  "sap.app": {
+    "id": "com.mitsu.monitorasistencia",
+    "type": "application",
+    "applicationVersion": {
+      "version": "0.2.0"
+    },
+    "title": "Monitor de Asistencia",
+    "description": "Control y monitoreo de asistencia, turnos y horarios"
+  },
+  "sap.ui": {
+    "technology": "UI5",
+    "deviceTypes": {
+      "desktop": true,
+      "tablet": true,
+      "phone": true
+    }
+  },
+  "sap.ui5": {
+    "flexEnabled": true,
+    "dependencies": {
+      "minUI5Version": "1.151.0",
+      "libs": {
+        "sap.ui.core": {},
+        "sap.m": {},
+        "sap.f": {},
+        "sap.tnt": {},
+        "sap.ui.layout": {},
+        "sap.viz": {},
+        "sap.ui.vbm": {}
+      }
+    },
+    "contentDensities": {
+      "compact": true,
+      "cozy": true
+    },
+    "models": {
+      "attendance": {
+        "type": "sap.ui.model.json.JSONModel",
+        "uri": "model/data.json",
+        "settings": {
+          "sizeLimit": 1000
+        }
+      }
+    },
+    "resources": {
+      "css": [
+        {
+          "uri": "css/style.css"
+        }
+      ]
+    },
+    "rootView": {
+      "viewName": "com.mitsu.monitorasistencia.view.Main",
+      "type": "XML",
+      "id": "main",
+      "async": true
+    },
+    "routing": {
+      "config": {
+        "routerClass": "sap.m.routing.Router",
+        "viewType": "XML",
+        "viewPath": "com.mitsu.monitorasistencia.view",
+        "controlId": "app",
+        "controlAggregation": "pages",
+        "async": true,
+        "transition": "slide"
+      },
+      "routes": [
+        {
+          "pattern": "",
+          "name": "overview",
+          "target": "overview"
+        },
+        {
+          "pattern": "centers/{zoneId}",
+          "name": "centers",
+          "target": "centers"
+        },
+        {
+          "pattern": "center/{centerId}",
+          "name": "center",
+          "target": "center"
+        },
+        {
+          "pattern": "records/{employeeId}",
+          "name": "records",
+          "target": "records"
+        },
+        {
+          "pattern": "shifts",
+          "name": "shifts",
+          "target": "shifts"
+        },
+        {
+          "pattern": "users",
+          "name": "users",
+          "target": "users"
+        },
+        {
+          "pattern": "user-performance/{employeeId}",
+          "name": "userPerformance",
+          "target": "userPerformance"
+        },
+        {
+          "pattern": "map",
+          "name": "map",
+          "target": "map"
+        },
+        {
+          "pattern": "map/{zoneId}",
+          "name": "mapZone",
+          "target": "map"
+        },
+        {
+          "pattern": "map/{zoneId}/{employeeId}",
+          "name": "mapUser",
+          "target": "map"
+        },
+        {
+          "pattern": "settings",
+          "name": "settings",
+          "target": "settings"
+        }
+      ],
+      "targets": {
+        "overview": {
+          "viewId": "overview",
+          "viewName": "Overview"
+        },
+        "centers": {
+          "viewId": "centers",
+          "viewName": "Centers"
+        },
+        "center": {
+          "viewId": "center",
+          "viewName": "Center"
+        },
+        "records": {
+          "viewId": "records",
+          "viewName": "Records"
+        },
+        "shifts": {
+          "viewId": "shifts",
+          "viewName": "Shifts"
+        },
+        "users": {
+          "viewId": "users",
+          "viewName": "Users"
+        },
+        "userPerformance": {
+          "viewId": "userPerformance",
+          "viewName": "UserPerformance"
+        },
+        "map": {
+          "viewId": "map",
+          "viewName": "Map"
+        },
+        "settings": {
+          "viewId": "settings",
+          "viewName": "Settings"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,2497 @@
+:root {
+    --monitor-navy: #0b1f33;
+    --monitor-navy-light: #12395d;
+    --monitor-blue: #0a6ed1;
+    --monitor-cyan: #00a6d6;
+    --monitor-bg: #f5f6f7;
+    --monitor-border: #d9dfe5;
+    --monitor-text: #1d2d3e;
+    --monitor-muted: #556b82;
+    --monitor-green: #188918;
+    --monitor-amber: #e9730c;
+    --monitor-red: #bb0000;
+}
+
+html,
+body,
+body > div,
+#container,
+#container-uiarea {
+    height: 100%;
+}
+
+.monitorToolPage,
+.monitorToolPage .sapTntToolPageMain,
+.monitorToolPage .sapTntToolPageMainContentWrapper {
+    height: 100%;
+}
+
+.monitorToolPage .sapTntToolPageMainContentWrapper {
+    background: var(--monitor-bg);
+}
+
+.monitorHeader.sapTntToolHeader {
+    min-height: 3.5rem;
+    padding: 0 1rem;
+    background: #ffffff;
+    border-bottom: 1px solid var(--monitor-border);
+    box-shadow: none;
+}
+
+.monitorBrandTitle {
+    color: var(--monitor-text) !important;
+    font-weight: 700 !important;
+}
+
+.brandAvatar.sapFAvatar {
+    background: var(--monitor-blue);
+    color: #ffffff;
+}
+
+.monitorToolPage .sapTntToolPageAside,
+.monitorToolPage .sapTntToolPageAsideContent,
+.monitorToolPage .sapTntSideNavigation,
+.monitorToolPage .sapTntNavLI,
+.monitorToolPage .sapTntNavLIGroup,
+.monitorToolPage .sapTntNavLIFixedItems {
+    background: var(--monitor-navy);
+}
+
+.monitorToolPage .sapTntNavLIItem,
+.monitorToolPage .sapTntNavLIGroupItem {
+    background: transparent !important;
+}
+
+.monitorToolPage .sapTntNLI > a {
+    background: transparent !important;
+    color: #eaf3fc !important;
+}
+
+.monitorToolPage .sapTntNavLIGroupItem,
+.monitorToolPage .sapTntNavLIItem .sapMText,
+.monitorToolPage .sapTntNavLIItem .sapUiIcon,
+.monitorToolPage .sapTntNavLIText {
+    color: #eaf3fc !important;
+}
+
+.monitorToolPage .sapTntNLIText,
+.monitorToolPage .sapTntNLIIcon {
+    color: #eaf3fc !important;
+}
+
+.monitorToolPage .sapTntNavLIGroupItem {
+    width: calc(100% - 1rem);
+    margin: 0.2rem 0.5rem;
+    border-radius: 0.4rem;
+    box-sizing: border-box;
+}
+
+.monitorToolPage .sapTntNLI {
+    width: calc(100% - 1rem);
+    margin: 0.28rem 0.5rem;
+    background: transparent !important;
+    border-radius: 0.7rem;
+    overflow: visible;
+    box-sizing: border-box;
+}
+
+.monitorToolPage .sapTntNavLIItem:hover,
+.monitorToolPage .sapTntNavLIGroupItem:hover,
+.monitorToolPage .sapTntNLI > a:hover {
+    background: rgba(255, 255, 255, 0.075) !important;
+}
+
+.monitorToolPage .sapTntNavLIItemSelected,
+.monitorToolPage .sapTntNavLIItemSelected:hover,
+.monitorToolPage .sapTntNavLIItemSelected > .sapTntNavLIGroupItem,
+.monitorToolPage .sapTntNavLIItemSelected > .sapTntNavLIGroupItem:hover,
+.monitorToolPage .sapTntNLISelected > a,
+.monitorToolPage .sapTntNLISelected > a:hover {
+    background: transparent !important;
+}
+
+/*
+ * Selector luminoso inspirado en la referencia del usuario. Cada opción tiene
+ * su propio color y el estado seleccionado anima la burbuja alrededor del icono.
+ */
+.monitorToolPage .sapTntNLI > a {
+    --nav-accent: #c00000;
+    --nav-accent-rgb: 192, 0, 0;
+}
+
+.monitorToolPage .sapTntNLI > a[id$="navOverviewItem-a"] {
+    --nav-accent: #c00000;
+    --nav-accent-rgb: 192, 0, 0;
+}
+
+.monitorToolPage .sapTntNLI > a[id$="navToggleItem-a"] {
+    margin-bottom: 0.45rem;
+    border-color: rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.055) !important;
+}
+
+.monitorToolPage .sapTntNLI > a[id$="navToggleItem-a"]::before {
+    display: none;
+}
+
+.monitorToolPage .sapTntNLI > a[id$="navToggleItem-a"] .sapUiIcon {
+    color: #9bd7ff !important;
+}
+
+.monitorToolPage .sapTntNLCollapsed .sapTntNLIText {
+    display: none !important;
+}
+
+.monitorToolPage .sapTntNLCollapsed .sapTntNLI {
+    width: 2.3rem;
+    margin-right: 0.35rem;
+    margin-left: 0.35rem;
+}
+
+.monitorToolPage .sapTntNLCollapsed .sapTntNLI > a {
+    width: 2.3rem;
+    min-width: 2.3rem;
+    padding-right: 0;
+    padding-left: 0;
+}
+
+.monitorToolPage .sapTntNLCollapsed .sapTntNLI > a::before {
+    left: 0.08rem;
+}
+
+.monitorToolPage .sapTntNLI > a[id$="navShiftsItem-a"] {
+    --nav-accent: #c00000;
+    --nav-accent-rgb: 192, 0, 0;
+}
+
+.monitorToolPage .sapTntNLI > a[id$="navRecordsItem-a"] {
+    --nav-accent: #c00000;
+    --nav-accent-rgb: 192, 0, 0;
+}
+
+.monitorToolPage .sapTntNLI > a[id$="navUsersItem-a"] {
+    --nav-accent: #c00000;
+    --nav-accent-rgb: 192, 0, 0;
+}
+
+.monitorToolPage .sapTntNLI > a[id$="navCentersItem-a"] {
+    --nav-accent: #c00000;
+    --nav-accent-rgb: 192, 0, 0;
+}
+
+.monitorToolPage .sapTntNLI > a[id$="navSettingsItem-a"] {
+    --nav-accent: #c00000;
+    --nav-accent-rgb: 192, 0, 0;
+}
+
+.monitorToolPage .sapTntNLI > a {
+    position: relative;
+    min-height: 2.65rem;
+    border: 1px solid transparent;
+    border-radius: 0.7rem;
+    overflow: visible;
+    transition:
+        background-color 180ms ease,
+        border-color 180ms ease,
+        transform 180ms ease;
+}
+
+.monitorToolPage .sapTntNLI > a::before {
+    content: "";
+    position: absolute;
+    z-index: 0;
+    top: 50%;
+    left: 0.3rem;
+    width: 2.15rem;
+    height: 2.15rem;
+    border-radius: 50%;
+    background:
+        radial-gradient(circle at 35% 30%, #ffffff 0 5%, transparent 22%),
+        linear-gradient(145deg, rgba(255, 255, 255, 0.36), transparent 45%),
+        var(--nav-accent);
+    box-shadow:
+        0 0 0 0 rgba(var(--nav-accent-rgb), 0),
+        0 0 0.9rem rgba(var(--nav-accent-rgb), 0);
+    opacity: 0;
+    transform: translate(-0.7rem, -50%) scale(0.4);
+    transition:
+        opacity 220ms ease,
+        transform 380ms cubic-bezier(0.2, 0.85, 0.25, 1.25),
+        box-shadow 380ms ease;
+    pointer-events: none;
+}
+
+.monitorToolPage .sapTntNLISelected > a {
+    border-color: rgba(var(--nav-accent-rgb), 0.16);
+    background: linear-gradient(
+        90deg,
+        rgba(var(--nav-accent-rgb), 0.12),
+        rgba(var(--nav-accent-rgb), 0.025) 72%,
+        transparent
+    ) !important;
+}
+
+.monitorToolPage .sapTntNLISelected > a::before {
+    opacity: 1;
+    transform: translate(0, -50%) scale(1);
+    box-shadow:
+        0 0 0.5rem rgba(var(--nav-accent-rgb), 0.92),
+        0 0 1.15rem rgba(var(--nav-accent-rgb), 0.55),
+        0 0 2rem rgba(var(--nav-accent-rgb), 0.2);
+    animation: monitorNavBubbleIn 520ms cubic-bezier(0.2, 0.9, 0.25, 1.2);
+}
+
+.monitorToolPage .sapTntNLI:not(.sapTntNLISelected) > a:not([id$="navToggleItem-a"]):hover::before {
+    opacity: 0.78;
+    transform: translate(0, -50%) scale(0.88);
+    box-shadow:
+        0 0 0.4rem rgba(var(--nav-accent-rgb), 0.78),
+        0 0 1rem rgba(var(--nav-accent-rgb), 0.42);
+}
+
+.monitorToolPage .sapTntNLI:not(.sapTntNLISelected) > a:not([id$="navToggleItem-a"]):hover .sapTntNLIIcon,
+.monitorToolPage .sapTntNLI:not(.sapTntNLISelected) > a:not([id$="navToggleItem-a"]):hover .sapUiIcon {
+    color: #ffffff !important;
+    transform: scale(1.06);
+}
+
+.monitorToolPage .sapTntNLI:not(.sapTntNLISelected) > a:not([id$="navToggleItem-a"]):hover .sapTntNLIText,
+.monitorToolPage .sapTntNLI:not(.sapTntNLISelected) > a:not([id$="navToggleItem-a"]):hover .sapMText {
+    color: #ffb3b3 !important;
+    transform: translateX(0.12rem);
+}
+
+.monitorToolPage .sapTntNLI > a .sapTntNLIIcon,
+.monitorToolPage .sapTntNLI > a .sapUiIcon {
+    position: relative;
+    z-index: 1;
+    transition:
+        color 220ms ease,
+        transform 380ms cubic-bezier(0.2, 0.85, 0.25, 1.25),
+        filter 220ms ease;
+}
+
+.monitorToolPage .sapTntNLI > a .sapTntNLIText,
+.monitorToolPage .sapTntNLI > a .sapMText {
+    position: relative;
+    z-index: 1;
+    transition:
+        color 220ms ease,
+        transform 300ms cubic-bezier(0.2, 0.8, 0.2, 1),
+        text-shadow 220ms ease;
+}
+
+.monitorToolPage .sapTntNLISelected > a .sapTntNLIIcon,
+.monitorToolPage .sapTntNLISelected > a .sapUiIcon {
+    color: #ffffff !important;
+    transform: scale(1.1);
+    filter: drop-shadow(0 1px 1px rgba(255, 255, 255, 0.35));
+}
+
+.monitorToolPage .sapTntNLISelected > a .sapTntNLIText,
+.monitorToolPage .sapTntNLISelected > a .sapMText {
+    color: #ffb3b3 !important;
+    font-weight: 700;
+    transform: translateX(0.18rem);
+    text-shadow: 0 0 0.8rem rgba(var(--nav-accent-rgb), 0.25);
+}
+
+@keyframes monitorNavBubbleIn {
+    0% {
+        opacity: 0;
+        transform: translate(-0.85rem, -50%) scale(0.35);
+    }
+
+    58% {
+        opacity: 1;
+        transform: translate(0.1rem, -50%) scale(1.12);
+    }
+
+    100% {
+        opacity: 1;
+        transform: translate(0, -50%) scale(1);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .monitorToolPage .sapTntNLI > a,
+    .monitorToolPage .sapTntNLI > a::before,
+    .monitorToolPage .sapTntNLI > a .sapTntNLIIcon,
+    .monitorToolPage .sapTntNLI > a .sapUiIcon,
+    .monitorToolPage .sapTntNLI > a .sapTntNLIText,
+    .monitorToolPage .sapTntNLI > a .sapMText {
+        animation: none !important;
+        transition: none !important;
+    }
+}
+
+.monitorToolPage .sapTntNavLIFixedItems {
+    border-top: 1px solid rgba(255, 255, 255, 0.22);
+}
+
+.monitorPage,
+.monitorPage > section {
+    background: var(--monitor-bg) !important;
+}
+
+.pageContainer {
+    width: 100%;
+    max-width: none;
+    margin: 0 auto;
+    padding: 1.5rem 2rem 2.5rem;
+    box-sizing: border-box;
+}
+
+.narrowPage {
+    max-width: 76rem;
+}
+
+.compactPage {
+    padding-top: 0.65rem;
+    padding-bottom: 0.8rem;
+}
+
+.compactPage .pageTitle {
+    font-size: 1.5rem !important;
+    line-height: 1.75rem !important;
+}
+
+.compactPage .pageSubtitle {
+    line-height: 1rem;
+}
+
+.compactPage .sapUiSmallMarginTop {
+    margin-top: 0.6rem !important;
+}
+
+.compactPage .sapUiSmallMarginBottom {
+    margin-bottom: 0.6rem !important;
+}
+
+.compactPage .filterBar.sapMTB {
+    min-height: 3.8rem;
+    padding: 0.4rem 0.75rem;
+}
+
+.compactPage .filterField .sapMLabel {
+    margin-bottom: 0.1rem;
+}
+
+.compactPage .kpiRow {
+    gap: 0.75rem;
+}
+
+.compactPage .kpiCard {
+    min-height: 4.8rem;
+    padding: 0.6rem 0.9rem;
+}
+
+.compactPage .kpiCard .sapMObjectNumberText {
+    font-size: 1.45rem;
+}
+
+.compactPage .kpiIcon {
+    width: 2.25rem;
+    height: 2.25rem;
+    line-height: 2.25rem;
+    margin-right: 0.65rem;
+    font-size: 1rem;
+}
+
+.compactPage .dashboardPanel .sapMPanelHdr,
+.compactPage .dashboardPanel .sapMPanelWrappingDivTb {
+    min-height: 2.25rem;
+    height: 2.25rem;
+    line-height: 2.25rem;
+}
+
+.compactPage .dashboardPanel .sapMPanelContent {
+    padding: 0.5rem 0.75rem;
+}
+
+.compactPage .chartHint {
+    padding-top: 0.25rem;
+}
+
+.compactPage .shiftListItem {
+    padding: 0.35rem 0.15rem;
+}
+
+.compactPage .zoneCardList .sapMListUl {
+    gap: 0.75rem;
+}
+
+.compactPage .zoneSummaryCard.sapMLIB {
+    min-height: 6.9rem;
+    padding: 0.7rem 0.85rem;
+}
+
+.compactPage .zoneMetricRow {
+    margin-top: 0.55rem;
+}
+
+.compactPage .zoneSummaryCard .sapMObjectNumberText {
+    font-size: 1.4rem;
+}
+
+.compactPage .zoneDirectionIcon {
+    width: 1.9rem;
+    height: 1.9rem;
+    line-height: 1.9rem;
+}
+
+.compactPage .sapMListTblHeaderCell,
+.compactPage .sapMListTblCell {
+    padding-top: 0.35rem;
+    padding-bottom: 0.35rem;
+}
+
+.compactPage .recordDetailPanel {
+    min-height: 18rem;
+}
+
+.compactPage .emptyDetail {
+    min-height: 13rem;
+}
+
+.pageTitle {
+    color: var(--monitor-text) !important;
+    font-size: 1.75rem !important;
+    font-weight: 700 !important;
+}
+
+.pageSubtitle {
+    color: var(--monitor-muted) !important;
+    margin-top: 0.15rem;
+}
+
+.filterBar.sapMTB,
+.dashboardPanel.sapMPanel,
+.kpiCard,
+.zoneSummaryCard.sapMLIB {
+    background: #ffffff;
+    border: 1px solid var(--monitor-border);
+    border-radius: 0.75rem;
+    box-shadow: 0 0.125rem 0.5rem rgba(15, 35, 55, 0.06);
+}
+
+.filterBar.sapMTB {
+    min-height: 5rem;
+    height: auto;
+    padding: 0.75rem 1rem;
+    position: relative;
+    overflow: hidden;
+    border-color: #cbd9e6;
+    background:
+        radial-gradient(circle at 90% -40%, rgba(10, 110, 209, 0.12), transparent 34%),
+        linear-gradient(105deg, #ffffff, #f7fafc 58%, #ffffff);
+    box-shadow:
+        0 0.25rem 0.8rem rgba(15, 35, 55, 0.075),
+        inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+.filterBar.sapMTB::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 0.23rem;
+    background: linear-gradient(180deg, #e33a3a, #c00000 55%, #7f0000);
+}
+
+.filterField {
+    position: relative;
+    margin-right: 0.65rem;
+    padding: 0.22rem 0.55rem 0.28rem 0.65rem;
+    border: 1px solid #d8e2eb;
+    border-radius: 0.65rem;
+    background: rgba(255, 255, 255, 0.9);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.95);
+    transition:
+        border-color 160ms ease,
+        box-shadow 160ms ease,
+        transform 160ms ease;
+}
+
+.filterField:hover {
+    border-color: #8fb3d1;
+    box-shadow:
+        0 0.18rem 0.55rem rgba(10, 110, 209, 0.1),
+        inset 0 1px 0 #ffffff;
+    transform: translateY(-0.04rem);
+}
+
+.filterField:focus-within {
+    border-color: #c00000;
+    box-shadow:
+        0 0 0 0.14rem rgba(192, 0, 0, 0.12),
+        0 0.2rem 0.65rem rgba(15, 35, 55, 0.08);
+}
+
+.filterField .sapMLabel {
+    color: var(--monitor-muted);
+    margin-bottom: 0.05rem;
+    font-size: 0.66rem;
+    font-weight: 700;
+    letter-spacing: 0.025rem;
+    line-height: 0.78rem;
+    text-transform: uppercase;
+}
+
+.filterField .sapMInputBaseContentWrapper,
+.filterField .sapMSlt,
+.filterField .sapMSF,
+.filterField .sapMSFF {
+    border: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+}
+
+.filterField .sapMInputBaseContentWrapper,
+.filterField .sapMSlt {
+    min-height: 1.75rem;
+    height: 1.75rem;
+}
+
+.filterField .sapMInputBaseInner,
+.filterField .sapMSltLabel,
+.filterField .sapMSFI {
+    color: var(--monitor-text);
+    font-size: 0.82rem;
+    font-weight: 600;
+    background: transparent !important;
+}
+
+.filterField .sapMSltLabel {
+    line-height: 1.75rem;
+}
+
+.filterField .sapMSltArrow,
+.filterField .sapMInputBaseIcon,
+.filterField .sapMSFB {
+    color: #0a6ed1;
+}
+
+.filterField:focus-within .sapMSltArrow,
+.filterField:focus-within .sapMInputBaseIcon,
+.filterField:focus-within .sapMSFB {
+    color: #c00000;
+}
+
+.filterBar .sapMBtnInner {
+    border-radius: 0.62rem;
+    font-weight: 700;
+}
+
+.filterBar .sapMBtnInner.sapMBtnEmphasized {
+    border-color: #a60000 !important;
+    background: linear-gradient(135deg, #d11a1a, #c00000 55%, #8e0000) !important;
+    box-shadow: 0 0.22rem 0.6rem rgba(192, 0, 0, 0.24);
+}
+
+.filterBar .sapMBtnInner.sapMBtnEmphasized:hover {
+    background: linear-gradient(135deg, #e02a2a, #b00000 60%, #790000) !important;
+}
+
+.filterBar .sapMBtnInner.sapMBtnTransparent {
+    border-color: #d6e0e9;
+    background: rgba(255, 255, 255, 0.8);
+}
+
+.modernSearchField.sapMSF,
+.dashboardPanel .modernSearchField.sapMSF {
+    height: 2rem;
+    border: 1px solid #d5e0e9;
+    border-radius: 999px;
+    background: #f7fafc;
+    box-shadow: inset 0 1px 0 #ffffff;
+    transition: border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
+}
+
+.modernSearchField.sapMSF:hover {
+    border-color: #8fb3d1;
+    background: #ffffff;
+}
+
+.modernSearchField.sapMSF:focus-within {
+    border-color: #c00000;
+    background: #ffffff;
+    box-shadow: 0 0 0 0.14rem rgba(192, 0, 0, 0.11);
+}
+
+.modernSearchField .sapMSFF {
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+}
+
+.modernSearchField .sapMSFI {
+    color: var(--monitor-text);
+    font-size: 0.8rem;
+    background: transparent;
+}
+
+.modernSearchField .sapMSFB {
+    color: #0a6ed1;
+}
+
+.modernSearchField:focus-within .sapMSFB {
+    color: #c00000;
+}
+
+.modernSelect.sapMSlt {
+    height: 2rem;
+    border-color: #d5e0e9;
+    border-radius: 0.62rem;
+    background: #f7fafc;
+}
+
+.modernSelect.sapMSlt:hover,
+.modernSelect.sapMSlt:focus {
+    border-color: #c00000;
+    background: #ffffff;
+    box-shadow: 0 0 0 0.12rem rgba(192, 0, 0, 0.1);
+}
+
+.zoneCardList.sapMList {
+    background: transparent;
+    border: 0;
+}
+
+.zoneCardList .sapMListUl {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 1rem;
+    padding: 0;
+}
+
+.zoneSummaryCard.sapMLIB {
+    min-height: 8.25rem;
+    padding: 1rem 1.1rem;
+    box-sizing: border-box;
+    transition: transform 0.16s ease, box-shadow 0.16s ease;
+}
+
+.zoneSummaryCard.sapMLIB:hover {
+    transform: translateY(-0.125rem);
+    box-shadow: 0 0.35rem 1rem rgba(10, 110, 209, 0.15);
+}
+
+.zoneSummaryCard .sapMLIBContent {
+    padding: 0 !important;
+}
+
+.zoneSummaryCard .sapMTitle {
+    color: var(--monitor-text);
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+.zoneMeta {
+    color: var(--monitor-muted) !important;
+    margin-top: 0.15rem;
+}
+
+.zoneDirectionIcon {
+    width: 2.25rem;
+    height: 2.25rem;
+    line-height: 2.25rem;
+    text-align: center;
+    border-radius: 50%;
+    color: var(--monitor-blue);
+    background: #e8f2fc;
+}
+
+.zoneMetricRow {
+    margin-top: 1rem;
+}
+
+.zoneSummaryCard .sapMObjectNumberText {
+    font-size: 1.65rem;
+    font-weight: 700;
+}
+
+.zoneSummaryCard .sapMObjectNumberUnit {
+    color: var(--monitor-muted);
+    font-size: 0.75rem;
+}
+
+.dashboardPanel.sapMPanel {
+    overflow: hidden;
+}
+
+.dashboardPanel .sapMPanelHdr,
+.dashboardPanel .sapMPanelWrappingDivTb {
+    color: var(--monitor-text);
+    font-weight: 700;
+    border-bottom: 1px solid #edf0f2;
+    background: #ffffff;
+}
+
+.dashboardPanel .sapMPanelContent {
+    border-bottom: 0;
+    padding: 1rem;
+}
+
+.kpiRow {
+    gap: 1rem;
+}
+
+.kpiCard {
+    --kpi-accent: #0a6ed1;
+    --kpi-accent-rgb: 10, 110, 209;
+    flex: 1 1 13rem;
+    min-width: 13rem;
+    padding: 1rem 1.25rem;
+    box-sizing: border-box;
+    position: relative;
+    overflow: hidden;
+    border-color: rgba(var(--kpi-accent-rgb), 0.2);
+    border-left: 0.22rem solid var(--kpi-accent);
+    background:
+        linear-gradient(105deg, rgba(var(--kpi-accent-rgb), 0.105), rgba(var(--kpi-accent-rgb), 0.025) 48%, #ffffff 82%);
+    box-shadow:
+        0 0.18rem 0.65rem rgba(15, 35, 55, 0.07),
+        inset 0 1px 0 rgba(255, 255, 255, 0.72);
+    transition:
+        transform 180ms ease,
+        border-color 180ms ease,
+        box-shadow 180ms ease;
+}
+
+.kpiCard::after {
+    content: "";
+    position: absolute;
+    top: -2.6rem;
+    right: -1.8rem;
+    width: 7rem;
+    height: 7rem;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(var(--kpi-accent-rgb), 0.13), transparent 68%);
+    pointer-events: none;
+}
+
+.kpiCard:hover {
+    transform: translateY(-0.12rem);
+    border-color: rgba(var(--kpi-accent-rgb), 0.46);
+    box-shadow:
+        0 0.35rem 1rem rgba(var(--kpi-accent-rgb), 0.14),
+        inset 0 1px 0 rgba(255, 255, 255, 0.82);
+}
+
+.kpiCard > .sapMFlexBox {
+    position: relative;
+    z-index: 1;
+}
+
+.kpiCard .sapMText {
+    color: var(--monitor-muted);
+    font-size: 0.82rem;
+    font-weight: 600;
+}
+
+.kpiCard .sapMObjectNumberText {
+    color: var(--kpi-accent) !important;
+    font-size: 1.75rem;
+    font-weight: 700;
+}
+
+.kpiCard .sapMObjectNumberUnit {
+    color: var(--kpi-accent) !important;
+    font-weight: 600;
+}
+
+.kpiBlue {
+    --kpi-accent: #0a6ed1;
+    --kpi-accent-rgb: 10, 110, 209;
+}
+
+.kpiCyan {
+    --kpi-accent: #07838f;
+    --kpi-accent-rgb: 7, 131, 143;
+}
+
+.kpiGreen {
+    --kpi-accent: #188918;
+    --kpi-accent-rgb: 24, 137, 24;
+}
+
+.kpiAmber {
+    --kpi-accent: #e9730c;
+    --kpi-accent-rgb: 233, 115, 12;
+}
+
+.kpiRed {
+    --kpi-accent: #bb0000;
+    --kpi-accent-rgb: 187, 0, 0;
+}
+
+.kpiViolet {
+    --kpi-accent: #7858d7;
+    --kpi-accent-rgb: 120, 88, 215;
+}
+
+.kpiIcon {
+    width: 2.75rem;
+    height: 2.75rem;
+    line-height: 2.75rem;
+    text-align: center;
+    border-radius: 50%;
+    margin-right: 0.85rem;
+    font-size: 1.2rem;
+}
+
+.kpiIcon.blue {
+    color: var(--monitor-blue);
+    background: #e8f2fc;
+}
+
+.kpiIcon.cyan {
+    color: #07838f;
+    background: #e2f8fb;
+}
+
+.kpiIcon.green {
+    color: var(--monitor-green);
+    background: #e8f6e8;
+}
+
+.kpiIcon.amber {
+    color: var(--monitor-amber);
+    background: #fff3e2;
+}
+
+.kpiIcon.red {
+    color: var(--monitor-red);
+    background: #fdeaea;
+}
+
+.kpiCard .kpiIcon {
+    color: var(--kpi-accent) !important;
+    background: rgba(var(--kpi-accent-rgb), 0.11) !important;
+    border: 1px solid rgba(var(--kpi-accent-rgb), 0.14);
+    box-shadow: 0 0 0.8rem rgba(var(--kpi-accent-rgb), 0.1);
+}
+
+.shiftsPage .filterBar.sapMTB {
+    min-height: 3.45rem;
+    padding-top: 0.28rem;
+    padding-bottom: 0.28rem;
+}
+
+.shiftsPage .kpiCard {
+    min-height: 4.15rem;
+    padding: 0.42rem 0.72rem;
+}
+
+.shiftsPage .kpiIcon {
+    width: 2.15rem;
+    height: 2.15rem;
+    line-height: 2.15rem;
+}
+
+.shiftsPage .shiftScheduleList.sapMList {
+    background: transparent;
+}
+
+.shiftsPage .shiftScheduleList .sapMListUl {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.35rem;
+    padding: 0;
+}
+
+.shiftsPage .shiftScheduleList .sapMLIB {
+    min-height: 3.4rem;
+    border: 1px solid #e7ebef;
+    border-radius: 0.5rem;
+    background: linear-gradient(135deg, #ffffff, #f7fafc);
+}
+
+.shiftsPage .shiftScheduleList .sapMLIBContent {
+    padding: 0.25rem 0.45rem;
+}
+
+.shiftsPage .shiftScheduleList .sapMTitle {
+    font-size: 0.86rem;
+}
+
+.shiftsPage .shiftScheduleList .sapMText,
+.shiftsPage .shiftScheduleList .sapMObjectNumberUnit {
+    font-size: 0.72rem;
+}
+
+.shiftsPage .shiftScheduleList .sapMObjectNumberText {
+    font-size: 0.92rem;
+}
+
+.shiftsPage .shiftListItem {
+    padding: 0;
+}
+
+.shiftsPage .compactTablePanel .sapMPanelContent {
+    padding: 0.12rem 0.75rem 0.2rem;
+}
+
+.shiftsPage .shiftConfigTable .sapMListTblHeaderCell,
+.shiftsPage .shiftConfigTable .sapMListTblCell {
+    height: 2rem;
+    padding-top: 0.12rem;
+    padding-bottom: 0.12rem;
+}
+
+.shiftsPage .shiftConfigTable .sapMLIB {
+    min-height: 2.2rem;
+}
+
+.shiftsPage .shiftConfigTable .sapMText,
+.shiftsPage .shiftConfigTable .sapMObjectNumberText,
+.shiftsPage .shiftConfigTable .sapMObjectNumberUnit,
+.shiftsPage .shiftConfigTable .sapMObjStatusText {
+    font-size: 0.8rem;
+}
+
+.shiftsPage .shiftNameCell {
+    color: var(--monitor-text);
+    font-weight: 700;
+}
+
+.shiftsPage .shiftConfigTable .sapMPI {
+    height: 0.9rem;
+}
+
+.shiftsPage .shiftConfigTable .sapMPIText {
+    font-size: 0.68rem;
+    line-height: 0.9rem;
+}
+
+.recordsPage .filterBar.sapMTB {
+    min-height: 3.45rem;
+    padding-top: 0.28rem;
+    padding-bottom: 0.28rem;
+}
+
+.recordsPage .kpiCard {
+    min-height: 4.15rem;
+    padding: 0.42rem 0.72rem;
+}
+
+.recordsPage .kpiIcon {
+    width: 2.15rem;
+    height: 2.15rem;
+    line-height: 2.15rem;
+}
+
+.recordsPage .kpiCard > .sapMFlexBox,
+.recordsPage .kpiCard > .sapMFlexBox > .sapMVBox {
+    width: 100%;
+}
+
+.recordsKpiPercent.sapMObjStatus {
+    padding: 0.06rem 0.38rem;
+    border: 1px solid currentColor;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.72);
+}
+
+.recordsKpiPercent .sapMObjStatusText {
+    font-size: 0.68rem;
+    font-weight: 700;
+}
+
+.recordsPage .recordsKpiDescription {
+    overflow: hidden;
+    max-width: 13rem;
+    color: var(--monitor-muted) !important;
+    font-size: 0.66rem !important;
+    font-weight: 400 !important;
+    line-height: 0.78rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.recordsStatusRow {
+    gap: 0.55rem;
+}
+
+.recordsStatusCard {
+    flex: 1 1 11.5rem;
+    min-width: 11.5rem;
+    padding: 0.45rem 0.62rem;
+    box-sizing: border-box;
+    border: 1px solid #dce4eb;
+    border-radius: 0.65rem;
+    background: linear-gradient(110deg, #ffffff, #f7f9fb);
+    box-shadow: 0 0.15rem 0.55rem rgba(15, 35, 55, 0.06);
+}
+
+.recordsStatusIcon {
+    flex: 0 0 auto;
+    width: 1.8rem;
+    height: 1.8rem;
+    margin-right: 0.5rem;
+    line-height: 1.8rem;
+    text-align: center;
+    border-radius: 50%;
+    background: rgba(10, 110, 209, 0.08);
+}
+
+.recordsStatusContent {
+    min-width: 0;
+}
+
+.recordsStatusTitle,
+.recordsStatusMetric {
+    color: var(--monitor-text) !important;
+    font-size: 0.72rem !important;
+    font-weight: 700 !important;
+}
+
+.recordsStatusMetric {
+    flex: 0 0 auto;
+    margin-left: 0.35rem;
+}
+
+.recordsStatusDescription {
+    overflow: hidden;
+    color: var(--monitor-muted) !important;
+    font-size: 0.62rem !important;
+    line-height: 0.78rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.recordsPage .recordsTablePanel .sapMPanelContent {
+    padding: 0.15rem 0.75rem 0;
+}
+
+.recordsPage .recordsTable .sapMListTblHeaderCell,
+.recordsPage .recordsTable .sapMListTblCell {
+    padding-top: 0.22rem;
+    padding-bottom: 0.22rem;
+}
+
+.recordsPage .recordsTable .sapMLIB {
+    min-height: 2.9rem;
+}
+
+.recordsPage .recordsTable .sapMText,
+.recordsPage .recordsTable .sapMObjStatusText {
+    font-size: 0.8rem;
+}
+
+.recordsPage .recordsTable .sapMObjectIdentifierTitle .sapMText {
+    color: var(--monitor-text);
+    font-size: 0.82rem;
+    font-weight: 700;
+}
+
+.recordsPage .recordsTable .sapMObjectIdentifierText .sapMText {
+    color: var(--monitor-muted);
+    font-size: 0.72rem;
+}
+
+.recordsPage .recordsTable .recordMealCell {
+    color: #5b3aa4;
+    font-size: 0.74rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.recordsPage .recordsTable .sapMLIBSelected {
+    background: rgba(10, 110, 209, 0.07) !important;
+}
+
+.recordsPager.sapMTB {
+    min-height: 2.45rem;
+    height: 2.45rem;
+    padding: 0 0.1rem;
+    border-top: 1px solid #edf0f2;
+    background: #ffffff;
+}
+
+.recordsPager .sapMText {
+    color: var(--monitor-muted);
+    font-size: 0.76rem;
+}
+
+.recordsPager .pagerCurrent {
+    color: var(--monitor-text);
+    font-weight: 700;
+}
+
+.recordsPage .recordDetailPanel {
+    min-height: 31rem;
+    border-color: #cbd9e7;
+    box-shadow: 0 0.35rem 1.1rem rgba(15, 35, 55, 0.09);
+}
+
+.recordsPage .recordDetailPanel .sapMPanelContent {
+    padding: 0.65rem 0.8rem 0.7rem;
+}
+
+.recordDetailHeader.sapMTB {
+    min-height: 2.35rem;
+    height: 2.35rem;
+    padding: 0 0.55rem 0 0.8rem;
+    border-bottom: 1px solid #e3e9ee;
+    background: linear-gradient(90deg, #ffffff, #f6f9fc);
+}
+
+.recordDetailHeader .sapMTitle {
+    color: var(--monitor-text);
+    font-size: 0.95rem;
+    font-weight: 700;
+}
+
+.recordDetailContent {
+    width: 100%;
+}
+
+.recordProfileHeader {
+    padding: 0.1rem 0 0.55rem;
+}
+
+.recordAvatar.sapFAvatar {
+    color: #075a9c;
+    background: #d9edff;
+    box-shadow: 0 0.2rem 0.55rem rgba(10, 110, 209, 0.18);
+}
+
+.recordProfileText {
+    max-width: 13rem;
+    margin-left: 0.55rem;
+}
+
+.recordProfileText .sapMTitle {
+    color: var(--monitor-text);
+    font-size: 0.86rem;
+    line-height: 1.05rem;
+}
+
+.recordProfileText .sapMText {
+    color: var(--monitor-muted);
+    font-size: 0.68rem;
+    line-height: 0.9rem;
+}
+
+.detailStatusPill.sapMObjStatus {
+    flex-shrink: 0;
+    padding: 0.12rem 0.42rem;
+    border: 1px solid currentColor;
+    border-radius: 999px;
+    background: #f4f7f9;
+}
+
+.detailStatusPill.sapMObjStatusSuccess {
+    background: #eaf7ed;
+}
+
+.detailStatusPill.sapMObjStatusWarning {
+    background: #fff5df;
+}
+
+.detailStatusPill.sapMObjStatusError {
+    background: #fdeaea;
+}
+
+.detailStatusPill.sapMObjStatusInformation {
+    background: #e8f2fc;
+}
+
+.detailStatusPill .sapMObjStatusText {
+    font-size: 0.67rem;
+    font-weight: 700;
+}
+
+.recordDetailSection {
+    padding: 0.48rem 0;
+    border-top: 1px solid #e8edf1;
+}
+
+.detailSectionTitle {
+    color: var(--monitor-text) !important;
+    margin-bottom: 0.35rem;
+    font-size: 0.76rem !important;
+    font-weight: 700 !important;
+}
+
+.detailInfoRow + .detailInfoRow {
+    margin-top: 0.34rem;
+}
+
+.detailInfoRow .sapMLabel {
+    color: var(--monitor-muted);
+    font-size: 0.65rem;
+    line-height: 0.8rem;
+}
+
+.detailPrimaryValue {
+    color: var(--monitor-text) !important;
+    font-size: 0.76rem !important;
+    font-weight: 600;
+}
+
+.markingRow {
+    gap: 0.35rem;
+}
+
+.markingCard {
+    width: 32%;
+    padding: 0.35rem 0.2rem;
+    border: 1px solid #e0e7ed;
+    border-radius: 0.5rem;
+    background: #f8fafc;
+}
+
+.markingCard .sapUiIcon {
+    margin-bottom: 0.12rem;
+    color: var(--monitor-blue);
+    font-size: 0.9rem;
+}
+
+.markingCard .sapMLabel {
+    color: var(--monitor-muted);
+    font-size: 0.62rem;
+}
+
+.markingCard .sapMText {
+    color: var(--monitor-text);
+    font-size: 0.78rem;
+    font-weight: 700;
+}
+
+.markingExit .sapUiIcon {
+    color: #07838f;
+    transform: scaleX(-1);
+}
+
+.markingHours .sapUiIcon {
+    color: #7858d7;
+}
+
+.mealMarkingRow {
+    margin-top: 0.38rem;
+}
+
+.markingMealOut .sapUiIcon {
+    color: #e9730c;
+}
+
+.markingMealIn .sapUiIcon {
+    color: #188918;
+}
+
+.markingZone .sapUiIcon {
+    color: #bb0000;
+}
+
+.markingZone .sapMObjStatusText {
+    font-size: 0.72rem;
+    font-weight: 700;
+}
+
+.mealMarkingHint {
+    margin-top: 0.28rem;
+    color: var(--monitor-muted) !important;
+    font-size: 0.62rem !important;
+    line-height: 0.78rem;
+}
+
+.observationCard {
+    padding: 0.4rem 0.48rem;
+    border-left: 0.18rem solid #e9730c;
+    border-radius: 0.35rem;
+    background: #fff8ee;
+}
+
+.observationCard .sapUiIcon {
+    margin: 0.08rem 0.4rem 0 0;
+    color: #e9730c;
+}
+
+.observationCard .sapMText {
+    color: #4c5967;
+    font-size: 0.7rem;
+    line-height: 0.95rem;
+}
+
+.recordHistorySection .sapMText,
+.recordHistorySection .sapMObjStatusText {
+    font-size: 0.68rem;
+}
+
+.historyAuthor {
+    color: var(--monitor-muted) !important;
+    margin-top: 0.2rem;
+}
+
+.recordDetailActions {
+    padding-top: 0.5rem;
+    border-top: 1px solid #e8edf1;
+}
+
+.recordDetailActions .sapMBtn {
+    min-width: 5rem;
+}
+
+.tableScrollContainer.sapMScrollCont {
+    width: 100%;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain;
+    scrollbar-color: #7890a7 #edf2f6;
+    scrollbar-width: thin;
+    border-bottom: 1px solid #dce4eb;
+    background: #ffffff;
+}
+
+.tableScrollContainer .sapMScrollContScroll {
+    min-width: 100%;
+}
+
+.tableScrollContainer .scrollTable.sapMList,
+.tableScrollContainer .scrollTable .sapMListTbl {
+    width: 100%;
+    background: #ffffff;
+}
+
+.tableScrollContainer .scrollTable .sapMListTblHeaderCell {
+    position: sticky;
+    z-index: 4;
+    top: 0;
+    background: #f6f9fc !important;
+    box-shadow: inset 0 -1px 0 #cfd9e2;
+}
+
+.tableScrollContainer .scrollTable .sapMListTblHeaderCell .sapMText {
+    color: #31475c;
+    font-size: 0.76rem;
+    font-weight: 700;
+}
+
+.tableScrollContainer .scrollTable .sapMListTblCell {
+    padding-top: 0.32rem;
+    padding-bottom: 0.32rem;
+}
+
+.tableScrollContainer .scrollTable .sapMLIB:hover {
+    background: rgba(10, 110, 209, 0.055);
+}
+
+.tableScrollContainer::-webkit-scrollbar,
+.tableScrollContainer .sapMScrollContScroll::-webkit-scrollbar {
+    width: 0.48rem;
+    height: 0.48rem;
+}
+
+.tableScrollContainer::-webkit-scrollbar-track,
+.tableScrollContainer .sapMScrollContScroll::-webkit-scrollbar-track {
+    border-radius: 999px;
+    background: #edf2f6;
+}
+
+.tableScrollContainer::-webkit-scrollbar-thumb,
+.tableScrollContainer .sapMScrollContScroll::-webkit-scrollbar-thumb {
+    border: 2px solid #edf2f6;
+    border-radius: 999px;
+    background: #7890a7;
+}
+
+.tableScrollContainer::-webkit-scrollbar-thumb:hover,
+.tableScrollContainer .sapMScrollContScroll::-webkit-scrollbar-thumb:hover {
+    background: #c00000;
+}
+
+.overviewPage .dashboardPanel .sapMPanelContent {
+    padding-bottom: 0.4rem;
+}
+
+.zoneIncidentSummary {
+    color: var(--monitor-muted) !important;
+    font-size: 0.72rem !important;
+    margin-top: 0.15rem;
+}
+
+.zoneSummaryCard.zoneRiskLow.sapMLIB {
+    border-top: 0.18rem solid #188918;
+}
+
+.zoneSummaryCard.zoneRiskMedium.sapMLIB {
+    border-top: 0.18rem solid #e9730c;
+}
+
+.zoneSummaryCard.zoneRiskHigh.sapMLIB,
+.zoneSummaryCard.zoneRiskCritical.sapMLIB {
+    border-top: 0.18rem solid #c00000;
+}
+
+.criticalMetricGrid {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.5rem;
+    width: 100%;
+}
+
+.criticalMetric {
+    min-width: 0;
+    min-height: 4.45rem;
+    padding: 0.55rem 0.65rem;
+    box-sizing: border-box;
+    border: 1px solid #d9e2ea;
+    border-left-width: 0.22rem;
+    border-radius: 0.65rem;
+    background: linear-gradient(110deg, #f7fafc, #ffffff);
+}
+
+.criticalMetric > .sapMFlexBox:first-child {
+    gap: 0.35rem;
+}
+
+.criticalMetric .sapUiIcon {
+    font-size: 0.9rem;
+}
+
+.criticalMetric .sapMText {
+    color: var(--monitor-muted);
+    font-size: 0.68rem;
+}
+
+.criticalMetric .sapMObjectNumberText,
+.criticalMetric .sapMTitle {
+    color: var(--monitor-text);
+    font-size: 1.1rem;
+    font-weight: 800;
+}
+
+.criticalMetricBlue {
+    border-left-color: #0a6ed1;
+    background: linear-gradient(110deg, rgba(10, 110, 209, 0.08), #ffffff);
+}
+
+.criticalMetricAmber {
+    border-left-color: #e9730c;
+    background: linear-gradient(110deg, rgba(233, 115, 12, 0.09), #ffffff);
+}
+
+.criticalMetricRed {
+    border-left-color: #c00000;
+    background: linear-gradient(110deg, rgba(192, 0, 0, 0.08), #ffffff);
+}
+
+.criticalMetricViolet {
+    border-left-color: #7858d7;
+    background: linear-gradient(110deg, rgba(120, 88, 215, 0.08), #ffffff);
+}
+
+.criticalCentersScroll .sapMObjectIdentifierTitle .sapMText,
+.criticalCentersScroll .sapMObjectIdentifierText,
+.criticalCentersScroll .sapMText,
+.criticalCentersScroll .sapMObjectNumberText,
+.criticalCentersScroll .sapMObjStatusText {
+    font-size: 0.76rem;
+}
+
+.criticalCentersScroll .sapMListTblHeaderCell,
+.criticalCentersScroll .sapMListTblCell {
+    padding-top: 0.28rem;
+    padding-bottom: 0.28rem;
+}
+
+.criticalCenterList.sapMList {
+    background: transparent;
+}
+
+.criticalCenterItem.sapMLIB {
+    min-height: 3.25rem;
+    padding: 0.35rem 0.25rem;
+    background: #ffffff;
+}
+
+.criticalCenterItem.sapMLIB:hover {
+    background: #f5f8fb;
+}
+
+.criticalCenterItem .sapMLIBContent {
+    padding: 0;
+}
+
+.criticalCenterItem .sapMTitle {
+    color: var(--monitor-text);
+    font-size: 0.78rem;
+    font-weight: 800;
+}
+
+.criticalCenterItem .sapMText,
+.criticalCenterItem .sapMObjectNumberUnit {
+    color: var(--monitor-muted);
+    font-size: 0.68rem;
+}
+
+.criticalCenterItem .sapMObjectNumberText {
+    font-size: 0.85rem;
+}
+
+/* Aprovecha el alto adicional sin modificar la composición en pantallas normales. */
+.shiftsPage [id$="coverageChart"] {
+    height: clamp(11rem, calc(100vh - 42rem), 15rem) !important;
+}
+
+.shiftsPage .shiftsTableScroll {
+    height: clamp(7.8rem, calc(100vh - 45rem), 12rem) !important;
+}
+
+.overviewPage [id$="inefficiencyChart"] {
+    height: clamp(10.5rem, calc(100vh - 44rem), 13rem) !important;
+}
+
+.overviewPage [id$="incidentTrendChart"] {
+    height: clamp(10.5rem, calc(100vh - 48rem), 12rem) !important;
+}
+
+.overviewPage .criticalCentersScroll {
+    height: clamp(8rem, calc(100vh - 51rem), 10rem) !important;
+}
+
+.usersTableScroll {
+    height: clamp(23rem, calc(100vh - 23rem), 34rem) !important;
+}
+
+.centersTableScroll {
+    height: clamp(17rem, calc(100vh - 36rem), 22rem) !important;
+}
+
+[id$="centerRankingChart"] {
+    height: clamp(19rem, calc(100vh - 36rem), 24rem) !important;
+}
+
+.centerUsersTableScroll {
+    height: clamp(10.5rem, calc(100vh - 46rem), 18rem) !important;
+}
+
+@media (min-width: 100rem) {
+    .pageContainer {
+        padding-right: 1.5rem;
+        padding-left: 1.5rem;
+    }
+
+    .kpiRow,
+    .compactPage .kpiRow,
+    .zoneCardList .sapMListUl,
+    .compactPage .zoneCardList .sapMListUl {
+        gap: 0.85rem;
+    }
+}
+
+.chartHint {
+    color: var(--monitor-muted);
+    padding-top: 0.65rem;
+    font-size: 0.875rem;
+}
+
+.shiftListItem {
+    width: 100%;
+    padding: 0.75rem 0.25rem;
+}
+
+.recordDetailPanel {
+    min-height: 29rem;
+}
+
+.emptyDetail {
+    min-height: 22rem;
+    color: var(--monitor-muted);
+    text-align: center;
+}
+
+.detailValue {
+    color: var(--monitor-text);
+    margin-bottom: 0.8rem;
+}
+
+.sapMBtnEmphasized {
+    background: var(--monitor-blue) !important;
+    border-color: var(--monitor-blue) !important;
+}
+
+.sapMPIBarPositive {
+    background: var(--monitor-green);
+}
+
+@media (max-width: 75rem) {
+    .zoneCardList .sapMListUl {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .pageContainer {
+        padding: 1.25rem;
+    }
+}
+
+@media (max-width: 85rem) {
+    .shiftsPage .shiftScheduleList .sapMListUl {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 48rem) {
+    .monitorBrandTitle,
+    .monitorHeader .sapMObjStatus,
+    .monitorHeader > .sapMText {
+        display: none;
+    }
+
+    .zoneCardList .sapMListUl {
+        grid-template-columns: 1fr;
+    }
+
+    .kpiCard {
+        width: 100% !important;
+    }
+
+    .pageContainer {
+        padding: 1rem;
+    }
+
+    .filterField {
+        margin-bottom: 0.5rem;
+    }
+}
+
+/* Resumen: tratamiento visual compacto de las dos gráficas operativas. */
+.overviewPage .overviewInefficiencyChart,
+.overviewPage .overviewIncidentTrendChart {
+    display: block;
+    width: 100% !important;
+    min-height: 10.5rem;
+}
+
+.overviewPage .inefficiencyPanel .sapMPanelContent,
+.overviewPage .incidentTrendPanel .sapMPanelContent {
+    padding: 0.35rem 0.65rem 0.45rem !important;
+}
+
+.overviewPage .overviewInefficiencyChart svg,
+.overviewPage .overviewIncidentTrendChart svg {
+    overflow: visible;
+}
+
+/* Mapa operativo: vista general por zona y detalle del personal. */
+.mapTitleRow {
+    min-height: 3.2rem;
+}
+
+.mapDemoBadge {
+    padding: 0.45rem 0.75rem;
+    border: 1px solid rgba(10, 110, 209, 0.2);
+    border-radius: 999px;
+    background: rgba(10, 110, 209, 0.07);
+}
+
+.mapToolbar {
+    border-left: 0.22rem solid #c00000;
+    background: linear-gradient(100deg, #ffffff 0%, #f8fbff 72%, #edf6ff 100%) !important;
+}
+
+.mapToolbar .sapMTBSeparator {
+    height: 2.3rem;
+    margin-right: 0.8rem;
+    margin-left: 0.8rem;
+}
+
+.mapWorkspace {
+    width: 100%;
+}
+
+.mapCanvasPanel,
+.mapSidePanel {
+    overflow: hidden;
+    box-shadow: 0 0.3rem 1.1rem rgba(11, 31, 51, 0.08);
+}
+
+.mapCanvasPanel .sapMPanelContent {
+    padding: 0 !important;
+    overflow: hidden;
+}
+
+.mapGeoControl {
+    height: clamp(30rem, calc(100vh - 17rem), 50rem) !important;
+    background: #dce7ee;
+}
+
+.mapSidePanel .sapMPanelContent {
+    padding: 0;
+}
+
+.mapSideContent {
+    height: clamp(30rem, calc(100vh - 17rem), 50rem);
+    overflow: auto;
+    background: #ffffff;
+    scrollbar-width: thin;
+    scrollbar-color: #7890a7 transparent;
+}
+
+.mapSideContent::-webkit-scrollbar {
+    width: 0.35rem;
+}
+
+.mapSideContent::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: #7890a7;
+}
+
+.mapLegend {
+    position: sticky;
+    z-index: 2;
+    top: 0;
+    gap: 0.65rem 1rem;
+    padding: 0.7rem 0.85rem;
+    border-bottom: 1px solid var(--monitor-border);
+    background: rgba(255, 255, 255, 0.96);
+    backdrop-filter: blur(8px);
+}
+
+.mapLegend .sapMObjStatus {
+    position: relative;
+    padding-left: 0.7rem;
+}
+
+.mapLegend .sapMObjStatus::before {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    width: 0.42rem;
+    height: 0.42rem;
+    border-radius: 50%;
+    background: currentColor;
+    content: "";
+    transform: translateY(-50%);
+}
+
+.mapZoneList,
+.mapPersonnelList {
+    border: 0;
+    background: transparent;
+}
+
+.mapZoneListItem,
+.mapPersonListItem {
+    padding: 0.78rem 0.85rem !important;
+    transition: background 150ms ease, transform 150ms ease;
+}
+
+.mapZoneListItem:hover,
+.mapPersonListItem:hover {
+    background: #f1f7fc !important;
+}
+
+.mapZoneAvatar.sapFAvatar {
+    background: rgba(192, 0, 0, 0.1);
+    color: #c00000;
+    box-shadow: inset 0 0 0 1px rgba(192, 0, 0, 0.18);
+}
+
+.mapPersonAvatar.sapFAvatar,
+.mapSelectedAvatar.sapFAvatar {
+    background: #e8f2fb;
+    color: var(--monitor-blue);
+}
+
+.mapPersonIdentity {
+    min-width: 0;
+    max-width: 100%;
+}
+
+.mapPersonIdentity .sapMVBox {
+    min-width: 0;
+}
+
+.mapPersonIdentity .sapMText {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.mapPersonFooter {
+    min-width: 0;
+}
+
+.mapPersonName {
+    max-width: 100%;
+    color: var(--monitor-text) !important;
+    font-weight: 700;
+}
+
+.mapPersonStatus {
+    flex: 0 0 auto;
+    margin-left: 0.4rem;
+}
+
+.mapUpdateText {
+    color: var(--monitor-muted) !important;
+    font-size: 0.72rem !important;
+}
+
+.mapNavigateIcon {
+    margin-top: 0.25rem;
+    color: var(--monitor-blue);
+}
+
+.mapSelectedPerson {
+    margin: 0.75rem;
+    padding: 0.85rem;
+    border: 1px solid rgba(192, 0, 0, 0.22);
+    border-left: 0.22rem solid #c00000;
+    border-radius: 0.75rem;
+    background: linear-gradient(110deg, rgba(192, 0, 0, 0.06), #ffffff 75%);
+    box-shadow: 0 0.25rem 0.9rem rgba(11, 31, 51, 0.08);
+}
+
+.mapPersonDetailRow {
+    gap: 0.8rem;
+    margin-top: 0.75rem;
+    padding-top: 0.7rem;
+    border-top: 1px solid var(--monitor-border);
+}
+
+.mapPersonDetailRow .sapMLabel {
+    color: var(--monitor-muted);
+    font-size: 0.7rem;
+    text-transform: uppercase;
+}
+
+.mapPersonDetailRow .sapMText {
+    font-weight: 600;
+}
+
+@media (min-width: 100rem) {
+    .mapGeoControl,
+    .mapSideContent {
+        height: clamp(36rem, calc(100vh - 17rem), 50rem) !important;
+    }
+}
+
+@media (max-width: 75rem) {
+    .mapGeoControl,
+    .mapSideContent {
+        height: 31rem !important;
+    }
+}
+
+@media (max-width: 48rem) {
+    .mapTitleRow {
+        align-items: flex-start !important;
+    }
+
+    .mapDemoBadge {
+        display: none;
+    }
+
+    .mapToolbar .sapMObjStatus {
+        display: none;
+    }
+
+    .mapZoneSelector,
+    .mapZoneSelector .sapMSlt {
+        width: 100% !important;
+    }
+
+    .mapGeoControl {
+        height: 25rem !important;
+    }
+
+    .mapSideContent {
+        height: auto !important;
+        max-height: 28rem;
+    }
+}
+
+/* Resumen: proporciones equilibradas y sin vacíos visuales. */
+.overviewPrimaryGrid,
+.overviewSecondaryGrid,
+.scheduleInsightsGrid {
+    width: 100%;
+}
+
+.overviewBalancedPanel.sapMPanel,
+.scheduleRiskPanel.sapMPanel,
+.scheduleTypePanel.sapMPanel {
+    width: 100%;
+    border-color: #d6e0e8;
+    box-shadow: 0 0.28rem 0.9rem rgba(16, 42, 67, 0.075);
+}
+
+.overviewBalancedPanel .sapMPanelHdr,
+.scheduleRiskPanel .sapMPanelHdr,
+.scheduleTypePanel .sapMPanelHdr {
+    background: linear-gradient(90deg, #ffffff, #f8fbfe);
+}
+
+.overviewPage .criticalMetric {
+    min-height: 3.85rem;
+    padding: 0.42rem 0.58rem;
+}
+
+.overviewPage .criticalSummaryPanel .sapMPanelContent {
+    display: flex;
+    min-height: 12.4rem;
+    flex-direction: column;
+    justify-content: space-between;
+    box-sizing: border-box;
+}
+
+.overviewPriorityCallout {
+    gap: 0.65rem;
+    margin-top: 0.48rem;
+    padding: 0.52rem 0.65rem;
+    border: 1px solid rgba(192, 0, 0, 0.18);
+    border-left: 0.22rem solid #c00000;
+    border-radius: 0.6rem;
+    background: linear-gradient(100deg, rgba(192, 0, 0, 0.065), #ffffff 78%);
+}
+
+.overviewPriorityCallout > .sapUiIcon {
+    flex: 0 0 auto;
+    color: #c00000;
+    font-size: 1.1rem;
+}
+
+.overviewPriorityCallout .sapMText {
+    color: #526a80;
+    font-size: 0.72rem;
+    line-height: 1rem;
+}
+
+.overviewPriorityLabel {
+    color: #8f0000 !important;
+    font-weight: 800 !important;
+}
+
+.overviewPage [id$="incidentTrendChart"],
+.overviewPage .criticalCentersScroll {
+    height: clamp(9.5rem, calc(100vh - 48rem), 11.5rem) !important;
+}
+
+.overviewPage .criticalCenterItem.sapMLIB {
+    min-height: 2.8rem;
+}
+
+/* Catálogo de horarios: análisis, tabla con scroll y alta semanal. */
+.scheduleFilterBar.sapMTB {
+    border-left-color: #c00000;
+    background: linear-gradient(100deg, #ffffff 0%, #f8fbff 68%, #edf6ff 100%) !important;
+}
+
+.scheduleFilterBar .sapMSF,
+.scheduleFilterBar .sapMSlt,
+.scheduleFilterBar .sapMInputBaseContentWrapper {
+    border-radius: 0.55rem;
+}
+
+.scheduleKpiRow .kpiCard {
+    min-height: 4.25rem;
+}
+
+.scheduleInsightsGrid .sapMPanelContent {
+    box-sizing: border-box;
+}
+
+.scheduleCatalogPage [id$="coverageChart"] {
+    height: clamp(9.75rem, calc(100vh - 43rem), 12rem) !important;
+}
+
+.scheduleTypeList.sapMList {
+    border: 0;
+    background: transparent;
+}
+
+.scheduleTypeList .sapMListUl {
+    display: grid;
+    gap: 0.28rem;
+}
+
+.scheduleTypeList .sapMLIB {
+    min-height: 0;
+    border: 1px solid #e2e8ee;
+    border-radius: 0.55rem;
+    background: linear-gradient(105deg, #f7fafc, #ffffff);
+}
+
+.scheduleTypeList .sapMLIBContent {
+    padding: 0.34rem 0.48rem;
+}
+
+.scheduleTypeItem {
+    gap: 0.18rem;
+}
+
+.scheduleTypeName {
+    color: var(--monitor-text) !important;
+    font-size: 0.76rem !important;
+    font-weight: 700 !important;
+}
+
+.scheduleTypeItem .sapMObjectNumberText {
+    font-size: 0.82rem;
+}
+
+.scheduleTypeItem .sapMObjectNumberUnit {
+    color: var(--monitor-muted);
+    font-size: 0.66rem;
+}
+
+.scheduleTypeItem .sapMPI {
+    height: 0.68rem;
+}
+
+.scheduleTypeItem .sapMPIText {
+    font-size: 0.6rem;
+    line-height: 0.68rem;
+}
+
+.scheduleCatalogPanel .sapMPanelContent {
+    padding: 0 0.7rem 0.35rem !important;
+}
+
+.scheduleCatalogScroll {
+    height: clamp(10rem, calc(100vh - 39rem), 15rem) !important;
+}
+
+.scheduleCatalogTable .sapMListTblHeaderCell {
+    position: sticky;
+    z-index: 3;
+    top: 0;
+    background: #f4f8fb;
+    box-shadow: inset 0 -1px 0 #cad6e0;
+}
+
+.scheduleCatalogTable .sapMListTblHeaderCell .sapMText {
+    color: #354b61;
+    font-size: 0.72rem;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+
+.scheduleCatalogTable .sapMListTblCell {
+    padding-top: 0.26rem !important;
+    padding-bottom: 0.26rem !important;
+}
+
+.scheduleCatalogTable .sapMLIB:hover {
+    background: rgba(192, 0, 0, 0.035);
+}
+
+.scheduleCatalogTable .sapMObjectIdentifierTitle .sapMText {
+    color: var(--monitor-text);
+    font-weight: 800;
+}
+
+.scheduleDialog .sapMDialogSection {
+    background: #f7f9fb;
+}
+
+.scheduleDialogContent > .sapMTitle {
+    margin-top: 0.85rem !important;
+    padding-top: 0.65rem;
+    border-top: 1px solid #dce4eb;
+    color: #273b4e;
+    font-size: 0.9rem !important;
+}
+
+.scheduleDialogContent > .sapMTitle:first-of-type {
+    border-top: 0;
+}
+
+.scheduleDialogHelp,
+.userScheduleHelp {
+    color: var(--monitor-muted) !important;
+    font-size: 0.72rem !important;
+    line-height: 1rem !important;
+}
+
+.scheduleDialogRow {
+    gap: 0.75rem;
+}
+
+/* Usuarios: el horario es un dato principal y el alta conserva contexto. */
+.usersPage .dashboardPanel .sapMTB {
+    background: linear-gradient(90deg, #ffffff, #f8fbfe);
+}
+
+.usersPage .usersTableScroll .sapMObjectIdentifierText {
+    max-width: 15rem;
+    overflow: hidden;
+    color: var(--monitor-muted);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.usersTableScroll {
+    height: auto !important;
+    max-height: clamp(18rem, calc(100dvh - 24rem), 34rem);
+    overflow-y: auto !important;
+}
+
+.userDialog .sapMDialogSection {
+    background: #f7f9fb;
+}
+
+.userDialogRow {
+    gap: 0.75rem;
+}
+
+.userScheduleSelector {
+    padding: 0.75rem;
+    border: 1px solid rgba(10, 110, 209, 0.18);
+    border-left: 0.22rem solid #0a6ed1;
+    border-radius: 0.65rem;
+    background: linear-gradient(105deg, rgba(10, 110, 209, 0.06), #ffffff 72%);
+}
+
+.userScheduleSelector .sapMLabel,
+.userActiveTitle {
+    color: var(--monitor-text) !important;
+    font-weight: 700 !important;
+}
+
+.userActiveRow {
+    padding: 0.6rem 0.75rem;
+    border: 1px solid #e0e6eb;
+    border-radius: 0.65rem;
+    background: #ffffff;
+}
+
+@media (min-width: 100rem) and (min-height: 52rem) {
+    .overviewPage [id$="inefficiencyChart"] {
+        height: 11.25rem !important;
+    }
+
+    .overviewPage [id$="incidentTrendChart"],
+    .overviewPage .criticalCentersScroll {
+        height: 10.75rem !important;
+    }
+
+    .scheduleCatalogPage [id$="coverageChart"] {
+        height: 11rem !important;
+    }
+
+    .scheduleCatalogScroll {
+        height: clamp(11rem, calc(100vh - 39rem), 15rem) !important;
+    }
+}
+
+@media (max-width: 60rem) {
+    .scheduleDialogRow,
+    .userDialogRow {
+        align-items: stretch !important;
+        flex-direction: column !important;
+    }
+
+    .scheduleDialogRow > .sapMVBox,
+    .userDialogRow > .sapMVBox {
+        width: 100% !important;
+    }
+}
+
+/* Ajuste automático de altura y lectura explícita de porcentajes. */
+.periodAppliedField {
+    min-width: 12rem;
+}
+
+.periodAppliedField .sapMObjStatus {
+    padding: 0.3rem 0.55rem;
+    border: 1px solid rgba(10, 110, 209, 0.2);
+    border-radius: 0.55rem;
+    background: rgba(10, 110, 209, 0.06);
+}
+
+.recordsPage .kpiCard {
+    min-height: 5.2rem;
+    height: auto;
+}
+
+.recordsPage .recordsKpiDescription {
+    overflow: visible;
+    max-width: none;
+    margin-top: 0.08rem;
+    line-height: 0.86rem;
+    text-overflow: clip;
+    white-space: normal;
+}
+
+.recordsStatusCard {
+    height: auto;
+}
+
+.recordsStatusDescription {
+    overflow: visible;
+    line-height: 0.82rem;
+    text-overflow: clip;
+    white-space: normal;
+}
+
+.recordsPage .recordDetailPanel,
+.recordsPage .emptyDetail,
+.recordDetailPanel,
+.emptyDetail {
+    min-height: 0;
+    height: auto;
+}
+
+.recordsPage .recordDetailContent {
+    overflow-y: auto;
+    max-height: calc(100vh - 12rem);
+    max-height: calc(100dvh - 12rem);
+    padding-right: 0.15rem;
+    scrollbar-color: #7890a7 #edf2f6;
+    scrollbar-width: thin;
+}
+
+.recordsPage .recordsTablePanel {
+    height: auto;
+}
+
+.recordsPage .recordsTablePanel .sapMPanelContent {
+    min-height: 0;
+}
+
+.recordDetailActions {
+    gap: 0.35rem;
+    flex-wrap: wrap;
+}
+
+/* Horarios: ambos paneles se ajustan al contenido; la tabla desplaza solo al superar el máximo. */
+.scheduleInsightsGrid .scheduleRiskPanel,
+.scheduleInsightsGrid .scheduleTypePanel {
+    height: auto !important;
+    min-height: 0;
+}
+
+.scheduleTypePanel .sapMPanelContent {
+    padding: 0.42rem 0.5rem !important;
+}
+
+.scheduleTypeList.sapUiRespGrid {
+    padding: 0 !important;
+}
+
+.scheduleTypeList .scheduleTypeItem {
+    min-height: 4.15rem;
+    padding: 0.42rem 0.5rem;
+    box-sizing: border-box;
+    border: 1px solid #dde6ed;
+    border-radius: 0.55rem;
+    background: linear-gradient(110deg, #f7fafc, #ffffff);
+}
+
+.scheduleTypeList .scheduleTypeItem .sapMText {
+    color: var(--monitor-muted);
+    font-size: 0.68rem;
+    line-height: 0.85rem;
+}
+
+.scheduleTypeList .scheduleTypeItem .sapMObjStatusText {
+    font-size: 0.7rem;
+    font-weight: 700;
+}
+
+.scheduleKpiDetail {
+    max-width: 13.5rem;
+    color: var(--monitor-muted) !important;
+    font-size: 0.66rem !important;
+    line-height: 0.82rem !important;
+    white-space: normal;
+}
+
+.scheduleCatalogScroll {
+    height: auto !important;
+    max-height: clamp(12rem, calc(100dvh - 35rem), 24rem);
+    overflow-y: auto !important;
+}
+
+.centersTableScroll {
+    height: auto !important;
+    max-height: clamp(14rem, calc(100dvh - 28rem), 28rem);
+    overflow-y: auto !important;
+}
+
+.centerUsersTableScroll {
+    height: auto !important;
+    max-height: clamp(12rem, calc(100dvh - 32rem), 22rem);
+    overflow-y: auto !important;
+}
+
+.overviewPage .criticalCentersScroll {
+    height: auto !important;
+    max-height: 12rem;
+    overflow-y: auto !important;
+}
+
+.overviewPage .criticalSummaryPanel .sapMPanelContent,
+.usersTableScroll {
+    min-height: 0 !important;
+    height: auto !important;
+}
+
+.usersTableScroll {
+    max-height: clamp(14rem, calc(100dvh - 23rem), 30rem);
+    overflow-y: auto !important;
+}
+
+/* Vista de desempeño individual. */
+.userPerformancePage {
+    min-height: calc(100dvh - 3.5rem);
+}
+
+.performanceHero {
+    padding: 0.35rem 0.15rem 0.45rem;
+}
+
+.performanceHero .sapFAvatar {
+    box-shadow: 0 0.3rem 0.9rem rgba(10, 110, 209, 0.2);
+}
+
+.performanceFilterBar.sapMTB {
+    border-left-color: #c00000;
+    background: linear-gradient(100deg, #ffffff 0%, #f8fbff 68%, #edf6ff 100%) !important;
+}
+
+.performanceKpiRow .kpiCard {
+    min-height: 6.1rem;
+    height: auto;
+}
+
+.performanceKpiRow .kpiCard > .sapMFlexBox,
+.performanceKpiRow .kpiCard > .sapMFlexBox > .sapMVBox {
+    width: 100%;
+}
+
+.performanceKpiRow .kpiCard .sapMText {
+    line-height: 0.9rem;
+    white-space: normal;
+}
+
+.performanceKpiRow .performanceFormula {
+    margin-top: 0.12rem;
+    color: #5e7388 !important;
+    font-size: 0.63rem !important;
+    font-weight: 400 !important;
+}
+
+.performanceInsightsGrid .performanceTrendPanel,
+.performanceInsightsGrid .performanceSummaryPanel {
+    height: auto !important;
+}
+
+.performanceStatusGrid.sapUiRespGrid {
+    padding: 0 !important;
+}
+
+.performanceStatusCard {
+    min-height: 4.65rem;
+    padding: 0.48rem 0.55rem;
+    box-sizing: border-box;
+    border: 1px solid #dce5ec;
+    border-left: 0.2rem solid #0a6ed1;
+    border-radius: 0.55rem;
+    background: linear-gradient(110deg, #f7fafc, #ffffff);
+}
+
+.performanceStatusTitle {
+    color: var(--monitor-text) !important;
+    font-size: 0.74rem !important;
+    font-weight: 800 !important;
+}
+
+.performanceStatusCard .sapMObjectNumberText {
+    font-size: 0.9rem;
+}
+
+.performanceStatusCard .sapMObjectNumberUnit,
+.performanceStatusCard .sapMObjStatusText,
+.performanceStatusDescription {
+    color: var(--monitor-muted);
+    font-size: 0.65rem !important;
+    line-height: 0.82rem !important;
+}
+
+.performanceDetailPanel .sapMPanelContent {
+    padding: 0 0.7rem 0.35rem !important;
+}
+
+.performanceTableScroll {
+    min-height: 6rem;
+    max-height: clamp(10rem, calc(100dvh - 39rem), 20rem);
+}
+
+.performanceTableScroll .sapMListTblHeaderCell {
+    position: sticky;
+    z-index: 3;
+    top: 0;
+    background: #f4f8fb;
+}
+
+/* Centro de trabajo: porcentajes comparables y gráficas adaptables. */
+.centerPage .kpiCard {
+    min-height: 5.25rem;
+    height: auto;
+}
+
+.centerPage .kpiCard > .sapMFlexBox,
+.centerPage .kpiCard > .sapMFlexBox > .sapMVBox {
+    width: 100%;
+}
+
+.centerKpiDetail {
+    max-width: 14rem;
+    color: var(--monitor-muted) !important;
+    font-size: 0.66rem !important;
+    font-weight: 400 !important;
+    line-height: 0.84rem !important;
+    white-space: normal;
+}
+
+.centerAnalyticsGrid .centerSchedulePanel,
+.centerAnalyticsGrid .centerTrendPanel {
+    height: auto !important;
+}
+
+.centerAnalyticsGrid .sapMPanelContent {
+    padding-bottom: 0.4rem !important;
+}
+
+.centerPage [id$="scheduleChart"],
+.centerPage [id$="centerTrendChart"] {
+    min-height: 9rem;
+    max-height: 15rem;
+}
+
+@media (max-width: 75rem) {
+    .performanceFilterBar .sapMSegB {
+        width: 18rem !important;
+    }
+
+    .performanceKpiRow .kpiCard {
+        flex-basis: calc(50% - 0.5rem);
+    }
+}
+
+@media (max-width: 48rem) {
+    .performanceHero {
+        align-items: flex-start !important;
+    }
+
+    .performanceHero > .sapMFlexBox:last-child,
+    .performanceHero > .sapMBtn {
+        margin-left: 0.5rem;
+    }
+
+    .performanceFilterBar .sapMSegB {
+        width: 100% !important;
+    }
+
+    .performanceKpiRow .kpiCard {
+        flex-basis: 100%;
+    }
+}

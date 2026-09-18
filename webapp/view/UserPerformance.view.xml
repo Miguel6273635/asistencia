@@ -1,0 +1,163 @@
+<mvc:View
+    controllerName="com.mitsu.monitorasistencia.controller.UserPerformance"
+    xmlns:mvc="sap.ui.core.mvc"
+    xmlns="sap.m"
+    xmlns:core="sap.ui.core"
+    xmlns:l="sap.ui.layout"
+    xmlns:viz="sap.viz.ui5.controls"
+    xmlns:viz.data="sap.viz.ui5.data"
+    xmlns:viz.feeds="sap.viz.ui5.controls.common.feeds">
+    <Page showHeader="false" class="monitorPage">
+        <content>
+            <VBox class="pageContainer compactPage userPerformancePage">
+                <Breadcrumbs currentLocationText="Desempeño del usuario" class="sapUiTinyMarginBottom">
+                    <Link text="Inicio" press=".onNavOverview" />
+                    <Link text="Usuarios" press=".onNavUsers" />
+                </Breadcrumbs>
+
+                <HBox width="100%" alignItems="Center" justifyContent="SpaceBetween" class="performanceHero">
+                    <HBox alignItems="Center">
+                        <Avatar initials="{view>/employee/initials}" displaySize="M" backgroundColor="Accent6" />
+                        <VBox class="sapUiSmallMarginBegin">
+                            <Title text="{view>/employee/name}" level="H1" class="pageTitle" />
+                            <Text text="{= ${view>/employee/number} + ' · ' + ${view>/employee/center} + ' · ' + ${view>/employee/scheduleName}}" class="pageSubtitle" />
+                        </VBox>
+                    </HBox>
+                    <Button text="Ver ubicación" icon="sap-icon://map-2" type="Transparent" press=".onOpenMap" />
+                </HBox>
+
+                <OverflowToolbar class="filterBar performanceFilterBar sapUiSmallMarginTop sapUiSmallMarginBottom">
+                    <VBox class="filterField">
+                        <Label text="Vista del periodo" />
+                        <SegmentedButton selectedKey="{view>/period}" selectionChange=".onPeriodChange" width="24rem">
+                            <items>
+                                <SegmentedButtonItem key="weekly" text="Semanal" icon="sap-icon://calendar" />
+                                <SegmentedButtonItem key="monthly" text="Mensual" icon="sap-icon://appointment-2" />
+                                <SegmentedButtonItem key="annual" text="Anual" icon="sap-icon://business-objects-experience" />
+                            </items>
+                        </SegmentedButton>
+                    </VBox>
+                    <VBox class="filterField">
+                        <Label text="Año" />
+                        <Select width="8rem" selectedKey="{view>/selectedYear}" change=".onFilterChange" items="{view>/years}">
+                            <core:Item key="{view>key}" text="{view>text}" />
+                        </Select>
+                    </VBox>
+                    <VBox class="filterField" visible="{= ${view>/period} === 'monthly'}">
+                        <Label text="Mes" />
+                        <Select width="12rem" selectedKey="{view>/selectedMonth}" change=".onFilterChange" items="{view>/months}">
+                            <core:Item key="{view>key}" text="{view>text}" />
+                        </Select>
+                    </VBox>
+                    <VBox class="filterField" visible="{= ${view>/period} === 'weekly'}">
+                        <Label text="Semana" />
+                        <Select width="15rem" selectedKey="{view>/selectedWeek}" change=".onFilterChange" items="{view>/weeks}">
+                            <core:Item key="{view>key}" text="{view>text}" />
+                        </Select>
+                    </VBox>
+                    <ToolbarSpacer />
+                    <ObjectStatus text="{view>/periodLabel}" state="Information" inverted="true" />
+                </OverflowToolbar>
+
+                <FlexBox wrap="Wrap" class="kpiRow performanceKpiRow">
+                    <VBox class="kpiCard kpiBlue">
+                        <HBox alignItems="Center"><core:Icon src="sap-icon://employee-approvals" class="kpiIcon blue" /><VBox><Text text="Asistencia efectiva" /><ObjectNumber number="{view>/kpis/attendance/value}" unit="%" state="{view>/kpis/attendance/state}" /><Text text="{view>/kpis/attendance/detail}" wrapping="true" /><Text text="Con entrada ÷ días laborables sin permisos" class="performanceFormula" wrapping="true" /></VBox></HBox>
+                    </VBox>
+                    <VBox class="kpiCard kpiGreen">
+                        <HBox alignItems="Center"><core:Icon src="sap-icon://time-entry-request" class="kpiIcon green" /><VBox><Text text="Puntualidad" /><ObjectNumber number="{view>/kpis/punctuality/value}" unit="%" state="{view>/kpis/punctuality/state}" /><Text text="{view>/kpis/punctuality/detail}" wrapping="true" /><Text text="Entradas a tiempo ÷ asistencias registradas" class="performanceFormula" wrapping="true" /></VBox></HBox>
+                    </VBox>
+                    <VBox class="kpiCard kpiCyan">
+                        <HBox alignItems="Center"><core:Icon src="sap-icon://complete" class="kpiIcon cyan" /><VBox><Text text="Jornadas completas" /><ObjectNumber number="{view>/kpis/completion/value}" unit="%" state="{view>/kpis/completion/state}" /><Text text="{view>/kpis/completion/detail}" wrapping="true" /><Text text="Entrada y salida ÷ asistencias registradas" class="performanceFormula" wrapping="true" /></VBox></HBox>
+                    </VBox>
+                    <VBox class="kpiCard kpiRed">
+                        <HBox alignItems="Center"><core:Icon src="sap-icon://map-2" class="kpiIcon red" /><VBox><Text text="Cumplimiento de zona" /><ObjectNumber number="{view>/kpis/geofence/value}" unit="%" state="{view>/kpis/geofence/state}" /><Text text="{view>/kpis/geofence/detail}" wrapping="true" /><Text text="Marcaciones ≤ 2 m ÷ marcaciones con GPS" class="performanceFormula" wrapping="true" /></VBox></HBox>
+                    </VBox>
+                </FlexBox>
+
+                <l:Grid defaultSpan="XL8 L8 M12 S12" hSpacing="1" vSpacing="1" class="sapUiSmallMarginTop performanceInsightsGrid">
+                    <Panel headerText="Tendencia del desempeño (%)" class="dashboardPanel performanceTrendPanel">
+                        <content>
+                            <viz:VizFrame id="performanceTrend" vizType="line" width="100%" height="12rem">
+                                <viz:dataset>
+                                    <viz.data:FlattenedDataset data="{view>/trend}">
+                                        <viz.data:dimensions><viz.data:DimensionDefinition name="Periodo" value="{view>label}" /></viz.data:dimensions>
+                                        <viz.data:measures>
+                                            <viz.data:MeasureDefinition name="Asistencia" value="{view>attendance}" />
+                                            <viz.data:MeasureDefinition name="Puntualidad" value="{view>punctuality}" />
+                                            <viz.data:MeasureDefinition name="Jornada completa" value="{view>completion}" />
+                                        </viz.data:measures>
+                                    </viz.data:FlattenedDataset>
+                                </viz:dataset>
+                                <viz:feeds>
+                                    <viz.feeds:FeedItem uid="valueAxis" type="Measure" values="Asistencia,Puntualidad,Jornada completa" />
+                                    <viz.feeds:FeedItem uid="categoryAxis" type="Dimension" values="Periodo" />
+                                </viz:feeds>
+                            </viz:VizFrame>
+                            <HBox alignItems="Center" class="chartHint">
+                                <core:Icon src="sap-icon://hint" class="sapUiTinyMarginEnd" />
+                                <Text text="Asistencia, puntualidad y jornada completa se calculan con sus respectivos numeradores y denominadores del periodo." />
+                            </HBox>
+                        </content>
+                    </Panel>
+
+                    <Panel headerText="Lectura del periodo" class="dashboardPanel performanceSummaryPanel">
+                        <layoutData><l:GridData span="XL4 L4 M12 S12" /></layoutData>
+                        <content>
+                            <l:Grid content="{view>/statusSummary}" defaultSpan="XL6 L6 M4 S12" hSpacing="0.4" vSpacing="0.4" class="performanceStatusGrid">
+                                <VBox class="performanceStatusCard">
+                                    <HBox justifyContent="SpaceBetween" alignItems="Center">
+                                        <Text text="{view>status}" class="performanceStatusTitle" />
+                                        <ObjectNumber number="{view>count}" unit="registros" state="{view>state}" />
+                                    </HBox>
+                                    <ObjectStatus text="{view>percentage}" state="{view>state}" />
+                                    <Text text="{view>description}" wrapping="true" class="performanceStatusDescription" />
+                                </VBox>
+                            </l:Grid>
+                            <MessageStrip text="Los permisos autorizados (vacaciones y paternidad) no reducen la asistencia efectiva; se excluyen del denominador." type="Information" showIcon="true" class="sapUiSmallMarginTop" />
+                        </content>
+                    </Panel>
+                </l:Grid>
+
+                <Panel class="dashboardPanel performanceDetailPanel sapUiTinyMarginTop">
+                    <headerToolbar>
+                        <OverflowToolbar>
+                            <Title text="Detalle del periodo" level="H3" />
+                            <ToolbarSpacer />
+                            <Text text="{view>/recordRangeText}" />
+                        </OverflowToolbar>
+                    </headerToolbar>
+                    <content>
+                        <ScrollContainer height="{view>/tableHeight}" vertical="true" horizontal="true" focusable="true" class="tableScrollContainer performanceTableScroll">
+                            <Table items="{view>/records}" noDataText="No hay registros para los filtros seleccionados" fixedLayout="false" class="scrollTable">
+                                <columns>
+                                    <Column width="7rem"><Text text="Fecha" /></Column>
+                                    <Column width="6rem"><Text text="Entrada" /></Column>
+                                    <Column width="6rem"><Text text="Salida" /></Column>
+                                    <Column width="9rem"><Text text="Comida" /></Column>
+                                    <Column width="6rem"><Text text="Horas" /></Column>
+                                    <Column width="7rem"><Text text="Distancia" /></Column>
+                                    <Column width="10rem"><Text text="Estatus" /></Column>
+                                    <Column minScreenWidth="Desktop" demandPopin="true"><Text text="Observación" /></Column>
+                                </columns>
+                                <items>
+                                    <ColumnListItem highlight="{view>highlight}">
+                                        <cells>
+                                            <Text text="{view>date}" />
+                                            <Text text="{view>entry}" />
+                                            <Text text="{view>exit}" />
+                                            <Text text="{view>mealRange}" />
+                                            <ObjectNumber number="{view>hours}" />
+                                            <ObjectStatus text="{view>distanceLabel}" state="{view>distanceState}" />
+                                            <ObjectStatus text="{view>status}" state="{view>statusState}" inverted="true" />
+                                            <Text text="{view>observation}" wrapping="false" tooltip="{view>observation}" />
+                                        </cells>
+                                    </ColumnListItem>
+                                </items>
+                            </Table>
+                        </ScrollContainer>
+                    </content>
+                </Panel>
+            </VBox>
+        </content>
+    </Page>
+</mvc:View>
