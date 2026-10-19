@@ -1,0 +1,28 @@
+{
+  "employee": {
+    "id": "EMP-2048",
+    "name": "Miguel Hernández Soto",
+    "role": "Colaborador Mitsubishi",
+    "center": "Tlalnepantla",
+    "schedule": "07:30–17:30",
+    "initials": "MH"
+  },
+  "today": {
+    "dateText": "Lunes, 19 de octubre de 2026",
+    "status": "Jornada activa",
+    "nextAction": "MEAL_START",
+    "entry": "07:27",
+    "mealStart": "—",
+    "mealEnd": "—",
+    "exit": "—",
+    "worked": "04:36",
+    "locationStatus": "Dentro de zona",
+    "distance": "18 m",
+    "lastUpdate": "12:03"
+  },
+  "history": [
+    { "date": "18/10/2026", "entry": "07:29", "exit": "17:34", "hours": "9:31", "status": "Presente", "state": "Success" },
+    { "date": "17/10/2026", "entry": "07:41", "exit": "17:32", "hours": "9:17", "status": "Retardo", "state": "Warning" },
+    { "date": "16/10/2026", "entry": "07:25", "exit": "17:29", "hours": "9:30", "status": "Presente", "state": "Success" }
+  ]
+}

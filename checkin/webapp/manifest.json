@@ -1,0 +1,48 @@
+{
+  "_version": "1.70.0",
+  "sap.app": {
+    "id": "com.mitsu.checkin",
+    "type": "application",
+    "applicationVersion": { "version": "0.1.0" },
+    "title": "Mi asistencia",
+    "description": "Marcajes de entrada, comida y salida para el personal de Mitsubishi",
+    "dataSources": {
+      "attendanceApi": {
+        "uri": "/api/attendance/",
+        "type": "JSON"
+      }
+    }
+  },
+  "sap.ui": {
+    "technology": "UI5",
+    "deviceTypes": { "desktop": true, "tablet": true, "phone": true }
+  },
+  "sap.ui5": {
+    "flexEnabled": true,
+    "dependencies": {
+      "minUI5Version": "1.136.1",
+      "libs": {
+        "sap.ui.core": {},
+        "sap.m": {},
+        "sap.f": {},
+        "sap.ui.layout": {}
+      }
+    },
+    "models": {
+      "attendance": {
+        "type": "sap.ui.model.json.JSONModel",
+        "uri": "model/mockData.json",
+        "settings": { "sizeLimit": 100 }
+      }
+    },
+    "resources": {
+      "css": [{ "uri": "css/style.css" }]
+    },
+    "rootView": {
+      "viewName": "com.mitsu.checkin.view.Main",
+      "type": "XML",
+      "id": "main",
+      "async": true
+    }
+  }
+}

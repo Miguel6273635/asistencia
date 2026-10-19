@@ -1,0 +1,32 @@
+:root { --brand:#0064d9; --navy:#17324d; --surface:#fff; --line:#d7e2ed; --muted:#58708a; }
+.mechanicPage, .mechanicPage .sapMPageBgStandard { background:#f3f6f9; }
+.appHeader { height:3.5rem; padding:0 1.25rem; background:#fff; border-bottom:1px solid var(--line); }
+.appShell { width:min(1180px, calc(100% - 2rem)); margin:1.25rem auto 2rem; gap:1rem; }
+.welcomeCard, .panel { background:var(--surface); border:1px solid var(--line); border-radius:1rem; box-shadow:0 4px 14px rgba(23,50,77,.06); }
+.welcomeCard { padding:1.2rem 1.4rem; border-left:5px solid var(--brand); }
+.employeeName { color:var(--navy); margin:.15rem 0; }
+.eyebrow { color:var(--muted); font-size:.72rem; font-weight:700; letter-spacing:.08em; }
+.mutedText { color:var(--muted); }
+.strongText { color:var(--navy); font-weight:700; }
+.contentGrid { gap:1rem; }
+.mainColumn { flex:1 1 700px; gap:1rem; min-width:0; }
+.sideColumn { flex:1 1 280px; gap:1rem; min-width:260px; }
+.panel { padding:1.1rem; gap:1rem; }
+.timeline { position:relative; gap:.5rem; padding:.75rem 0; }
+.timeStep { width:22%; min-width:120px; padding:.85rem .5rem; text-align:center; align-items:center; border:1px solid var(--line); border-radius:.75rem; background:#f8fafc; }
+.timeStep .sapUiIcon { color:#7b8ea2; font-size:1.25rem; margin-bottom:.35rem; }
+.timeStep.complete { background:#eef9f1; border-color:#a9d9b3; }
+.timeStep.complete .sapUiIcon { color:#188a38; }
+.primaryMarkButton .sapMBtnInner { min-height:3.25rem; border-radius:.8rem; font-size:1.05rem; }
+.locationPanel { align-items:center; text-align:center; }
+.locationPanel > .sapMFlexItem:first-child { align-self:stretch; }
+.locationIcon { font-size:3rem; color:var(--brand); padding:.75rem; background:#eaf4ff; border-radius:50%; }
+.locationText { color:var(--navy); font-weight:600; }
+.summaryPanel .sapMHBox { padding:.55rem 0; border-bottom:1px solid #edf1f5; }
+.historyTable .sapMListTblHeaderCell { background:#f4f8fb; }
+@media (max-width:700px) {
+  .appShell { width:calc(100% - 1rem); margin:.5rem auto 1rem; }
+  .welcomeCard, .panel { border-radius:.75rem; }
+  .timeStep { width:45%; flex-grow:1; }
+  .sideColumn { min-width:100%; }
+}

@@ -1,0 +1,12 @@
+specVersion: "4.0"
+metadata:
+  name: com.mitsu.checkin
+type: application
+framework:
+  name: OpenUI5
+  version: "1.136.1"
+  libraries:
+    - name: sap.ui.core
+    - name: sap.m
+    - name: sap.f
+    - name: sap.ui.layout

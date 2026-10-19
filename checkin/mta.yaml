@@ -1,0 +1,45 @@
+_schema-version: "3.3"
+ID: mitsu-checkin
+version: 0.1.0
+description: Aplicación BTP de marcajes para el personal de Mitsubishi
+
+modules:
+  - name: mitsu-checkin-content
+    type: com.sap.application.content
+    path: .
+    requires:
+      - name: mitsu-checkin-html5-repo
+        parameters:
+          content-target: true
+    build-parameters:
+      build-result: resources
+      requires:
+        - name: mitsu-checkin-ui
+          artifacts:
+            - checkin.zip
+          target-path: resources/
+
+  - name: mitsu-checkin-ui
+    type: html5
+    path: .
+    build-parameters:
+      builder: custom
+      commands:
+        - npm install
+        - npm run build
+        - npx bestzip checkin.zip dist/*
+      supported-platforms: []
+
+resources:
+  - name: mitsu-checkin-html5-repo
+    type: org.cloudfoundry.managed-service
+    parameters:
+      service: html5-apps-repo
+      service-plan: app-host
+
+  - name: mitsu-checkin-xsuaa
+    type: org.cloudfoundry.managed-service
+    parameters:
+      service: xsuaa
+      service-plan: application
+      path: xs-security.json

@@ -1,0 +1,84 @@
+<mvc:View controllerName="com.mitsu.checkin.controller.Main"
+  xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m" xmlns:f="sap.f" xmlns:core="sap.ui.core">
+  <App busy="{app>/busy}">
+    <Page showHeader="true" class="mechanicPage">
+      <customHeader>
+        <Bar class="appHeader">
+          <contentLeft><Title text="Mi asistencia" level="H2" /></contentLeft>
+          <contentRight><Avatar initials="{attendance>/employee/initials}" displaySize="XS" /></contentRight>
+        </Bar>
+      </customHeader>
+      <content>
+        <VBox class="appShell">
+          <HBox class="welcomeCard" justifyContent="SpaceBetween" alignItems="Center" wrap="Wrap">
+            <VBox>
+              <Text text="Hola," class="eyebrow" />
+              <Title text="{attendance>/employee/name}" level="H1" class="employeeName" />
+              <Text text="{attendance>/employee/role} · {attendance>/employee/center}" class="mutedText" />
+            </VBox>
+            <ObjectStatus text="{attendance>/today/status}" state="Success" inverted="true" />
+          </HBox>
+
+          <HBox class="contentGrid" wrap="Wrap" alignItems="Start">
+            <VBox class="mainColumn">
+              <VBox class="panel todayPanel">
+                <HBox justifyContent="SpaceBetween" alignItems="Center">
+                  <VBox><Text text="JORNADA DE HOY" class="eyebrow"/><Title text="{attendance>/today/dateText}" level="H2"/></VBox>
+                  <VBox alignItems="End"><Text text="Horario asignado" class="mutedText"/><Text text="{attendance>/employee/schedule}" class="strongText"/></VBox>
+                </HBox>
+
+                <HBox class="timeline" justifyContent="SpaceBetween" wrap="Wrap">
+                  <VBox class="timeStep complete"><core:Icon src="sap-icon://log"/><Text text="Entrada"/><Title text="{attendance>/today/entry}" level="H3"/></VBox>
+                  <VBox class="timeStep"><core:Icon src="sap-icon://meal"/><Text text="Inicio de comida"/><Title text="{attendance>/today/mealStart}" level="H3"/></VBox>
+                  <VBox class="timeStep"><core:Icon src="sap-icon://meal"/><Text text="Fin de comida"/><Title text="{attendance>/today/mealEnd}" level="H3"/></VBox>
+                  <VBox class="timeStep"><core:Icon src="sap-icon://log"/><Text text="Salida"/><Title text="{attendance>/today/exit}" level="H3"/></VBox>
+                </HBox>
+
+                <Button id="primaryAction" text="Iniciar comida" type="Emphasized" icon="sap-icon://accept" press=".onPrimaryAction" class="primaryMarkButton" />
+                <MessageStrip text="Se solicitará tu ubicación solamente al confirmar el marcaje. No se realiza seguimiento continuo." type="Information" showIcon="true" />
+              </VBox>
+
+              <VBox class="panel historyPanel">
+                <Title text="Últimos registros" level="H2" />
+                <Table items="{attendance>/history}" growing="true" growingThreshold="5" class="historyTable">
+                  <columns>
+                    <Column><Text text="Fecha" /></Column>
+                    <Column minScreenWidth="Tablet" demandPopin="true"><Text text="Entrada" /></Column>
+                    <Column minScreenWidth="Tablet" demandPopin="true"><Text text="Salida" /></Column>
+                    <Column><Text text="Horas" /></Column>
+                    <Column><Text text="Estatus" /></Column>
+                  </columns>
+                  <items><ColumnListItem>
+                    <cells>
+                      <Text text="{attendance>date}"/><Text text="{attendance>entry}"/><Text text="{attendance>exit}"/>
+                      <Text text="{attendance>hours}"/><ObjectStatus text="{attendance>status}" state="{attendance>state}"/>
+                    </cells>
+                  </ColumnListItem></items>
+                </Table>
+              </VBox>
+            </VBox>
+
+            <VBox class="sideColumn">
+              <VBox class="panel locationPanel">
+                <HBox justifyContent="SpaceBetween" alignItems="Center">
+                  <Title text="Ubicación del marcaje" level="H2" />
+                  <Button icon="sap-icon://refresh" type="Transparent" tooltip="Actualizar" press=".onRefreshLocation" />
+                </HBox>
+                <core:Icon src="sap-icon://map-2" class="locationIcon" />
+                <ObjectStatus text="{attendance>/today/locationStatus}" state="Success" inverted="true" />
+                <Text text="A {attendance>/today/distance} del centro autorizado" class="locationText" />
+                <Text text="Última validación: {attendance>/today/lastUpdate}" class="mutedText" />
+              </VBox>
+              <VBox class="panel summaryPanel">
+                <Title text="Resumen de hoy" level="H2" />
+                <HBox justifyContent="SpaceBetween"><Text text="Tiempo registrado"/><ObjectNumber number="{attendance>/today/worked}" unit="h"/></HBox>
+                <HBox justifyContent="SpaceBetween"><Text text="Centro"/><Text text="{attendance>/employee/center}" class="strongText"/></HBox>
+                <HBox justifyContent="SpaceBetween"><Text text="Núm. empleado"/><Text text="{attendance>/employee/id}" class="strongText"/></HBox>
+              </VBox>
+            </VBox>
+          </HBox>
+        </VBox>
+      </content>
+    </Page>
+  </App>
+</mvc:View>
