@@ -4,7 +4,8 @@
   "private": true,
   "description": "Aplicación SAPUI5 de marcajes para el personal de Mitsubishi",
   "scripts": {
-    "start": "ui5 serve --open /index.html",
+    "start": "fiori run --config ./ui5-local.yaml --open /index.html",
+    "start-basic": "ui5 serve --open /index.html",
     "build": "ui5 build --clean-dest --dest dist"
   },
   "devDependencies": {

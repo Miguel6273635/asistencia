@@ -9,4 +9,25 @@ framework:
     - name: sap.ui.core
     - name: sap.m
     - name: sap.f
+    - name: sap.tnt
     - name: sap.ui.layout
+server:
+  customMiddleware:
+    - name: fiori-tools-proxy
+      afterMiddleware: compression
+      configuration:
+        ignoreCertErrors: false
+        backend:
+          - path: /sap
+            destination: Control_asistenci
+        ui5:
+          path:
+            - /resources
+            - /test-resources
+          url: https://ui5.sap.com
+    - name: fiori-tools-appreload
+      afterMiddleware: compression
+      configuration:
+        port: 35730
+        path: webapp
+        delay: 300

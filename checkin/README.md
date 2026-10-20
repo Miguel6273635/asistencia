@@ -8,10 +8,11 @@ Aplicación SAPUI5 independiente para que el personal de Mitsubishi registre su 
 - Secuencia controlada de acciones; no permite elegir un evento fuera de orden.
 - Confirmación antes de cada marcaje.
 - Geolocalización solicitada únicamente al marcar; no hay rastreo continuo.
-- Identificador único por solicitud para soportar idempotencia.
-- Resumen de jornada y últimos registros con datos de prueba.
+- Consulta del empleado en `EmployeeSet` por número de nómina o correo.
+- Registro real de marcajes en `AttendanceRecordSet`, incluyendo token CSRF.
+- Consulta y agrupación del historial diario desde `AttendanceHistorySet`.
 - Diseño adaptable a teléfono, tableta y escritorio.
-- Ruta `/api/attendance/` preparada para un destino BTP llamado `AttendanceBackend`.
+- Ruta OData preparada para la destination BTP `Control_asistenci`.
 
 ## Ejecutar localmente
 
@@ -20,12 +21,14 @@ npm install
 npm start
 ```
 
-El navegador debe permitir ubicación para probar un marcaje. En desarrollo local el servicio devuelve una respuesta simulada desde `webapp/model/AttendanceService.js`.
+`npm start` utiliza el proxy de SAP Business Application Studio y la destination `Control_asistenci`. La opción **Preview Application** también usa esa destination mediante `ui5.yaml`; reinicie la vista previa después de cambiar cualquier archivo YAML.
+
+El navegador debe permitir ubicación para realizar un marcaje. La pantalla ya no contiene registros ni datos de colaborador simulados; si SAP no está disponible, muestra el error de conexión sin inventar información.
 
 ## Conexión productiva
 
-Sustituir la respuesta simulada de `AttendanceService.mark` por un `POST` a `/api/attendance/events`. El backend deberá validar identidad, horario, estatus bloqueantes, secuencia, tolerancia, geocerca e idempotencia antes de registrar el evento SAP.
+La identidad temporal se encuentra en `webapp/model/IdentityService.js` con el número `00004281`. Cuando se conecte el login, se debe llamar `setAuthenticatedIdentity` con el correo o número de nómina proporcionado por BTP y desactivar así el modo de prueba.
 
-La respuesta no debe exponer errores técnicos de BAPI. Debe devolver un resultado funcional y el estado actualizado de la jornada.
+El servicio usa `P10`, `P15`, `P25` y `P20` para entrada, inicio de comida, fin de comida y salida.
 
 La arquitectura, el contrato inicial y la lista de configuración se encuentran en [`docs/INTEGRACION_BTP_SAP.md`](docs/INTEGRACION_BTP_SAP.md).

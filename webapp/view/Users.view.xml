@@ -2,7 +2,8 @@
     controllerName="com.mitsu.monitorasistencia.controller.Users"
     xmlns:mvc="sap.ui.core.mvc"
     xmlns="sap.m"
-    xmlns:core="sap.ui.core">
+    xmlns:core="sap.ui.core"
+    xmlns:u="sap.ui.unified">
     <Page showHeader="false" class="monitorPage">
         <content>
             <VBox class="pageContainer compactPage usersPage">
@@ -40,6 +41,7 @@
                                 <core:Item key="inactive" text="Inactivos" />
                             </Select>
                             <Button text="Exportar" icon="sap-icon://download" press=".onExport" />
+                            <Button text="Carga masiva" icon="sap-icon://upload" press=".onOpenBulkDialog" />
                             <Button text="Alta de usuario" icon="sap-icon://add" type="Emphasized" press=".onOpenUserDialog" />
                         </OverflowToolbar>
                     </headerToolbar>
@@ -90,12 +92,16 @@
         </content>
 
         <dependents>
-            <Dialog id="userDialog" title="Alta de usuario" contentWidth="42rem" stretchOnPhone="true" class="userDialog">
+            <Dialog id="userDialog" title="Alta de usuario" contentWidth="42rem" stretch="{device>/system/phone}" class="userDialog">
                 <content>
                     <VBox class="sapUiMediumMargin userDialogContent">
                         <HBox justifyContent="SpaceBetween" class="userDialogRow">
                             <VBox width="58%"><Label text="Nombre completo" required="true" labelFor="userName" /><Input id="userName" placeholder="Nombre y apellidos" /></VBox>
                             <VBox width="38%"><Label text="Número de empleado" required="true" labelFor="userNumber" /><Input id="userNumber" placeholder="EMP-0000" /></VBox>
+                        </HBox>
+                        <HBox justifyContent="SpaceBetween" class="userDialogRow sapUiSmallMarginTop">
+                            <VBox width="38%"><Label text="Fecha de nacimiento" required="true" labelFor="userBirthDate" /><DatePicker id="userBirthDate" width="100%" valueFormat="yyyy-MM-dd" displayFormat="dd/MM/yyyy" placeholder="dd/mm/aaaa" /></VBox>
+                            <VBox width="58%"><Label text="CURP" required="true" labelFor="userCurp" /><Input id="userCurp" maxLength="18" liveChange=".onCurpLiveChange" placeholder="18 caracteres" /></VBox>
                         </HBox>
                         <HBox justifyContent="SpaceBetween" class="userDialogRow sapUiSmallMarginTop">
                             <VBox width="48%">
@@ -123,6 +129,96 @@
                 </content>
                 <beginButton><Button text="Guardar" type="Emphasized" press=".onSaveUser" /></beginButton>
                 <endButton><Button text="Cancelar" press=".onCloseUserDialog" /></endButton>
+            </Dialog>
+
+            <Dialog id="bulkUserDialog" title="Precarga masiva de usuarios" contentWidth="92rem" contentHeight="42rem" stretch="{device>/system/phone}" class="bulkUserDialog">
+                <subHeader>
+                    <Toolbar class="bulkImportToolbar">
+                        <Button text="Descargar plantilla" icon="sap-icon://download" press=".onDownloadBulkTemplate" />
+                        <ToolbarSeparator />
+                        <u:FileUploader
+                            id="bulkFileUploader"
+                            name="bulkUsersFile"
+                            width="22rem"
+                            fileType="xlsx,xls,csv"
+                            mimeType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv"
+                            placeholder="Selecciona el archivo Excel"
+                            buttonText="Examinar"
+                            sameFilenameAllowed="true"
+                            change=".onBulkFileChange" />
+                        <Button
+                            id="discardBulkFileButton"
+                            text="Descartar archivo"
+                            icon="sap-icon://decline"
+                            type="Reject"
+                            enabled="{= ${bulk>/rows}.length > 0 || ${bulk>/fileName} !== '' }"
+                            press=".onDiscardBulkFile" />
+                        <Button text="Validar nuevamente" icon="sap-icon://validate" enabled="{= ${bulk>/rows}.length > 0 }" press=".onValidateBulkRows" />
+                        <Button text="Descargar no cargados" icon="sap-icon://excel-attachment" enabled="{= ${bulk>/stats/invalid} > 0 }" press=".onDownloadRejectedUsers" />
+                        <ToolbarSpacer />
+                        <ObjectStatus text="{= ${bulk>/stats/valid} + ' válidos' }" state="Success" />
+                        <ObjectStatus text="{= ${bulk>/stats/invalid} + ' con observaciones' }" state="Error" />
+                    </Toolbar>
+                </subHeader>
+                <content>
+                    <VBox class="bulkImportContent">
+                        <MessageStrip
+                            text="Puedes corregir los datos directamente en la tabla. Los registros válidos se cargarán y los que tengan errores permanecerán disponibles para corregir o descargar."
+                            type="Information"
+                            showIcon="true"
+                            class="sapUiSmallMargin" />
+                        <HBox wrap="Wrap" class="bulkSummaryRow sapUiSmallMarginBegin sapUiSmallMarginEnd">
+                            <VBox class="bulkSummaryCard"><Text text="Filas leídas" /><ObjectNumber number="{bulk>/stats/total}" /></VBox>
+                            <VBox class="bulkSummaryCard bulkSummarySuccess"><Text text="Listos para cargar" /><ObjectNumber number="{bulk>/stats/valid}" state="Success" /></VBox>
+                            <VBox class="bulkSummaryCard bulkSummaryError"><Text text="Requieren corrección" /><ObjectNumber number="{bulk>/stats/invalid}" state="Error" /></VBox>
+                        </HBox>
+                        <ScrollContainer horizontal="true" vertical="true" focusable="true" class="bulkImportTableScroll sapUiSmallMargin">
+                            <Table items="{bulk>/rows}" fixedLayout="false" growing="false" noDataText="Descarga la plantilla y selecciona un archivo para iniciar la validación" class="bulkImportTable">
+                                <columns>
+                                    <Column width="4rem" hAlign="Center"><Text text="Fila" /></Column>
+                                    <Column width="9rem"><Text text="Núm. empleado" /></Column>
+                                    <Column width="11rem"><Text text="Nombre(s)" /></Column>
+                                    <Column width="10rem"><Text text="Ap. paterno" /></Column>
+                                    <Column width="10rem"><Text text="Ap. materno" /></Column>
+                                    <Column width="13rem"><Text text="CURP" /></Column>
+                                    <Column width="10rem"><Text text="Nacimiento" /></Column>
+                                    <Column width="10rem"><Text text="Centro" /></Column>
+                                    <Column width="8rem"><Text text="Horario" /></Column>
+                                    <Column width="11rem"><Text text="Rol" /></Column>
+                                    <Column width="9rem"><Text text="Resultado" /></Column>
+                                    <Column width="22rem"><Text text="Detalle de validación" /></Column>
+                                </columns>
+                                <items>
+                                    <ColumnListItem highlight="{bulk>state}">
+                                        <cells>
+                                            <ObjectNumber number="{bulk>rowNumber}" />
+                                            <Input value="{bulk>number}" change=".onBulkCellChange" />
+                                            <Input value="{bulk>firstNames}" change=".onBulkCellChange" />
+                                            <Input value="{bulk>paternalSurname}" change=".onBulkCellChange" />
+                                            <Input value="{bulk>maternalSurname}" change=".onBulkCellChange" />
+                                            <Input value="{bulk>curp}" maxLength="18" change=".onBulkCellChange" />
+                                            <DatePicker value="{bulk>birthDate}" valueFormat="yyyy-MM-dd" displayFormat="dd/MM/yyyy" change=".onBulkCellChange" />
+                                            <Input value="{bulk>centerValue}" change=".onBulkCellChange" />
+                                            <Input value="{bulk>scheduleValue}" change=".onBulkCellChange" />
+                                            <Select selectedKey="{bulk>role}" change=".onBulkCellChange">
+                                                <core:Item key="Empleado" text="Empleado" />
+                                                <core:Item key="Supervisor" text="Supervisor" />
+                                                <core:Item key="Recursos Humanos" text="Recursos Humanos" />
+                                                <core:Item key="Administrador" text="Administrador" />
+                                                <core:Item key="Técnico" text="Técnico" />
+                                                <core:Item key="Técnico de campo" text="Técnico de campo" />
+                                            </Select>
+                                            <ObjectStatus text="{bulk>status}" state="{bulk>state}" inverted="true" />
+                                            <Text text="{bulk>messageText}" wrapping="true" />
+                                        </cells>
+                                    </ColumnListItem>
+                                </items>
+                            </Table>
+                        </ScrollContainer>
+                    </VBox>
+                </content>
+                <beginButton><Button text="Cargar usuarios válidos" icon="sap-icon://upload-to-cloud" type="Emphasized" enabled="{= ${bulk>/stats/valid} > 0 }" press=".onImportValidUsers" /></beginButton>
+                <endButton><Button text="Cerrar" press=".onCloseBulkDialog" /></endButton>
             </Dialog>
         </dependents>
     </Page>

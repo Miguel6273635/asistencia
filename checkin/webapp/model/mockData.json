@@ -3,7 +3,10 @@
     "id": "EMP-2048",
     "name": "Miguel Hernández Soto",
     "role": "Colaborador Mitsubishi",
+    "position": "Técnico",
     "center": "Tlalnepantla",
+    "centerCode": "MEX-TLAN",
+    "address": "Av. Gustavo Baz 2160, Tlalnepantla, Estado de México",
     "schedule": "07:30–17:30",
     "initials": "MH"
   },
@@ -18,11 +21,13 @@
     "worked": "04:36",
     "locationStatus": "Dentro de zona",
     "distance": "18 m",
+    "currentTime": "12:03",
     "lastUpdate": "12:03"
   },
   "history": [
-    { "date": "18/10/2026", "entry": "07:29", "exit": "17:34", "hours": "9:31", "status": "Presente", "state": "Success" },
-    { "date": "17/10/2026", "entry": "07:41", "exit": "17:32", "hours": "9:17", "status": "Retardo", "state": "Warning" },
-    { "date": "16/10/2026", "entry": "07:25", "exit": "17:29", "hours": "9:30", "status": "Presente", "state": "Success" }
+    { "date": "19/10/2026", "entry": "07:27", "mealStart": "—", "mealEnd": "—", "exit": "—", "hours": "4:36*", "status": "En curso", "state": "Information" },
+    { "date": "18/10/2026", "entry": "07:29", "mealStart": "12:31", "mealEnd": "13:28", "exit": "17:34", "hours": "9:31", "status": "Presente", "state": "Success" },
+    { "date": "17/10/2026", "entry": "07:41", "mealStart": "12:35", "mealEnd": "13:22", "exit": "17:32", "hours": "9:17", "status": "Retardo", "state": "Warning" },
+    { "date": "16/10/2026", "entry": "07:25", "mealStart": "12:28", "mealEnd": "13:19", "exit": "17:29", "hours": "9:30", "status": "Presente", "state": "Success" }
   ]
 }

@@ -1,0 +1,77 @@
+.compactShell {
+  gap: 0.75rem;
+  padding-top: 0.75rem !important;
+  padding-bottom: 0.75rem !important;
+}
+
+.compactWelcome {
+  gap: 0.35rem;
+  padding: 0.65rem 1rem;
+}
+
+.compactWelcome .employeeName {
+  font-size: 1.1rem;
+}
+
+.compactWelcome .todayClock {
+  gap: 0;
+}
+
+.singleScreenView,
+.singleScreenGrid {
+  width: 100%;
+  min-height: 0;
+}
+
+.singleScreenGrid {
+  display: grid !important;
+  grid-template-columns: minmax(34rem, 1.15fr) minmax(28rem, 0.85fr);
+  gap: 0.75rem;
+}
+
+.compactAttendancePanel,
+.compactHistoryPanel {
+  min-width: 0;
+  padding: 0.8rem;
+  align-self: stretch;
+}
+
+.compactAttendancePanel .timeline {
+  padding: 0.35rem 0.25rem 0;
+}
+
+.compactAttendancePanel .markActions {
+  gap: 0.4rem;
+}
+
+.compactAttendancePanel .markActions > .sapMBtn {
+  flex: 1 1 9rem;
+}
+
+.compactHistoryPanel .historyTable {
+  width: 100%;
+}
+
+.compactHistoryPanel .sapMListTblHeaderCell,
+.compactHistoryPanel .sapMListTblCell {
+  padding-right: 0.4rem;
+  padding-left: 0.4rem;
+}
+
+@media (max-width: 1180px) {
+  .singleScreenGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .compactWelcome .todayClock {
+    width: auto;
+    margin-top: 0.4rem;
+  }
+
+  .singleScreenGrid {
+    display: flex !important;
+    flex-direction: column;
+  }
+}

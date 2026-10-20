@@ -10,6 +10,13 @@
       "attendanceApi": {
         "uri": "/api/attendance/",
         "type": "JSON"
+      },
+      "attendanceOData": {
+        "uri": "/sap/opu/odata/sap/ZHMC_ATTENDANCE_MONITORING_SRV/",
+        "type": "OData",
+        "settings": {
+          "odataVersion": "2.0"
+        }
       }
     }
   },
@@ -25,18 +32,23 @@
         "sap.ui.core": {},
         "sap.m": {},
         "sap.f": {},
+        "sap.tnt": {},
         "sap.ui.layout": {}
       }
     },
     "models": {
       "attendance": {
         "type": "sap.ui.model.json.JSONModel",
-        "uri": "model/mockData.json",
+        "uri": "model/initialData.json",
         "settings": { "sizeLimit": 100 }
       }
     },
     "resources": {
-      "css": [{ "uri": "css/style.css" }]
+      "css": [
+        { "uri": "css/style.css" },
+        { "uri": "css/shell.css" },
+        { "uri": "css/layout.css" }
+      ]
     },
     "rootView": {
       "viewName": "com.mitsu.checkin.view.Main",

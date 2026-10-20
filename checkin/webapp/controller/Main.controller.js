@@ -2,25 +2,203 @@ sap.ui.define([
   "sap/ui/core/mvc/Controller",
   "sap/m/MessageBox",
   "sap/m/MessageToast",
+  "sap/ui/model/json/JSONModel",
+  "../model/IdentityService",
+  "../model/EmployeeService",
   "../model/AttendanceService"
-], function (Controller, MessageBox, MessageToast, AttendanceService) {
+], function (Controller, MessageBox, MessageToast, JSONModel, IdentityService, EmployeeService, AttendanceService) {
   "use strict";
 
   var ACTION_CONFIG = {
-    CHECK_IN: { title: "Registrar entrada", next: "MEAL_START", field: "entry" },
-    MEAL_START: { title: "Iniciar comida", next: "MEAL_END", field: "mealStart" },
-    MEAL_END: { title: "Finalizar comida", next: "CHECK_OUT", field: "mealEnd" },
-    CHECK_OUT: { title: "Registrar salida", next: null, field: "exit" }
+    CHECK_IN: { title: "Registrar entrada", display: "Entrada de jornada", icon: "sap-icon://log", next: "MEAL_START", field: "entry" },
+    MEAL_START: { title: "Iniciar comida", display: "Inicio de comida", icon: "sap-icon://meal", next: "MEAL_END", field: "mealStart" },
+    MEAL_END: { title: "Finalizar comida", display: "Fin de comida", icon: "sap-icon://meal", next: "CHECK_OUT", field: "mealEnd" },
+    CHECK_OUT: { title: "Registrar salida", display: "Salida de jornada", icon: "sap-icon://log", next: null, field: "exit" }
   };
+
+  var STEP_CONFIG = [
+    { id: "stepEntry", field: "entry", action: "CHECK_IN", connector: "connectorEntry" },
+    { id: "stepMealStart", field: "mealStart", action: "MEAL_START", connector: "connectorMealStart" },
+    { id: "stepMealEnd", field: "mealEnd", action: "MEAL_END", connector: "connectorMealEnd" },
+    { id: "stepExit", field: "exit", action: "CHECK_OUT" }
+  ];
 
   return Controller.extend("com.mitsu.checkin.controller.Main", {
     onInit: function () {
+      this._selectedSection = "attendance";
+      this.getView().setModel(new JSONModel({ sideExpanded: false }), "ui");
+      this._updateActionUI();
+      this._startClock();
+      this._loadEmployeeAfterInitialData();
+    },
+
+    onExit: function () {
+      if (this._clockInterval) {
+        clearInterval(this._clockInterval);
+      }
+    },
+
+    _loadEmployeeAfterInitialData: function () {
+      var attendanceModel = this.getView().getModel("attendance");
+      if (attendanceModel.getProperty("/employee")) {
+        this._loadEmployee();
+        return;
+      }
+
+      var onCompleted = function () {
+        attendanceModel.detachRequestCompleted(onCompleted, this);
+        this._loadEmployee();
+      }.bind(this);
+      attendanceModel.attachRequestCompleted(onCompleted, this);
+    },
+
+    _loadEmployee: function () {
+      var appModel = this.getView().getModel("app");
+      var attendanceModel = this.getView().getModel("attendance");
+      var dataSource = this.getOwnerComponent().getManifestEntry("/sap.app/dataSources/attendanceOData");
+      var identity = IdentityService.getActiveIdentity();
+
+      this._activeIdentity = identity;
+
+      appModel.setProperty("/employeeLoading", true);
+      appModel.setProperty("/employeeError", "");
+
+      EmployeeService.readEmployee(dataSource.uri, identity).then(function (employee) {
+        var currentEmployee = attendanceModel.getProperty("/employee") || {};
+        Object.keys(employee).forEach(function (property) {
+          if (employee[property]) {
+            currentEmployee[property] = employee[property];
+          }
+        });
+        attendanceModel.setProperty("/employee", currentEmployee);
+        appModel.setProperty("/employeeSource", "odata");
+        this._loadHistory(currentEmployee);
+      }.bind(this)).catch(function (error) {
+        appModel.setProperty("/employeeSource", "error");
+        appModel.setProperty("/employeeError", error.message);
+      }).finally(function () {
+        appModel.setProperty("/employeeLoading", false);
+      });
+    },
+
+    _loadHistory: function (employee) {
+      var appModel = this.getView().getModel("app");
+      var attendanceModel = this.getView().getModel("attendance");
+      var dataSource = this.getOwnerComponent().getManifestEntry("/sap.app/dataSources/attendanceOData");
+      var now = new Date();
+      var enterDate = now.getFullYear() + "-" + String(now.getMonth() + 1).padStart(2, "0") + "-" + String(now.getDate()).padStart(2, "0");
+
+      appModel.setProperty("/historyLoading", true);
+      appModel.setProperty("/historyError", "");
+      AttendanceService.readHistory(dataSource.uri, employee.id, enterDate).then(function (history) {
+        attendanceModel.setProperty("/history", history);
+        this._applyTodayFromHistory(history);
+      }.bind(this)).catch(function (error) {
+        appModel.setProperty("/historyError", error.message);
+      }).finally(function () {
+        appModel.setProperty("/historyLoading", false);
+      });
+    },
+
+    _applyTodayFromHistory: function (history) {
+      var model = this.getView().getModel("attendance");
+      var today = history[0] || {};
+      var entry = today.entry || "—";
+      var mealStart = today.mealStart || "—";
+      var mealEnd = today.mealEnd || "—";
+      var exit = today.exit || "—";
+      var nextAction = "CHECK_IN";
+
+      if (entry !== "—") { nextAction = "MEAL_START"; }
+      if (mealStart !== "—") { nextAction = "MEAL_END"; }
+      if (mealEnd !== "—") { nextAction = "CHECK_OUT"; }
+      if (exit !== "—") { nextAction = null; }
+
+      model.setProperty("/today/entry", entry);
+      model.setProperty("/today/mealStart", mealStart);
+      model.setProperty("/today/mealEnd", mealEnd);
+      model.setProperty("/today/exit", exit);
+      model.setProperty("/today/nextAction", nextAction);
       this._updateActionUI();
     },
 
-    onPrimaryAction: function () {
+    _startClock: function () {
+      var update = function () {
+        var attendanceModel = this.getView().getModel("attendance");
+        var now = new Date();
+        var dateText = now.toLocaleDateString("es-MX", {
+          weekday: "long",
+          day: "numeric",
+          month: "long",
+          year: "numeric"
+        });
+        attendanceModel.setProperty("/today/dateText", dateText.charAt(0).toUpperCase() + dateText.slice(1));
+        attendanceModel.setProperty("/today/currentTime", now.toLocaleTimeString("es-MX", {
+          hour: "2-digit",
+          minute: "2-digit"
+        }));
+      }.bind(this);
+
+      update();
+      this._clockInterval = setInterval(update, 30000);
+    },
+
+    onNavigationItemSelect: function (event) {
+      var key = event.getParameter("item").getKey();
+      if (key === "toggleMenu") {
+        var uiModel = this.getView().getModel("ui");
+        uiModel.setProperty("/sideExpanded", !uiModel.getProperty("/sideExpanded"));
+        setTimeout(function () {
+          this.byId("navigationList").setSelectedKey(this._selectedSection);
+        }.bind(this), 0);
+        return;
+      }
+      this._showSection(key);
+    },
+
+    onShowAttendance: function () {
+      this._showSection("attendance");
+    },
+
+    onShowProfile: function () {
+      this._showSection("profile");
+    },
+
+    _showSection: function (section) {
+      var attendanceSelected = section === "attendance";
+      this.byId("attendanceView").setVisible(attendanceSelected);
+      this.byId("profileView").setVisible(!attendanceSelected);
+      this._selectedSection = attendanceSelected ? "attendance" : "profile";
+      this.byId("navigationList").setSelectedKey(this._selectedSection);
+    },
+
+    onRequestProfileUpdate: function () {
+      MessageToast.show("La solicitud de actualización se habilitará al conectar Recursos Humanos");
+    },
+
+    onCheckIn: function () {
+      this._confirmAction("CHECK_IN");
+    },
+
+    onMealStart: function () {
+      this._confirmAction("MEAL_START");
+    },
+
+    onMealEnd: function () {
+      this._confirmAction("MEAL_END");
+    },
+
+    onCheckOut: function () {
+      this._confirmAction("CHECK_OUT");
+    },
+
+    _confirmAction: function (requestedAction) {
       var model = this.getView().getModel("attendance");
       var action = model.getProperty("/today/nextAction");
+      if (action !== requestedAction) {
+        MessageToast.show("Completa primero el marcaje anterior");
+        return;
+      }
       var config = ACTION_CONFIG[action];
       if (!config) {
         MessageToast.show("La jornada ya está finalizada");
@@ -59,20 +237,21 @@ sap.ui.define([
     },
 
     _register: function (action, position) {
-      AttendanceService.mark(action, position).then(function (result) {
+      var dataSource = this.getOwnerComponent().getManifestEntry("/sap.app/dataSources/attendanceOData");
+      var employee = this.getView().getModel("attendance").getProperty("/employee");
+      AttendanceService.mark(dataSource.uri, action, position, employee, this._activeIdentity.device).then(function (result) {
         var model = this.getView().getModel("attendance");
         var config = ACTION_CONFIG[action];
         var time = result.registeredAt.toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" });
         model.setProperty("/today/" + config.field, time);
         model.setProperty("/today/nextAction", config.next);
-        model.setProperty("/today/status", config.next ? "Jornada activa" : "Jornada finalizada");
-        model.setProperty("/today/lastUpdate", time);
         this.getView().getModel("app").setProperty("/busy", false);
         this._updateActionUI();
+        this._loadHistory(employee);
         MessageToast.show(config.title + " correctamente");
-      }.bind(this)).catch(function () {
+      }.bind(this)).catch(function (error) {
         this.getView().getModel("app").setProperty("/busy", false);
-        MessageBox.error("No fue posible registrar el evento. Intenta nuevamente.");
+        MessageBox.error("No fue posible registrar el evento en SAP. " + error.message);
       }.bind(this));
     },
 
@@ -81,15 +260,23 @@ sap.ui.define([
       if (!model) { return; }
       var update = function () {
         var action = model.getProperty("/today/nextAction");
-        var button = this.byId("primaryAction");
-        var labels = {
-          CHECK_IN: "Registrar entrada",
-          MEAL_START: "Iniciar comida",
-          MEAL_END: "Finalizar comida",
-          CHECK_OUT: "Registrar salida"
-        };
-        button.setText(labels[action] || "Jornada finalizada");
-        button.setEnabled(Boolean(action));
+        this.byId("checkInAction").setEnabled(action === "CHECK_IN");
+        this.byId("mealStartAction").setEnabled(action === "MEAL_START");
+        this.byId("mealEndAction").setEnabled(action === "MEAL_END");
+        this.byId("checkOutAction").setEnabled(action === "CHECK_OUT");
+
+        STEP_CONFIG.forEach(function (step) {
+          var control = this.byId(step.id);
+          var value = model.getProperty("/today/" + step.field);
+          var completed = value && value !== "—";
+          var active = action === step.action;
+          control.toggleStyleClass("complete", completed);
+          control.toggleStyleClass("active", active);
+          control.getItems()[3].setText(completed ? "Registrada" : (active ? "Siguiente" : "Pendiente"));
+          if (step.connector) {
+            this.byId(step.connector).toggleStyleClass("completeConnector", completed);
+          }
+        }.bind(this));
       }.bind(this);
 
       if (model.getProperty("/today")) {
@@ -101,6 +288,10 @@ sap.ui.define([
 
     onRefreshLocation: function () {
       MessageToast.show("La ubicación se valida al confirmar cada marcaje");
+    },
+
+    onHistory: function () {
+      MessageToast.show("El historial completo se habilitará al conectar el servicio SAP");
     }
   });
 });

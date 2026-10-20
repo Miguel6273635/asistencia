@@ -9,7 +9,14 @@ sap.ui.define([
 
     init: function () {
       UIComponent.prototype.init.apply(this, arguments);
-      this.setModel(new JSONModel({ busy: false }), "app");
+      this.setModel(new JSONModel({
+        busy: false,
+        employeeLoading: false,
+        employeeSource: "none",
+        employeeError: "",
+        historyLoading: false,
+        historyError: ""
+      }), "app");
     }
   });
 });

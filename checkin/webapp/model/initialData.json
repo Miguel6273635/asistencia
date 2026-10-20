@@ -1,0 +1,25 @@
+{
+  "employee": {
+    "id": "",
+    "name": "",
+    "role": "",
+    "position": "",
+    "center": "",
+    "centerCode": "",
+    "address": "",
+    "schedule": "",
+    "initials": "",
+    "email": "",
+    "zone": ""
+  },
+  "today": {
+    "dateText": "",
+    "nextAction": "CHECK_IN",
+    "entry": "—",
+    "mealStart": "—",
+    "mealEnd": "—",
+    "exit": "—",
+    "currentTime": ""
+  },
+  "history": []
+}
