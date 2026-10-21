@@ -18,16 +18,10 @@ server:
       configuration:
         ignoreCertErrors: false
         backend:
-          - path: /sap
-            destination: Control_asistenci
+          - path: /odata
+            url: https://mitsubishi-electric-de-m-xico--s--a--de-c--v--qas-mitsu11a6a2ad.cfapps.us10-001.hana.ondemand.com
         ui5:
           path:
             - /resources
             - /test-resources
           url: https://ui5.sap.com
-    - name: fiori-tools-appreload
-      afterMiddleware: compression
-      configuration:
-        port: 35730
-        path: webapp
-        delay: 300

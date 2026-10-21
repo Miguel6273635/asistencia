@@ -12,7 +12,7 @@
         "type": "JSON"
       },
       "attendanceOData": {
-        "uri": "/sap/opu/odata/sap/ZHMC_ATTENDANCE_MONITORING_SRV/",
+        "uri": "/odata/ZHMC_ATTENDANCE_MONITORING_SRV/",
         "type": "OData",
         "settings": {
           "odataVersion": "2.0"

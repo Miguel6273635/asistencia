@@ -14,6 +14,9 @@ sap.ui.define([
         employeeLoading: false,
         employeeSource: "none",
         employeeError: "",
+        requiresIdentity: true,
+        identityInput: "",
+        identityLookupError: "",
         historyLoading: false,
         historyError: ""
       }), "app");

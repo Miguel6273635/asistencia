@@ -1,6 +1,28 @@
 <mvc:View controllerName="com.mitsu.checkin.controller.Main" height="100%"
   xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m" xmlns:core="sap.ui.core" xmlns:tnt="sap.tnt">
-  <tnt:ToolPage id="toolPage" class="monitorToolPage checkinToolPage">
+  <VBox fitContainer="true" class="checkinRoot">
+    <VBox id="identityScreen" visible="{app>/requiresIdentity}" class="identityScreen" justifyContent="Center" alignItems="Center">
+      <VBox class="identityCard" busy="{app>/employeeLoading}" busyIndicatorDelay="0">
+        <VBox class="identityBrand" alignItems="Center">
+          <Avatar displayShape="Square" displaySize="L" src="sap-icon://employee-approvals" class="identityLogo" />
+          <Title text="Checkin" level="H1" />
+          <Text text="Consulta temporal de colaborador" class="identitySubtitle" />
+        </VBox>
+        <VBox class="identityForm">
+          <Label text="Número de nómina o correo" labelFor="identityInput" required="true" />
+          <Input id="identityInput" value="{app>/identityInput}" placeholder="Ej. 00004281 o empleado@empresa.com"
+            type="Text" liveChange=".onIdentityInputLiveChange" submit=".onIdentitySubmit" />
+          <Text text="Para nómina puedes escribir 4281; se completará como 00004281." class="identityHelp" />
+          <MessageStrip visible="{= !!${app>/identityLookupError} }" text="{app>/identityLookupError}" type="Error" showIcon="true" />
+          <Button text="Consultar empleado" icon="sap-icon://search" type="Emphasized" press=".onIdentitySubmit"
+            enabled="{= !${app>/employeeLoading} }" width="100%" />
+        </VBox>
+        <MessageStrip text="Pantalla temporal de pruebas. Después será reemplazada por la identidad del login de BTP."
+          type="Information" showIcon="true" />
+      </VBox>
+    </VBox>
+
+    <tnt:ToolPage id="toolPage" visible="{= !${app>/requiresIdentity} }" class="monitorToolPage checkinToolPage">
     <tnt:header>
       <tnt:ToolHeader class="monitorHeader">
         <Button icon="sap-icon://nav-back" type="Transparent" tooltip="Regresar" />
@@ -9,6 +31,7 @@
         <Title text="Checkin" level="H2" class="monitorBrandTitle" />
         <Button icon="sap-icon://slim-arrow-down" type="Transparent" tooltip="Opciones de la aplicación" />
         <ToolbarSpacer />
+        <Button text="Cambiar empleado" icon="sap-icon://employee-rejections" type="Transparent" press=".onChangeTestEmployee" />
         <Avatar initials="{attendance>/employee/initials}" displaySize="XS" />
       </tnt:ToolHeader>
     </tnt:header>
@@ -118,5 +141,6 @@
         </Page>
       </App>
     </tnt:mainContents>
-  </tnt:ToolPage>
+    </tnt:ToolPage>
+  </VBox>
 </mvc:View>

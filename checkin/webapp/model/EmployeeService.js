@@ -92,7 +92,10 @@ sap.ui.define([], function () {
         headers: { "Accept": "application/json" }
       }).then(function (response) {
         if (!response.ok) {
-          throw new Error("EmployeeSet respondió con HTTP " + response.status);
+          return response.text().then(function (body) {
+            console.error("EmployeeSet HTTP " + response.status, url, body);
+            throw new Error("EmployeeSet respondió con HTTP " + response.status + ". Ruta: " + url.split("?")[0]);
+          });
         }
         return response.json();
       }).then(function (payload) {

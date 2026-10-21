@@ -11,7 +11,7 @@
 ## OData configurado
 
 - Destination BTP: `Control_asistenci`.
-- Servicio: `ZHMC_ATTENDANCE_MONITORING_SRV`.
+- Servicio: `/ZHMC_ATTENDANCE_MONITORING_SRV/` relativo a la URL base de la destination.
 - Empleado: `EmployeeSet` filtrado por `PersonalNumber` o `Email`.
 - Marcaje: `POST AttendanceRecordSet` con token CSRF.
 - Historial: `AttendanceHistorySet` filtrado por `PersonalNumber` y `EnterDate`.

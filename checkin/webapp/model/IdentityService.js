@@ -1,38 +1,36 @@
 sap.ui.define([], function () {
   "use strict";
 
-  // Identidad fija para las pruebas actuales.
-  var TEST_IDENTITY = Object.freeze({
-    personalNumber: "00004281",
-    email: "",
-    device: "BTP-Web"
-  });
-
-  // Esta variable se llenará con los datos entregados por el login de BTP.
-  var authenticatedIdentity = {
+  // Identidad temporal. Más adelante se llenará directamente con el login de BTP.
+  var activeIdentity = {
     personalNumber: "",
     email: "",
     device: "BTP-Web"
   };
 
-  var useTestIdentity = true;
-
   return {
     getActiveIdentity: function () {
-      return useTestIdentity ? Object.assign({}, TEST_IDENTITY) : Object.assign({}, authenticatedIdentity);
+      return Object.assign({}, activeIdentity);
     },
 
     setAuthenticatedIdentity: function (identity) {
-      authenticatedIdentity = Object.assign({}, authenticatedIdentity, identity || {});
-      useTestIdentity = false;
+      activeIdentity = Object.assign({
+        personalNumber: "",
+        email: "",
+        device: "BTP-Web"
+      }, identity || {});
     },
 
-    useTestIdentity: function () {
-      useTestIdentity = true;
+    clearIdentity: function () {
+      activeIdentity = {
+        personalNumber: "",
+        email: "",
+        device: "BTP-Web"
+      };
     },
 
-    isTestMode: function () {
-      return useTestIdentity;
+    hasActiveIdentity: function () {
+      return Boolean(activeIdentity.personalNumber || activeIdentity.email);
     }
   };
 });

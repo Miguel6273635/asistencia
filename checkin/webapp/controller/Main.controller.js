@@ -29,7 +29,10 @@ sap.ui.define([
       this.getView().setModel(new JSONModel({ sideExpanded: false }), "ui");
       this._updateActionUI();
       this._startClock();
-      this._loadEmployeeAfterInitialData();
+      if (IdentityService.hasActiveIdentity()) {
+        this.getView().getModel("app").setProperty("/requiresIdentity", false);
+        this._loadEmployeeAfterInitialData(false);
+      }
     },
 
     onExit: function () {
@@ -38,21 +41,21 @@ sap.ui.define([
       }
     },
 
-    _loadEmployeeAfterInitialData: function () {
+    _loadEmployeeAfterInitialData: function (fromTemporaryAccess) {
       var attendanceModel = this.getView().getModel("attendance");
       if (attendanceModel.getProperty("/employee")) {
-        this._loadEmployee();
+        this._loadEmployee(fromTemporaryAccess);
         return;
       }
 
       var onCompleted = function () {
         attendanceModel.detachRequestCompleted(onCompleted, this);
-        this._loadEmployee();
+        this._loadEmployee(fromTemporaryAccess);
       }.bind(this);
       attendanceModel.attachRequestCompleted(onCompleted, this);
     },
 
-    _loadEmployee: function () {
+    _loadEmployee: function (fromTemporaryAccess) {
       var appModel = this.getView().getModel("app");
       var attendanceModel = this.getView().getModel("attendance");
       var dataSource = this.getOwnerComponent().getManifestEntry("/sap.app/dataSources/attendanceOData");
@@ -62,8 +65,9 @@ sap.ui.define([
 
       appModel.setProperty("/employeeLoading", true);
       appModel.setProperty("/employeeError", "");
+      appModel.setProperty("/identityLookupError", "");
 
-      EmployeeService.readEmployee(dataSource.uri, identity).then(function (employee) {
+      return EmployeeService.readEmployee(dataSource.uri, identity).then(function (employee) {
         var currentEmployee = attendanceModel.getProperty("/employee") || {};
         Object.keys(employee).forEach(function (property) {
           if (employee[property]) {
@@ -72,13 +76,75 @@ sap.ui.define([
         });
         attendanceModel.setProperty("/employee", currentEmployee);
         appModel.setProperty("/employeeSource", "odata");
+        appModel.setProperty("/requiresIdentity", false);
         this._loadHistory(currentEmployee);
       }.bind(this)).catch(function (error) {
         appModel.setProperty("/employeeSource", "error");
-        appModel.setProperty("/employeeError", error.message);
-      }).finally(function () {
+        if (fromTemporaryAccess) {
+          IdentityService.clearIdentity();
+          this._activeIdentity = null;
+          appModel.setProperty("/identityLookupError", error.message);
+          appModel.setProperty("/requiresIdentity", true);
+        } else {
+          appModel.setProperty("/employeeError", error.message);
+        }
+      }.bind(this)).finally(function () {
         appModel.setProperty("/employeeLoading", false);
       });
+    },
+
+    onIdentitySubmit: function () {
+      var appModel = this.getView().getModel("app");
+      var value = String(appModel.getProperty("/identityInput") || "").trim();
+      var identity = { personalNumber: "", email: "", device: "BTP-Web" };
+
+      if (!value) {
+        appModel.setProperty("/identityLookupError", "Escribe el número de nómina o el correo del empleado.");
+        return;
+      }
+
+      if (value.indexOf("@") >= 0) {
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+          appModel.setProperty("/identityLookupError", "El correo no tiene un formato válido.");
+          return;
+        }
+        identity.email = value.toLowerCase();
+      } else {
+        if (!/^\d{1,8}$/.test(value)) {
+          appModel.setProperty("/identityLookupError", "La nómina debe contener solamente números y máximo 8 posiciones.");
+          return;
+        }
+        identity.personalNumber = value.padStart(8, "0");
+        appModel.setProperty("/identityInput", identity.personalNumber);
+      }
+
+      IdentityService.setAuthenticatedIdentity(identity);
+      this._loadEmployeeAfterInitialData(true);
+    },
+
+    onIdentityInputLiveChange: function () {
+      this.getView().getModel("app").setProperty("/identityLookupError", "");
+    },
+
+    onChangeTestEmployee: function () {
+      var appModel = this.getView().getModel("app");
+      var attendanceModel = this.getView().getModel("attendance");
+      IdentityService.clearIdentity();
+      this._activeIdentity = null;
+      attendanceModel.setProperty("/employee", {
+        id: "", name: "", role: "", position: "", center: "", centerCode: "",
+        address: "", schedule: "", initials: "", email: "", zone: ""
+      });
+      attendanceModel.setProperty("/history", []);
+      attendanceModel.setProperty("/today/entry", "—");
+      attendanceModel.setProperty("/today/mealStart", "—");
+      attendanceModel.setProperty("/today/mealEnd", "—");
+      attendanceModel.setProperty("/today/exit", "—");
+      attendanceModel.setProperty("/today/nextAction", "CHECK_IN");
+      appModel.setProperty("/employeeError", "");
+      appModel.setProperty("/historyError", "");
+      appModel.setProperty("/identityLookupError", "");
+      appModel.setProperty("/requiresIdentity", true);
     },
 
     _loadHistory: function (employee) {

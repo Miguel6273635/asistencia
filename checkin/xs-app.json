@@ -3,8 +3,8 @@
   "authenticationMethod": "route",
   "routes": [
     {
-      "source": "^/sap/opu/odata/sap/(.*)$",
-      "target": "/sap/opu/odata/sap/$1",
+      "source": "^/odata/(.*)$",
+      "target": "/odata/$1",
       "destination": "Control_asistenci",
       "authenticationType": "xsuaa",
       "csrfProtection": false
