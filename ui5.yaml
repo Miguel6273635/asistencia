@@ -32,6 +32,9 @@ server:
         flp:
           theme: sap_horizon
 builder:
+  componentPreload:
+    excludes:
+      - "com/mitsu/monitorasistencia/thirdparty/xlsx.full.min.js"
   customTasks:
     - name: ui5-tooling-transpile-task
       afterTask: replaceVersion
