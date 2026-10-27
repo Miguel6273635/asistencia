@@ -18,8 +18,8 @@ server:
       configuration:
         ignoreCertErrors: false
         backend:
-          - path: /odata
-            url: https://mitsubishi-electric-de-m-xico--s--a--de-c--v--qas-mitsu11a6a2ad.cfapps.us10-001.hana.ondemand.com
+          - path: /sap
+            destination: QAS_MITSU_DASHs
         ui5:
           path:
             - /resources

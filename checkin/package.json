@@ -1,16 +1,17 @@
 {
   "name": "checkin",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "description": "Aplicación SAPUI5 de marcajes para el personal de Mitsubishi",
   "scripts": {
     "start": "ui5 serve --config ./ui5-local.yaml --open /index.html",
     "start-basic": "ui5 serve --open /index.html",
-    "build": "ui5 build --clean-dest --dest dist"
+    "build": "ui5 build --clean-dest --dest dist",
+    "package:html5": "node scripts/package-html5.js"
   },
   "devDependencies": {
-    "@sap/ux-ui5-tooling": "^1.20.0",
     "@ui5/cli": "^4.0.33",
+    "@sap/ux-ui5-tooling": "^1.20.0",
     "bestzip": "^2.2.1"
   }
 }
