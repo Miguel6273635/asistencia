@@ -16,12 +16,13 @@ sap.ui.define([
                 allRecords: [],
                 records: [],
                 pageRecords: [],
+                centerOptions: [{ key: "all", text: "Todos" }],
                 selectedRecord: {},
                 center: "all",
                 scheduleId: "",
                 status: "all",
                 periodType: "month",
-                referenceDate: "2026-08-31",
+                referenceDate: "2026-10-25",
                 periodStart: null,
                 periodEnd: null,
                 periodLabel: "",
@@ -72,12 +73,17 @@ sap.ui.define([
                 var aLocationOptionalStatuses = ["Viaje de trabajo", "Vacaciones", "Paternidad", "Home office"];
                 var bLocationOptional = aLocationOptionalStatuses.indexOf(oRecord.status) !== -1;
                 var bHasDistance = typeof oRecord.distanceMeters === "number";
-                var bOutsideZone = !bLocationOptional && bHasDistance && oRecord.distanceMeters > 2;
+                var sGeoStatus = String(oRecord.geoStatus || "").toUpperCase();
+                var bBackendOutside = oRecord.isOutOfZone || /OUT|FUERA/.test(sGeoStatus);
+                var bBackendInside = /(^|\s)IN($|\s)|DENTRO/.test(sGeoStatus);
+                var bOutsideZone = !bLocationOptional && (bBackendOutside || (bHasDistance && oRecord.distanceMeters > 2));
                 var sEffectiveStatus = bOutsideZone ? "Fuera de zona" : oRecord.status;
                 var sGeofenceStatus = bLocationOptional ? "No aplica" :
-                    (bHasDistance ? (bOutsideZone ? "Fuera de zona" : "Dentro de zona") : "Sin ubicación");
+                    (bOutsideZone ? "Fuera de zona" :
+                        (bBackendInside ? (oRecord.geoStatusDescription || "Dentro de zona") :
+                            (bHasDistance ? "Dentro de zona" : "Sin ubicación")));
                 var sGeofenceState = bOutsideZone ? "Error" :
-                    (bHasDistance ? "Success" : (bLocationOptional ? "Information" : "None"));
+                    (bHasDistance || bBackendInside ? "Success" : (bLocationOptional ? "Information" : "None"));
                 var sDistanceLabel = bHasDistance ? oRecord.distanceMeters.toFixed(1) + " m" :
                     (bLocationOptional ? "No aplica" : "Sin dato");
 
@@ -90,7 +96,7 @@ sap.ui.define([
                     center: oRecord.center || oRecordEmployee.center || "Sin centro",
                     shift: oRecord.shift || oRecordEmployee.shift || "Sin turno",
                     scheduled: oRecord.scheduled || oSchedule.shortDescription || "Sin horario",
-                    scheduleId: oRecordEmployee.scheduleId || "",
+                    scheduleId: oRecord.scheduleId || oRecordEmployee.scheduleId || "",
                     scheduleName: oSchedule.name || oRecordEmployee.scheduleName || "Sin horario asignado",
                     scheduleDescription: oSchedule.description || oSchedule.shortDescription || "No existe una regla semanal asociada",
                     mealCheckOut: oRecord.mealCheckOut || "—",
@@ -106,10 +112,16 @@ sap.ui.define([
                 return oRecord.employeeId === this._employeeId;
             }.bind(this));
             var oViewModel = this.getModel("view");
+            var aCenterOptions = Array.from(new Set(aEnrichedRecords.map(function (oRecord) {
+                return String(oRecord.center || "").trim();
+            }).filter(Boolean))).sort().map(function (sCenter) {
+                return { key: sCenter, text: sCenter };
+            });
 
             oViewModel.setProperty("/employee", oEmployee || {});
             oViewModel.setProperty("/title", oEmployee ? "Historial de asistencia: " + oEmployee.name : "Registros de asistencia");
             oViewModel.setProperty("/allRecords", aFilteredByEmployee);
+            oViewModel.setProperty("/centerOptions", [{ key: "all", text: "Todos" }].concat(aCenterOptions));
             oViewModel.setProperty("/center", "all");
             oViewModel.setProperty("/scheduleId", "");
             oViewModel.setProperty("/status", "all");

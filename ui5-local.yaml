@@ -29,7 +29,15 @@ server:
       afterMiddleware: compression
       configuration:
         ignoreCertErrors: false # If set to true, certificate errors will be ignored. E.g. self-signed certificates will be accepted
+        backend:
+          - path: /sap
+            destination: QAS_MITSU_DASH
+    - name: ui5-tooling-transpile-middleware
+      afterMiddleware: compression
 builder:
+  customTasks:
+    - name: ui5-tooling-transpile-task
+      afterTask: replaceVersion
   resources:
     excludes:
       - /test/**

@@ -36,15 +36,15 @@ sap.ui.define([
             this.setModel(new JSONModel({
                 mode: "general",
                 title: "Mapa general de ubicaciones",
-                subtitle: "Vista general por zona con información de demostración",
+                subtitle: "Vista general por zona con información de SAP",
                 currentLocationText: "Mapa general",
                 currentZoneId: "all",
                 mapPanelTitle: "Cobertura por zona",
                 sidePanelTitle: "Zonas operativas",
                 centerPosition: "-99.1700;19.4250",
                 zoomLevel: 9,
-                summaryText: "4 zonas · 16 centros",
-                lastRefreshText: "Actualizado hace 1 min",
+                summaryText: "Consultando ubicaciones de SAP",
+                lastRefreshText: "Datos obtenidos de SAP",
                 zoneOptions: [],
                 zoneSpots: [],
                 currentCenters: [],
@@ -83,6 +83,8 @@ sap.ui.define([
             var oAttendanceModel = this.getModel("attendance");
             var oMapModel = this.getModel("map");
             var aZones = oAttendanceModel.getProperty("/mapZones") || [];
+            var aCenters = oAttendanceModel.getProperty("/mapCenters") || [];
+            var aPersonnel = oAttendanceModel.getProperty("/mapPersonnel") || [];
 
             oMapModel.setProperty("/mode", "general");
             oMapModel.setProperty("/title", "Mapa general de ubicaciones");
@@ -91,7 +93,8 @@ sap.ui.define([
             oMapModel.setProperty("/currentZoneId", "all");
             oMapModel.setProperty("/mapPanelTitle", "Cobertura por zona");
             oMapModel.setProperty("/sidePanelTitle", "Zonas operativas");
-            oMapModel.setProperty("/summaryText", "4 zonas · 16 centros · 34 ubicaciones recientes");
+            oMapModel.setProperty("/summaryText", aZones.length + " zonas · " + aCenters.length +
+                " centros · " + aPersonnel.length + " ubicaciones con coordenadas");
             oMapModel.setProperty("/zoneOptions", [{ id: "all", name: "Todas las zonas" }].concat(aZones));
             oMapModel.setProperty("/zoneSpots", aZones);
             oMapModel.setProperty("/currentCenters", []);
@@ -201,12 +204,12 @@ sap.ui.define([
         },
 
         onRefreshLocations: function () {
-            var sTime = new Intl.DateTimeFormat("es-MX", {
-                hour: "2-digit",
-                minute: "2-digit"
-            }).format(new Date());
-            this.getModel("map").setProperty("/lastRefreshText", "Actualizado ahora · " + sTime);
-            MessageToast.show("Ubicaciones de demostración actualizadas");
+            this.getOwnerComponent().reloadAttendanceData().then(function () {
+                var sTime = new Intl.DateTimeFormat("es-MX", { hour: "2-digit", minute: "2-digit" }).format(new Date());
+                this.getModel("map").setProperty("/lastRefreshText", "Actualizado ahora · " + sTime);
+                this._showGeneralMap();
+                MessageToast.show("Ubicaciones actualizadas desde SAP");
+            }.bind(this));
         },
 
         onNavOverview: function () {

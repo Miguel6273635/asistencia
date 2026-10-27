@@ -7,7 +7,16 @@
       "version": "0.2.0"
     },
     "title": "Monitor de Asistencia",
-    "description": "Control y monitoreo de asistencia, turnos y horarios"
+    "description": "Control y monitoreo de asistencia, turnos y horarios",
+    "dataSources": {
+      "attendanceService": {
+        "uri": "/sap/opu/odata/sap/ZHMC_ATTENDANCE_MONITORING_SRV/",
+        "type": "OData",
+        "settings": {
+          "odataVersion": "2.0"
+        }
+      }
+    }
   },
   "sap.ui": {
     "technology": "UI5",
@@ -26,7 +35,7 @@
         "sap.m": {},
         "sap.f": {},
         "sap.tnt": {},
-        "sap.ui.unified": {},
+        "sap.ui.layout": {},
         "sap.viz": {},
         "sap.ui.vbm": {}
       }
@@ -38,7 +47,6 @@
     "models": {
       "attendance": {
         "type": "sap.ui.model.json.JSONModel",
-        "uri": "model/data.json",
         "settings": {
           "sizeLimit": 1000
         }

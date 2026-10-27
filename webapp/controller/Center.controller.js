@@ -1,21 +1,23 @@
 sap.ui.define([
     "com/mitsu/monitorasistencia/controller/BaseController",
     "com/mitsu/monitorasistencia/model/formatter",
+    "com/mitsu/monitorasistencia/model/AttendanceApi",
     "sap/ui/model/json/JSONModel",
     "sap/m/MessageToast"
-], function (BaseController, formatter, JSONModel, MessageToast) {
+], function (BaseController, formatter, AttendanceApi, JSONModel, MessageToast) {
     "use strict";
 
     return BaseController.extend("com.mitsu.monitorasistencia.controller.Center", {
         formatter: formatter,
 
         onInit: function () {
+            this._attendanceApi = new AttendanceApi();
             this.setModel(new JSONModel({
                 center: {},
                 allRecords: [],
                 employees: [],
                 periodType: "week",
-                referenceDate: "2026-08-31",
+                referenceDate: "2026-10-25",
                 rangeStart: null,
                 rangeEnd: null,
                 rangeLabel: "",
@@ -47,6 +49,7 @@ sap.ui.define([
             this._centerId = oEvent.getParameter("arguments").centerId;
             this.getModel("attendance").dataLoaded().then(function () {
                 this._loadCenter();
+                this._loadSapCenterDetails();
                 this._configureCharts();
             }.bind(this));
         },
@@ -117,6 +120,42 @@ sap.ui.define([
             oViewModel.setProperty("/search", "");
             this._updatePeriodRange();
             this._applyFilters();
+        },
+
+        _loadSapCenterDetails: function () {
+            var oViewModel = this.getModel("view");
+            var oCenter = oViewModel.getProperty("/center") || {};
+            if (!oCenter.code) { return; }
+            this._attendanceApi.getCenterSnapshot("SEMANA 43", oCenter.code).then(function (oSnapshot) {
+                if (oSnapshot.scheduleDistribution.length) {
+                    oViewModel.setProperty("/scheduleStats", oSnapshot.scheduleDistribution.map(function (oRow) {
+                        return {
+                            scheduleId: "schedule-" + String(oRow.Schedule || "").trim().toLowerCase(),
+                            scheduleLabel: String(oRow.Schedule || "").trim(),
+                            scheduleName: String(oRow.ScheduleDescription || oRow.Schedule || "Sin horario").trim(),
+                            present: Number(String(oRow.PresentCount || "0").trim()) || 0,
+                            late: Number(String(oRow.LateCount || "0").trim()) || 0,
+                            absent: Number(String(oRow.AbsenceCount || "0").trim()) || 0,
+                            other: Number(String(oRow.OtherCount || "0").trim()) || 0,
+                            total: Number(oRow.TotalCount) || 0
+                        };
+                    }));
+                }
+                if (oSnapshot.incidentTrend.length) {
+                    oViewModel.setProperty("/dailyTrend", oSnapshot.incidentTrend.map(function (oRow) {
+                        var sDate = String(oRow.TrendDate || "").trim();
+                        return {
+                            day: /^\d{8}$/.test(sDate) ? sDate.slice(6, 8) + "/" + sDate.slice(4, 6) : sDate,
+                            late: Number(String(oRow.LateCount || "0").trim()) || 0,
+                            absent: Number(String(oRow.AbsenceCount || "0").trim()) || 0,
+                            outside: Number(String(oRow.OutOfZoneCount || "0").trim()) || 0
+                        };
+                    }));
+                }
+                this._configureCharts();
+            }.bind(this)).catch(function (oError) {
+                console.warn("No se cargó el detalle OData del centro " + oCenter.code, oError);
+            });
         },
 
         _applyFilters: function () {

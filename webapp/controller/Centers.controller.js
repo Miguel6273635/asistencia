@@ -18,7 +18,7 @@ sap.ui.define([
                 zoneId: "all",
                 search: "",
                 granularity: "week",
-                referenceDate: "2026-08-31",
+                referenceDate: "2026-10-25",
                 periodLabel: "",
                 centers: [],
                 stats: { centers: 0, users: 0, present: 0, incidents: 0 }
@@ -88,6 +88,11 @@ sap.ui.define([
                 var bSearchMatch = !sSearch || String(oCenter.name || "").toLowerCase().includes(sSearch) || String(oCenter.code || "").toLowerCase().includes(sSearch);
                 return bZoneMatch && bSearchMatch;
             }).map(function (oCenter) {
+                if (oCenter.source === "sap") {
+                    return Object.assign({}, oCenter, {
+                        records: oCenter.evaluated || oCenter.users || 0
+                    });
+                }
                 var aCenterRecords = aRecords.filter(function (oRecord) { return oRecord.centerId === oCenter.id; });
                 var iPresent = this._countStatuses(aCenterRecords, PRESENT_STATUSES);
                 var iLate = this._countStatuses(aCenterRecords, ["Retardo"]);
@@ -112,6 +117,15 @@ sap.ui.define([
                 present: this._countStatuses(aVisibleRecords, PRESENT_STATUSES),
                 incidents: this._countStatuses(aVisibleRecords, INCIDENT_STATUSES)
             };
+            if (this.getModel("attendance").getProperty("/serviceState/live")) {
+                oStats = aFilteredCenters.reduce(function (oResult, oCenter) {
+                    oResult.centers += oCenter.records > 0 ? 1 : 0;
+                    oResult.users += Number(oCenter.users) || 0;
+                    oResult.present += Number(oCenter.present) || 0;
+                    oResult.incidents += Number(oCenter.incidents) || Number(oCenter.late) + Number(oCenter.absent) + Number(oCenter.outside) || 0;
+                    return oResult;
+                }, { centers: 0, users: 0, present: 0, incidents: 0 });
+            }
 
             oViewModel.setProperty("/centers", aFilteredCenters);
             oViewModel.setProperty("/stats", oStats);
@@ -145,58 +159,18 @@ sap.ui.define([
             if (oCenter) { this.navTo("center", { centerId: oCenter.id }); }
         },
 
-        onToggleCenterStatus: function (oEvent) {
-            var oViewCenter = oEvent.getSource().getBindingContext("view").getObject();
-            var aCenters = this.getModel("attendance").getProperty("/centers") || [];
-            var oCenter = aCenters.find(function (oItem) { return oItem.id === oViewCenter.id; });
-            if (!oCenter) { return; }
-            oCenter.active = !oCenter.active;
-            this.getModel("attendance").refresh(true);
-            this._applyFilters();
-            MessageToast.show(oCenter.name + (oCenter.active ? " fue activado" : " fue dado de baja"));
+        onToggleCenterStatus: function () {
+            MessageToast.show("CenterOfficeSummarySet está disponible sólo para consulta; SAP aún no expone el alta o baja de centros.");
         },
 
         onOpenCenterDialog: function () {
-            this.byId("newCenterName").setValue("");
-            this.byId("newCenterCode").setValue("");
-            this.byId("newCenterLocation").setValue("");
-            this.byId("newCenterZone").setSelectedKey("norte");
-            this.byId("centerDialog").open();
+            MessageToast.show("SAP aún no expone un servicio para crear centros; la pantalla permanece en modo consulta.");
         },
 
         onCloseCenterDialog: function () { this.byId("centerDialog").close(); },
 
         onSaveCenter: function () {
-            var sName = this.byId("newCenterName").getValue().trim();
-            var sCode = this.byId("newCenterCode").getValue().trim();
-            var sZoneId = this.byId("newCenterZone").getSelectedKey();
-            var sLocation = this.byId("newCenterLocation").getValue().trim();
-            if (!sName || !sCode || !sZoneId || sZoneId === "all") {
-                MessageToast.show("Captura nombre, código y zona");
-                return;
-            }
-
-            var oAttendanceModel = this.getModel("attendance");
-            var oZone = (oAttendanceModel.getProperty("/zones") || []).find(function (oItem) { return oItem.id === sZoneId; });
-            var aCenters = oAttendanceModel.getProperty("/centers") || [];
-            aCenters.push({
-                id: sName.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-"),
-                name: sName,
-                code: sCode.toUpperCase(),
-                zoneId: sZoneId,
-                zone: oZone.name,
-                users: 0,
-                present: 0,
-                late: 0,
-                absent: 0,
-                attendance: 0,
-                active: true,
-                location: sLocation
-            });
-            oAttendanceModel.refresh(true);
-            this.onCloseCenterDialog();
-            this._applyFilters();
-            MessageToast.show("Centro de trabajo creado");
+            MessageToast.show("No se enviaron cambios: falta el endpoint de mantenimiento de centros en SAP.");
         },
 
         onNavOverview: function () { this.navTo("overview"); }

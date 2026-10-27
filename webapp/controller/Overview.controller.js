@@ -13,7 +13,7 @@ sap.ui.define([
         onInit: function () {
             this.setModel(new JSONModel({
                 granularity: "week",
-                referenceDate: "2026-08-31",
+                referenceDate: "2026-10-25",
                 periodLabel: "",
                 scheduleId: "",
                 status: "all",
@@ -115,6 +115,21 @@ sap.ui.define([
         },
 
         _refreshDashboard: function () {
+            var oSapOverview = this.getModel("attendance").getProperty("/sapOverview");
+            var bUsesDefaultFilters = !this.getModel("view").getProperty("/scheduleId") &&
+                this.getModel("view").getProperty("/status") === "all" &&
+                this.getModel("view").getProperty("/granularity") === "week";
+            if (oSapOverview && bUsesDefaultFilters) {
+                this._getPeriod();
+                this.getModel("view").setProperty("/zoneSummaries", oSapOverview.zoneSummaries || []);
+                this.getModel("view").setProperty("/zoneInefficiency", oSapOverview.zoneInefficiency || []);
+                this.getModel("view").setProperty("/incidentTrend", oSapOverview.incidentTrend || []);
+                this.getModel("view").setProperty("/criticalCenters", oSapOverview.criticalCenters || []);
+                this.getModel("view").setProperty("/overviewSummary", oSapOverview.overviewSummary || {});
+                this.getModel("view").setProperty("/priorityText", oSapOverview.priorityText || "");
+                this._configureCharts();
+                return;
+            }
             var oPeriod = this._getPeriod();
             var aRecords = this._getEnrichedRecords(oPeriod);
             var aZones = (this.getModel("attendance").getProperty("/zones") || []).filter(function (oZone) {

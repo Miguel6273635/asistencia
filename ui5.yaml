@@ -10,11 +10,16 @@ server:
       afterMiddleware: compression
       configuration:
         ignoreCertErrors: false # If set to true, certificate errors will be ignored. E.g. self-signed certificates will be accepted
+        backend:
+          - path: /sap
+            destination: QAS_MITSU_DASH
         ui5:
           path:
             - /resources
             - /test-resources
           url: https://ui5.sap.com
+    - name: ui5-tooling-transpile-middleware
+      afterMiddleware: compression
     - name: fiori-tools-appreload
       afterMiddleware: compression
       configuration:
@@ -27,6 +32,9 @@ server:
         flp:
           theme: sap_horizon
 builder:
+  customTasks:
+    - name: ui5-tooling-transpile-task
+      afterTask: replaceVersion
   resources:
     excludes:
       - /test/**
