@@ -5,8 +5,9 @@ sap.ui.define([
   "sap/ui/model/json/JSONModel",
   "../model/IdentityService",
   "../model/EmployeeService",
-  "../model/AttendanceService"
-], function (Controller, MessageBox, MessageToast, JSONModel, IdentityService, EmployeeService, AttendanceService) {
+  "../model/AttendanceService",
+  "../model/Diagnostics"
+], function (Controller, MessageBox, MessageToast, JSONModel, IdentityService, EmployeeService, AttendanceService, Diagnostics) {
   "use strict";
 
   var ACTION_CONFIG = {
@@ -25,6 +26,9 @@ sap.ui.define([
 
   return Controller.extend("com.mitsu.checkin.controller.Main", {
     onInit: function () {
+      Diagnostics.info("UI", "Main.controller inicializado", {
+        hasActiveIdentity: IdentityService.hasActiveIdentity()
+      });
       this._selectedSection = "attendance";
       this.getView().setModel(new JSONModel({ sideExpanded: false }), "ui");
       this._updateActionUI();
@@ -60,6 +64,11 @@ sap.ui.define([
       var attendanceModel = this.getView().getModel("attendance");
       var dataSource = this.getOwnerComponent().getManifestEntry("/sap.app/dataSources/attendanceOData");
       var identity = IdentityService.getActiveIdentity();
+      Diagnostics.info("FLOW", "Iniciando consulta del empleado", {
+        serviceRoot: dataSource.uri,
+        identity: identity,
+        temporaryAccess: Boolean(fromTemporaryAccess)
+      });
 
       this._activeIdentity = identity;
 
@@ -68,6 +77,7 @@ sap.ui.define([
       appModel.setProperty("/identityLookupError", "");
 
       return EmployeeService.readEmployee(dataSource.uri, identity).then(function (employee) {
+        Diagnostics.info("FLOW", "Empleado recibido; se solicitará su historial", employee);
         var currentEmployee = attendanceModel.getProperty("/employee") || {};
         Object.keys(employee).forEach(function (property) {
           if (employee[property]) {
@@ -79,6 +89,7 @@ sap.ui.define([
         appModel.setProperty("/requiresIdentity", false);
         this._loadHistory(currentEmployee);
       }.bind(this)).catch(function (error) {
+        Diagnostics.error("FLOW", "No fue posible cargar el empleado", error);
         appModel.setProperty("/employeeSource", "error");
         if (fromTemporaryAccess) {
           IdentityService.clearIdentity();
@@ -119,6 +130,7 @@ sap.ui.define([
       }
 
       IdentityService.setAuthenticatedIdentity(identity);
+      Diagnostics.info("IDENTITY", "Identidad temporal aceptada", identity);
       this._loadEmployeeAfterInitialData(true);
     },
 
@@ -126,25 +138,18 @@ sap.ui.define([
       this.getView().getModel("app").setProperty("/identityLookupError", "");
     },
 
-    onChangeTestEmployee: function () {
+    onRefreshData: function () {
       var appModel = this.getView().getModel("app");
-      var attendanceModel = this.getView().getModel("attendance");
-      IdentityService.clearIdentity();
-      this._activeIdentity = null;
-      attendanceModel.setProperty("/employee", {
-        id: "", name: "", role: "", position: "", center: "", centerCode: "",
-        address: "", schedule: "", initials: "", email: "", zone: ""
-      });
-      attendanceModel.setProperty("/history", []);
-      attendanceModel.setProperty("/today/entry", "—");
-      attendanceModel.setProperty("/today/mealStart", "—");
-      attendanceModel.setProperty("/today/mealEnd", "—");
-      attendanceModel.setProperty("/today/exit", "—");
-      attendanceModel.setProperty("/today/nextAction", "CHECK_IN");
+
+      if (!IdentityService.hasActiveIdentity()) {
+        MessageToast.show("No hay un empleado activo para actualizar");
+        return;
+      }
+
       appModel.setProperty("/employeeError", "");
       appModel.setProperty("/historyError", "");
-      appModel.setProperty("/identityLookupError", "");
-      appModel.setProperty("/requiresIdentity", true);
+      MessageToast.show("Actualizando datos desde SAP");
+      this._loadEmployee(false);
     },
 
     _loadHistory: function (employee) {
@@ -153,13 +158,20 @@ sap.ui.define([
       var dataSource = this.getOwnerComponent().getManifestEntry("/sap.app/dataSources/attendanceOData");
       var now = new Date();
       var enterDate = now.getFullYear() + "-" + String(now.getMonth() + 1).padStart(2, "0") + "-" + String(now.getDate()).padStart(2, "0");
+      Diagnostics.info("FLOW", "Iniciando consulta del historial", {
+        serviceRoot: dataSource.uri,
+        personalNumber: employee.id,
+        enterDate: enterDate
+      });
 
       appModel.setProperty("/historyLoading", true);
       appModel.setProperty("/historyError", "");
       AttendanceService.readHistory(dataSource.uri, employee.id, enterDate).then(function (history) {
+        Diagnostics.info("FLOW", "Historial listo para la interfaz", history);
         attendanceModel.setProperty("/history", history);
         this._applyTodayFromHistory(history);
       }.bind(this)).catch(function (error) {
+        Diagnostics.error("FLOW", "No fue posible cargar el historial", error);
         appModel.setProperty("/historyError", error.message);
       }).finally(function () {
         appModel.setProperty("/historyLoading", false);
@@ -285,6 +297,7 @@ sap.ui.define([
     _requestLocationAndMark: function (action) {
       var appModel = this.getView().getModel("app");
       appModel.setProperty("/busy", true);
+      Diagnostics.info("GEO", "Solicitando ubicación para el marcaje", { action: action });
 
       if (!navigator.geolocation) {
         appModel.setProperty("/busy", false);
@@ -294,7 +307,8 @@ sap.ui.define([
 
       navigator.geolocation.getCurrentPosition(
         function (position) { this._register(action, position); }.bind(this),
-        function () {
+        function (error) {
+          Diagnostics.error("GEO", "No fue posible obtener la ubicación", error);
           appModel.setProperty("/busy", false);
           MessageBox.error("Activa el permiso de ubicación para realizar el marcaje.");
         },
@@ -305,6 +319,16 @@ sap.ui.define([
     _register: function (action, position) {
       var dataSource = this.getOwnerComponent().getManifestEntry("/sap.app/dataSources/attendanceOData");
       var employee = this.getView().getModel("attendance").getProperty("/employee");
+      Diagnostics.info("FLOW", "Enviando marcaje a SAP", {
+        action: action,
+        serviceRoot: dataSource.uri,
+        employeeId: employee && employee.id,
+        coordinates: position && position.coords ? {
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+          accuracy: position.coords.accuracy
+        } : null
+      });
       AttendanceService.mark(dataSource.uri, action, position, employee, this._activeIdentity.device).then(function (result) {
         var model = this.getView().getModel("attendance");
         var config = ACTION_CONFIG[action];
@@ -316,6 +340,7 @@ sap.ui.define([
         this._loadHistory(employee);
         MessageToast.show(config.title + " correctamente");
       }.bind(this)).catch(function (error) {
+        Diagnostics.error("FLOW", "No fue posible registrar el marcaje", error);
         this.getView().getModel("app").setProperty("/busy", false);
         MessageBox.error("No fue posible registrar el evento en SAP. " + error.message);
       }.bind(this));

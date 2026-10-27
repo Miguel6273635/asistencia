@@ -1,4 +1,6 @@
-sap.ui.define([], function () {
+sap.ui.define([
+  "./Diagnostics"
+], function (Diagnostics) {
   "use strict";
 
   var EVENT_CODES = {
@@ -101,6 +103,10 @@ sap.ui.define([], function () {
   }
 
   function requestCsrfToken(serviceRoot) {
+    var requestId = Diagnostics.request("GET", serviceRoot, {
+      purpose: "Solicitar token CSRF",
+      headers: { Accept: "application/json", "X-CSRF-Token": "Fetch" }
+    });
     return fetch(serviceRoot, {
       method: "GET",
       credentials: "same-origin",
@@ -109,14 +115,24 @@ sap.ui.define([], function () {
         "X-CSRF-Token": "Fetch"
       }
     }).then(function (response) {
-      if (!response.ok) {
-        throw new Error("No fue posible solicitar el token CSRF (HTTP " + response.status + ")");
-      }
-      var token = response.headers.get("X-CSRF-Token");
-      if (!token) {
-        throw new Error("SAP no devolvió el token CSRF");
-      }
-      return token;
+      return response.text().then(function (body) {
+        Diagnostics.response(requestId, response.status, response.statusText, body, {
+          contentType: response.headers.get("content-type"),
+          finalUrl: response.url,
+          csrfTokenReceived: Boolean(response.headers.get("X-CSRF-Token"))
+        });
+        if (!response.ok) {
+          throw new Error("No fue posible solicitar el token CSRF (HTTP " + response.status + ")");
+        }
+        var token = response.headers.get("X-CSRF-Token");
+        if (!token) {
+          throw new Error("SAP no devolvió el token CSRF");
+        }
+        return token;
+      });
+    }).catch(function (error) {
+      Diagnostics.error("CSRF", "Falló la solicitud del token CSRF", error, requestId);
+      throw error;
     });
   }
 
@@ -146,7 +162,14 @@ sap.ui.define([], function () {
       };
       var root = String(serviceRoot || "").replace(/\/?$/, "/");
 
+      Diagnostics.info("MARK", "Payload preparado para AttendanceRecordSet", payload);
       return requestCsrfToken(root).then(function (token) {
+        var url = root + "AttendanceRecordSet";
+        var requestId = Diagnostics.request("POST", url, {
+          entitySet: "AttendanceRecordSet",
+          payload: payload,
+          headers: { Accept: "application/json", "Content-Type": "application/json", "X-CSRF-Token": "[REDACTADO]" }
+        });
         return fetch(root + "AttendanceRecordSet", {
           method: "POST",
           credentials: "same-origin",
@@ -156,21 +179,38 @@ sap.ui.define([], function () {
             "X-CSRF-Token": token
           },
           body: JSON.stringify(payload)
-        });
-      }).then(function (response) {
-        if (!response.ok) {
+        }).then(function (response) {
           return response.text().then(function (body) {
-            throw new Error("AttendanceRecordSet respondió con HTTP " + response.status + ": " + body);
+            Diagnostics.response(requestId, response.status, response.statusText, body, {
+              contentType: response.headers.get("content-type"),
+              finalUrl: response.url
+            });
+            if (!response.ok) {
+              throw new Error("AttendanceRecordSet respondió con HTTP " + response.status + ": " + body);
+            }
+            var parsedResponse = {};
+            if (body) {
+              try {
+                parsedResponse = JSON.parse(body);
+              } catch (parseError) {
+                Diagnostics.error("PARSE", "AttendanceRecordSet no devolvió JSON válido", parseError, requestId);
+                parsedResponse = { rawBody: body };
+              }
+            }
+            Diagnostics.mapping("AttendanceRecordSet", parsedResponse, { success: true, registeredAt: now }, requestId);
+            return parsedResponse;
           });
-        }
-        return response.text().then(function (body) {
+        }).then(function (parsedResponse) {
           return {
             success: true,
             payload: payload,
-            response: body ? JSON.parse(body) : {},
+            response: parsedResponse,
             registeredAt: now
           };
         });
+      }).catch(function (error) {
+        Diagnostics.error("MARK", "Falló el registro de asistencia", error);
+        throw error;
       });
     },
 
@@ -181,17 +221,39 @@ sap.ui.define([], function () {
       var filter = "PersonalNumber eq '" + safeNumber + "' and EnterDate eq '" + safeDate + "'";
       var url = root + "AttendanceHistorySet?$filter=" + encodeURIComponent(filter) + "&$format=json";
 
+      var requestId = Diagnostics.request("GET", url, {
+        entitySet: "AttendanceHistorySet",
+        filter: filter,
+        personalNumber: personalNumber,
+        enterDate: enterDate
+      });
       return fetch(url, {
         method: "GET",
         credentials: "same-origin",
         headers: { "Accept": "application/json" }
       }).then(function (response) {
-        if (!response.ok) {
-          throw new Error("AttendanceHistorySet respondió con HTTP " + response.status);
-        }
-        return response.json();
+        return response.text().then(function (body) {
+          Diagnostics.response(requestId, response.status, response.statusText, body, {
+            contentType: response.headers.get("content-type"),
+            finalUrl: response.url
+          });
+          if (!response.ok) {
+            throw new Error("AttendanceHistorySet respondió con HTTP " + response.status + ". Ruta: " + url.split("?")[0]);
+          }
+          try {
+            return body ? JSON.parse(body) : {};
+          } catch (parseError) {
+            Diagnostics.error("PARSE", "AttendanceHistorySet no devolvió JSON válido", parseError, requestId);
+            throw new Error("AttendanceHistorySet devolvió una respuesta que no es JSON");
+          }
+        });
       }).then(function (payload) {
-        return mapHistory(odataResults(payload));
+        var history = mapHistory(odataResults(payload));
+        Diagnostics.mapping("AttendanceHistorySet", payload, history, requestId);
+        return history;
+      }).catch(function (error) {
+        Diagnostics.error("HISTORY", "Falló la consulta o el mapeo de AttendanceHistorySet", error, requestId);
+        throw error;
       });
     }
   };

@@ -3,7 +3,7 @@
   "sap.app": {
     "id": "com.mitsu.checkin",
     "type": "application",
-    "applicationVersion": { "version": "0.1.1" },
+    "applicationVersion": { "version": "0.1.2" },
     "title": "Mi asistencia",
     "description": "Marcajes de entrada, comida y salida para el personal de Mitsubishi",
     "dataSources": {

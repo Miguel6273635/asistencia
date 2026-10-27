@@ -1,6 +1,6 @@
 _schema-version: "3.3"
 ID: mitsu-checkin
-version: 0.1.1
+version: 0.1.3
 description: Aplicación BTP de marcajes para el personal de Mitsubishi
 
 modules:

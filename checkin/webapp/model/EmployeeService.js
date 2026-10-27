@@ -1,4 +1,6 @@
-sap.ui.define([], function () {
+sap.ui.define([
+  "./Diagnostics"
+], function (Diagnostics) {
   "use strict";
 
   function firstValue(record, properties, fallback) {
@@ -85,25 +87,44 @@ sap.ui.define([], function () {
       if (!safeLookupValue) {
         return Promise.reject(new Error("No existe número de nómina ni correo para consultar EmployeeSet"));
       }
+   var requestId = Diagnostics.request("GET", url, {
+        entitySet: "EmployeeSet",
+        filter: filter,
+        lookupField: lookupField,
+        lookupValue: lookupValue
+      });
 
       return fetch(url, {
         method: "GET",
         credentials: "same-origin",
         headers: { "Accept": "application/json" }
       }).then(function (response) {
-        if (!response.ok) {
-          return response.text().then(function (body) {
-            console.error("EmployeeSet HTTP " + response.status, url, body);
-            throw new Error("EmployeeSet respondió con HTTP " + response.status + ". Ruta: " + url.split("?")[0]);
+        return response.text().then(function (body) {
+          Diagnostics.response(requestId, response.status, response.statusText, body, {
+            contentType: response.headers.get("content-type"),
+            finalUrl: response.url
           });
-        }
-        return response.json();
+          if (!response.ok) {
+            throw new Error("EmployeeSet respondió con HTTP " + response.status + ". Ruta: " + url.split("?")[0]);
+           }
+          try {
+            return body ? JSON.parse(body) : {};
+          } catch (parseError) {
+            Diagnostics.error("PARSE", "EmployeeSet no devolvió JSON válido", parseError, requestId);
+            throw new Error("EmployeeSet devolvió una respuesta que no es JSON");
+          }
+        });
       }).then(function (payload) {
         var results = odataResults(payload);
         if (!results.length) {
           throw new Error("No se encontró el empleado " + lookupValue);
         }
-        return mapEmployee(results[0], identity.personalNumber);
+         var employee = mapEmployee(results[0], identity.personalNumber);
+        Diagnostics.mapping("EmployeeSet", payload, employee, requestId);
+        return employee;
+      }).catch(function (error) {
+        Diagnostics.error("EMPLOYEE", "Falló la consulta o el mapeo de EmployeeSet", error, requestId);
+        throw error;
       });
     }
   };

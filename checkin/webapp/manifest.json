@@ -3,7 +3,7 @@
   "sap.app": {
     "id": "com.mitsu.checkin",
     "type": "application",
-    "applicationVersion": { "version": "0.1.1" },
+    "applicationVersion": { "version": "0.1.3" },
     "title": "Mi asistencia",
     "description": "Marcajes de entrada, comida y salida para el personal de Mitsubishi",
     "dataSources": {
@@ -12,7 +12,7 @@
         "type": "JSON"
       },
       "attendanceOData": {
-        "uri": "/sap/opu/odata/sap/ZHMC_ATTENDANCE_MONITORING_SRV/",
+        "uri": "sap/opu/odata/sap/ZHMC_ATTENDANCE_MONITORING_SRV/",
         "type": "OData",
         "settings": {
           "odataVersion": "2.0"
