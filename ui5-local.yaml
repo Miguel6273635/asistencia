@@ -11,6 +11,7 @@ framework:
     - name: sap.m
     - name: sap.ui.core
     - name: sap.ushell
+    - name: sap.ui.export
     - name: themelib_sap_horizon
 server:
   customMiddleware:
@@ -31,7 +32,7 @@ server:
         ignoreCertErrors: false # If set to true, certificate errors will be ignored. E.g. self-signed certificates will be accepted
         backend:
           - path: /sap
-            destination: QAS_MITSU_DASH
+            destination: onPremECC_QAS_APP
     - name: ui5-tooling-transpile-middleware
       afterMiddleware: compression
 builder:

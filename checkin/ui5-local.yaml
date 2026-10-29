@@ -21,7 +21,7 @@ server:
         ignoreCertErrors: false
         backend:
           - path: /sap
-            destination: QAS_MITSU_DASH
+            destination: onPremECC_QAS_APP
         ui5:
           path:
             - /resources

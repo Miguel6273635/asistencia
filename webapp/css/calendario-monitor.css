@@ -1,0 +1,20 @@
+
+/* Selector emergente de fecha de referencia - Monitor de Asistencia */
+.monitorPeriodPopover .sapMPopoverCont { padding: 0.55rem 0.7rem; }
+.monitorPeriodPopupBody { gap: 0.3rem; }
+.monitorCalendarHeader { margin-bottom: 0.55rem; }
+.monitorCalendarHeader .sapMTitle { color: #0a6ed1; font-weight: 700; }
+.monitorCalendarWeekdays { margin-bottom: 0.15rem; }
+.monitorCalendarWeekdays .sapMText { color: #61758a; font-size: 0.75rem; }
+.monitorCalendarWeekRow { border-radius: 0.45rem; margin: 0.1rem 0; }
+.monitorCalendarSelectedRow { background: #d9ecff; }
+.monitorCalendarDay .sapMBtnInner { border-radius: 0.45rem; min-width: 2.4rem; }
+.monitorCalendarDayOutside .sapMBtnContent { color: #91a0af; }
+.monitorCalendarWeekSelected .sapMBtnContent { color: #0057b7; font-weight: 700; }
+.monitorCalendarChoiceRow { margin: 0.2rem 0; }
+.monitorCalendarChoice .sapMBtnInner { border: 1px solid #d8e2ea; border-radius: 0.5rem; height: 3rem; }
+.monitorCalendarChoice .sapMBtnContent { line-height: 2.85rem; }
+.monitorCalendarChoiceSelected .sapMBtnInner { background: #d9ecff; border-color: #0a6ed1; }
+.monitorCalendarChoiceSelected .sapMBtnContent { color: #0057b7; font-weight: 700; }
+.monitorCalendarActions { margin-top: 0.75rem; padding-top: 0.55rem; border-top: 1px solid #e5e9ed; gap: 0.4rem; }
+.monitorCalendarTrigger .sapMBtnInner { justify-content: space-between; }

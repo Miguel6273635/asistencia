@@ -31,7 +31,8 @@
         <Title text="Checkin" level="H2" class="monitorBrandTitle" />
         <Button icon="sap-icon://slim-arrow-down" type="Transparent" tooltip="Opciones de la aplicación" />
         <ToolbarSpacer />
-        <Button text="Cambiar empleado" icon="sap-icon://employee-rejections" type="Transparent" press=".onChangeTestEmployee" />
+        <Button text="Recargar datos" icon="sap-icon://refresh" type="Transparent" press=".onRefreshData"
+          enabled="{= !${app>/employeeLoading} &amp;&amp; !${app>/historyLoading} }" tooltip="Actualizar empleado y marcajes desde SAP" />
         <Avatar initials="{attendance>/employee/initials}" displaySize="XS" />
       </tnt:ToolHeader>
     </tnt:header>
@@ -89,20 +90,26 @@
                       <VBox id="connectorMealEnd" class="stepConnector" />
                       <VBox id="stepExit" class="timeStep" alignItems="Center"><VBox class="stepIcon"><core:Icon src="sap-icon://log" /></VBox><Text text="Salida" class="stepLabel" /><Title text="{attendance>/today/exit}" level="H3" /><Text text="Pendiente" class="stepState" /></VBox>
                     </HBox>
+                    <MessageStrip visible="{= !!${attendance>/today/validationMessage} }"
+                      text="{attendance>/today/validationMessage}" type="{attendance>/today/validationType}"
+                      showIcon="true" class="validationStrip" />
                     <HBox class="markActions" wrap="Wrap">
-                      <Button id="checkInAction" text="Registrar entrada" icon="sap-icon://log" type="Emphasized" press=".onCheckIn" />
+                      <Button id="checkInAction" text="{attendance>/today/checkInText}" icon="sap-icon://log" type="Emphasized" press=".onCheckIn" />
+                      <Button id="lateJustificationAction" text="{attendance>/today/lateJustificationButtonText}" icon="sap-icon://notes"
+                        type="Attention" visible="{= ${attendance>/today/isLateNow} &amp;&amp; ${attendance>/today/nextAction} === 'CHECK_IN' }"
+                        press=".onOpenLateJustification" />
                       <Button id="mealStartAction" text="Iniciar comida" icon="sap-icon://meal" enabled="false" press=".onMealStart" />
                       <Button id="mealEndAction" text="Finalizar comida" icon="sap-icon://meal" enabled="false" press=".onMealEnd" />
-                      <Button id="checkOutAction" text="Registrar salida" icon="sap-icon://log" enabled="false" press=".onCheckOut" />
+                      <Button id="checkOutAction" text="{attendance>/today/checkOutText}" icon="sap-icon://log" enabled="false" press=".onCheckOut" />
                     </HBox>
-                    <MessageStrip text="La ubicación se solicita únicamente al confirmar el marcaje." type="Information" showIcon="true" class="privacyStrip" />
+                    <MessageStrip text="El marcaje se envía a SAP sin solicitar la ubicación del dispositivo." type="Information" showIcon="true" class="privacyStrip" />
                   </VBox>
 
                   <VBox class="panel historyPanel compactHistoryPanel" busy="{app>/historyLoading}" busyIndicatorDelay="0">
                     <HBox class="panelHeading" alignItems="Center"><core:Icon src="sap-icon://list" /><VBox><Title text="Marcajes de hoy" level="H2" /><Text text="Datos obtenidos de SAP" class="mutedText" /></VBox></HBox>
                     <Table items="{attendance>/history}" class="historyTable" inset="false" noDataText="No hay marcajes registrados para hoy">
-                      <columns><Column><Text text="Fecha" /></Column><Column><Text text="Entrada" /></Column><Column><Text text="Inicio comida" /></Column><Column><Text text="Fin comida" /></Column><Column><Text text="Salida" /></Column><Column><Text text="Horas" /></Column></columns>
-                      <items><ColumnListItem vAlign="Middle"><cells><Text text="{attendance>date}" class="strongText" /><Text text="{attendance>entry}" /><Text text="{attendance>mealStart}" /><Text text="{attendance>mealEnd}" /><Text text="{attendance>exit}" /><Text text="{attendance>hours}" class="strongText" /></cells></ColumnListItem></items>
+                      <columns><Column><Text text="Fecha" /></Column><Column><Text text="Entrada" /></Column><Column><Text text="Inicio comida" /></Column><Column><Text text="Fin comida" /></Column><Column><Text text="Salida" /></Column><Column><Text text="Horas" /></Column><Column><Text text="Estatus" /></Column></columns>
+                      <items><ColumnListItem vAlign="Middle"><cells><Text text="{attendance>date}" class="strongText" /><Text text="{attendance>entry}" /><Text text="{attendance>mealStart}" /><Text text="{attendance>mealEnd}" /><Text text="{attendance>exit}" /><Text text="{attendance>hours}" class="strongText" /><Text text="{attendance>status}" class="historyStatus" /></cells></ColumnListItem></items>
                     </Table>
                     <MessageStrip visible="{= !!${app>/historyError} }" text="{app>/historyError}" type="Error" showIcon="true" />
                   </VBox>

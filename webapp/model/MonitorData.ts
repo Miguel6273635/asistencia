@@ -168,6 +168,14 @@ function mapRecords(rows: ODataRow[], schedules: Record<string, unknown>[]): Rec
     });
 }
 
+export function mapAttendanceRecords(
+    rows: ODataRow[],
+    schedules: Record<string, unknown>[] = []
+): Record<string, unknown>[] {
+    return mapRecords(rows, schedules);
+}
+
+
 function mapEmployees(rows: ODataRow[], history: ODataRow[]): Record<string, unknown>[] {
     const employees = new Map<string, Record<string, unknown>>();
     rows.forEach((row) => {

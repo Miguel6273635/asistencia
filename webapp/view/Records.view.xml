@@ -23,9 +23,34 @@
                             <core:Item key="year" text="Año" />
                         </Select>
                     </VBox>
-                    <VBox class="filterField">
+                    <VBox class="filterField" visible="{= ${view>/periodType} === 'week'}">
                         <Label text="Fecha de referencia" />
-                        <DatePicker value="{view>/referenceDate}" valueFormat="yyyy-MM-dd" displayFormat="dd/MM/yyyy" width="11rem" change=".onReferenceDateChange" />
+                        <DatePicker
+                            value="{view>/referenceDate}"
+                            valueFormat="yyyy-MM-dd"
+                            displayFormat="dd/MM/yyyy"
+                            width="11rem"
+                            change=".onReferenceDateChange" />
+                    </VBox>
+                    <VBox class="filterField" visible="{= ${view>/periodType} === 'month'}">
+                        <Label text="Mes" />
+                        <Select
+                            width="10rem"
+                            selectedKey="{view>/selectedMonth}"
+                            change=".onMonthYearChange"
+                            items="{view>/monthOptions}">
+                            <core:Item key="{view>key}" text="{view>text}" />
+                        </Select>
+                    </VBox>
+                    <VBox class="filterField" visible="{= ${view>/periodType} === 'month' || ${view>/periodType} === 'year'}">
+                        <Label text="Año" />
+                        <Select
+                            width="7rem"
+                            selectedKey="{view>/selectedYear}"
+                            change=".onMonthYearChange"
+                            items="{view>/yearOptions}">
+                            <core:Item key="{view>key}" text="{view>text}" />
+                        </Select>
                     </VBox>
                     <VBox class="filterField periodAppliedField">
                         <Label text="Rango aplicado" />
@@ -33,13 +58,8 @@
                     </VBox>
                     <VBox class="filterField">
                         <Label text="Centro de trabajo" />
-                        <Select width="14rem" selectedKey="{view>/center}" change=".onFilterChange">
-                            <core:Item key="all" text="Todos" />
-                            <core:Item key="Naucalpan" text="Naucalpan" />
-                            <core:Item key="Tlalnepantla" text="Tlalnepantla" />
-                            <core:Item key="Coyoacán" text="Coyoacán" />
-                            <core:Item key="Texcoco" text="Texcoco" />
-                            <core:Item key="Santa Fe" text="Santa Fe" />
+                        <Select width="14rem" selectedKey="{view>/center}" change=".onFilterChange" items="{view>/centerOptions}">
+                            <core:Item key="{view>key}" text="{view>text}" />
                         </Select>
                     </VBox>
                     <VBox class="filterField">

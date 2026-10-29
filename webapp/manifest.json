@@ -36,6 +36,7 @@
         "sap.f": {},
         "sap.tnt": {},
         "sap.ui.layout": {},
+        "sap.ui.export": {},
         "sap.viz": {},
         "sap.ui.vbm": {}
       }
