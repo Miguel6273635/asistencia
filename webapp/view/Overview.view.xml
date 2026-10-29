@@ -1,184 +1,117 @@
-<mvc:View
-    controllerName="com.mitsu.monitorasistencia.controller.Overview"
-    xmlns:mvc="sap.ui.core.mvc"
-    xmlns="sap.m"
-    xmlns:core="sap.ui.core"
-    xmlns:l="sap.ui.layout"
-    xmlns:viz="sap.viz.ui5.controls"
-    xmlns:viz.data="sap.viz.ui5.data"
-    xmlns:viz.feeds="sap.viz.ui5.controls.common.feeds">
-    <Page showHeader="false" class="monitorPage">
-        <content>
-            <VBox class="pageContainer compactPage overviewPage">
-                <Breadcrumbs currentLocationText="Resumen por zona" class="sapUiTinyMarginBottom">
-                    <Link text="Inicio" enabled="false" />
-                </Breadcrumbs>
-                <Title text="Resumen por zona" level="H1" class="pageTitle" />
-                <Text text="Eficiencia operativa, incidencias y centros que requieren atención" class="pageSubtitle" />
+<mvc:View controllerName="com.mitsu.monitorasistencia.controller.Overview"
+  xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m" xmlns:core="sap.ui.core"
+  xmlns:l="sap.ui.layout" xmlns:viz="sap.viz.ui5.controls"
+  xmlns:viz.data="sap.viz.ui5.data" xmlns:viz.feeds="sap.viz.ui5.controls.common.feeds">
+  <Page showHeader="false" class="monitorPage">
+    <content>
+      <VBox class="pageContainer compactPage overviewPage">
+        <Breadcrumbs currentLocationText="Resumen por zona" class="sapUiTinyMarginBottom">
+          <Link text="Inicio" enabled="false"/>
+        </Breadcrumbs>
+        <Title text="Resumen por zona" level="H1" class="pageTitle"/>
+        <Text text="Asistencia e incidencias por zona" class="pageSubtitle"/>
+        <OverflowToolbar class="filterBar sapUiSmallMarginTop sapUiSmallMarginBottom">
+          <VBox class="filterField">
+            <Label text="Periodo"/>
+            <Select width="10rem" selectedKey="{view>/granularity}" change=".onPeriodChange">
+              <core:Item key="week" text="Semana"/>
+              <core:Item key="month" text="Mes"/>
+              <core:Item key="year" text="Año"/>
+            </Select>
+          </VBox>
+          <VBox class="filterField">
+            <Label text="Fecha de referencia"/>
+            <Button text="{view>/selectionLabel}" icon="sap-icon://calendar" press=".onOpenPeriodPicker" width="17rem" class="monitorCalendarTrigger"/>
+          </VBox>
+          <ObjectStatus text="{view>/periodLabel}" state="Information" inverted="true"/>
+          <ToolbarSpacer/>
+          <Button text="Aplicar filtros" type="Emphasized" icon="sap-icon://filter" press=".onApplyFilters" busy="{view>/loading}"/>
+        </OverflowToolbar>
 
-                <OverflowToolbar class="filterBar sapUiSmallMarginTop sapUiSmallMarginBottom">
-                    <VBox class="filterField">
-                        <Label text="Periodo" />
-                        <Select width="10rem" selectedKey="{view>/granularity}" change=".onPeriodChange">
-                            <core:Item key="week" text="Semana" />
-                            <core:Item key="month" text="Mes" />
-                            <core:Item key="year" text="Año" />
-                        </Select>
-                    </VBox>
-                    <VBox class="filterField">
-                        <Label text="Fecha de referencia" />
-                        <DatePicker value="{view>/referenceDate}" valueFormat="yyyy-MM-dd" displayFormat="dd/MM/yyyy" width="12rem" change=".onReferenceDateChange" />
-                    </VBox>
-                    <VBox class="filterField">
-                        <Label text="Horario" />
-                        <ComboBox width="18rem" placeholder="Todos los horarios" selectedKey="{view>/scheduleId}" selectionChange=".onPeriodChange" items="{attendance>/schedules}" showSecondaryValues="true" filterSecondaryValues="true">
-                            <core:ListItem key="{attendance>id}" text="{attendance>name}" additionalText="{attendance>shortDescription}" />
-                        </ComboBox>
-                    </VBox>
-                    <VBox class="filterField">
-                        <Label text="Estatus" />
-                        <Select width="12rem" selectedKey="{view>/status}" change=".onPeriodChange">
-                            <core:Item key="all" text="Todos" />
-                            <core:Item key="present" text="Presentes" />
-                            <core:Item key="late" text="Retardos" />
-                            <core:Item key="absent" text="Ausencias" />
-                            <core:Item key="outside" text="Fuera de zona" />
-                        </Select>
-                    </VBox>
-                    <ObjectStatus text="{view>/periodLabel}" state="Information" inverted="true" />
-                    <ToolbarSpacer />
-                    <Button text="Aplicar filtros" type="Emphasized" icon="sap-icon://filter" press=".onApplyFilters" />
-                </OverflowToolbar>
-
-                <List items="{view>/zoneSummaries}" showSeparators="None" class="zoneCardList">
-                    <CustomListItem type="Active" press=".onZonePress" class="zoneSummaryCard">
-                        <customData><core:CustomData key="zoneId" value="{view>zoneId}" /></customData>
-                        <VBox width="100%">
-                            <HBox justifyContent="SpaceBetween" alignItems="Start">
-                                <VBox><Title text="{view>name}" level="H4" /><Text text="{view>meta}" class="zoneMeta" /></VBox>
-                                <ObjectStatus text="{view>riskText}" state="{view>state}" inverted="true" />
-                            </HBox>
-                            <HBox justifyContent="SpaceBetween" alignItems="End" class="zoneMetricRow">
-                                <VBox><ObjectNumber number="{view>attendance}" unit="% asistencia" state="{view>state}" /><Text text="{view>incidentSummary}" class="zoneIncidentSummary" /></VBox>
-                                <ObjectStatus text="{view>inefficiencyText}" state="{view>state}" />
-                            </HBox>
-                        </VBox>
-                    </CustomListItem>
-                </List>
-
-                <l:Grid defaultSpan="XL8 L8 M12 S12" hSpacing="1" vSpacing="1" class="sapUiSmallMarginTop overviewPrimaryGrid">
-                    <Panel headerText="Ineficiencia por zona (%)" class="dashboardPanel inefficiencyPanel overviewBalancedPanel">
-                        <content>
-                            <viz:VizFrame id="inefficiencyChart" vizType="stacked_bar" width="100%" height="11.25rem" selectData=".onZoneChartSelect" class="overviewInefficiencyChart">
-                                <viz:dataset>
-                                    <viz.data:FlattenedDataset data="{view>/zoneInefficiency}">
-                                        <viz.data:dimensions>
-                                            <viz.data:DimensionDefinition name="Zona" value="{view>zone}" />
-                                        </viz.data:dimensions>
-                                        <viz.data:measures>
-                                            <viz.data:MeasureDefinition name="Ausencias" value="{view>absentRate}" />
-                                            <viz.data:MeasureDefinition name="Retardos" value="{view>lateRate}" />
-                                        </viz.data:measures>
-                                    </viz.data:FlattenedDataset>
-                                </viz:dataset>
-                                <viz:feeds>
-                                    <viz.feeds:FeedItem uid="valueAxis" type="Measure" values="Ausencias,Retardos" />
-                                    <viz.feeds:FeedItem uid="categoryAxis" type="Dimension" values="Zona" />
-                                </viz:feeds>
-                            </viz:VizFrame>
-                            <HBox alignItems="Center" class="chartHint">
-                                <core:Icon src="sap-icon://hint" class="sapUiTinyMarginEnd" />
-                                <Text text="Cada barra suma retardos y ausencias; su longitud total representa la ineficiencia de la zona." />
-                            </HBox>
-                        </content>
-                    </Panel>
-
-                    <Panel headerText="Indicadores críticos" class="dashboardPanel criticalSummaryPanel overviewBalancedPanel">
-                        <layoutData><l:GridData span="XL4 L4 M12 S12" /></layoutData>
-                        <content>
-                            <FlexBox wrap="Wrap" class="criticalMetricGrid">
-                                <VBox class="criticalMetric criticalMetricBlue">
-                                    <HBox alignItems="Center"><core:Icon src="sap-icon://performance" /><Text text="Asistencia global" /></HBox>
-                                    <ObjectNumber number="{view>/overviewSummary/attendance}" unit="%" state="Warning" />
-                                    <Text text="{view>/overviewSummary/attendanceDescription}" />
-                                </VBox>
-                                <VBox class="criticalMetric criticalMetricAmber">
-                                    <HBox alignItems="Center"><core:Icon src="sap-icon://alert" /><Text text="Incidencias" /></HBox>
-                                    <ObjectNumber number="{view>/overviewSummary/incidents}" state="Warning" />
-                                    <Text text="{view>/overviewSummary/incidentsDescription}" />
-                                </VBox>
-                                <VBox class="criticalMetric criticalMetricRed">
-                                    <HBox alignItems="Center"><core:Icon src="sap-icon://warning2" /><Text text="Mayor riesgo" /></HBox>
-                                    <Title text="{view>/overviewSummary/criticalZone}" level="H4" />
-                                    <Text text="{view>/overviewSummary/criticalZoneDescription}" />
-                                </VBox>
-                                <VBox class="criticalMetric criticalMetricViolet">
-                                    <HBox alignItems="Center"><core:Icon src="sap-icon://target-group" /><Text text="Brecha de meta" /></HBox>
-                                    <ObjectNumber number="{view>/overviewSummary/targetGap}" state="Error" />
-                                    <Text text="{view>/overviewSummary/targetGapDescription}" />
-                                </VBox>
-                            </FlexBox>
-                            <HBox alignItems="Center" class="overviewPriorityCallout">
-                                <core:Icon src="sap-icon://warning2" />
-                                <VBox>
-                                    <Text text="Prioridad del día" class="overviewPriorityLabel" />
-                                    <Text text="{view>/priorityText}" wrapping="true" />
-                                </VBox>
-                            </HBox>
-                        </content>
-                    </Panel>
-                </l:Grid>
-
-                <l:Grid defaultSpan="XL7 L7 M12 S12" hSpacing="1" vSpacing="1" class="sapUiTinyMarginTop overviewSecondaryGrid">
-                    <Panel headerText="{= 'Tendencia de incidencias · ' + ${view>/periodLabel}}" class="dashboardPanel incidentTrendPanel overviewBalancedPanel">
-                        <content>
-                            <viz:VizFrame id="incidentTrendChart" vizType="line" width="100%" height="10.75rem" class="overviewIncidentTrendChart">
-                                <viz:dataset>
-                                    <viz.data:FlattenedDataset data="{view>/incidentTrend}">
-                                        <viz.data:dimensions>
-                                            <viz.data:DimensionDefinition name="Día" value="{view>day}" />
-                                        </viz.data:dimensions>
-                                        <viz.data:measures>
-                                            <viz.data:MeasureDefinition name="Retardos" value="{view>late}" />
-                                            <viz.data:MeasureDefinition name="Ausencias" value="{view>absent}" />
-                                            <viz.data:MeasureDefinition name="Fuera de zona" value="{view>outsideZone}" />
-                                        </viz.data:measures>
-                                    </viz.data:FlattenedDataset>
-                                </viz:dataset>
-                                <viz:feeds>
-                                    <viz.feeds:FeedItem uid="valueAxis" type="Measure" values="Retardos,Ausencias,Fuera de zona" />
-                                    <viz.feeds:FeedItem uid="categoryAxis" type="Dimension" values="Día" />
-                                </viz:feeds>
-                            </viz:VizFrame>
-                        </content>
-                    </Panel>
-
-                    <Panel headerText="Centros con mayor ineficiencia" class="dashboardPanel criticalCentersPanel overviewBalancedPanel">
-                        <layoutData><l:GridData span="XL5 L5 M12 S12" /></layoutData>
-                        <content>
-                            <ScrollContainer vertical="true" horizontal="false" focusable="true" class="tableScrollContainer criticalCentersScroll">
-                                <List items="{view>/criticalCenters}" showSeparators="Inner" noDataText="No hay centros críticos en el periodo" class="criticalCenterList">
-                                    <items>
-                                        <CustomListItem type="Navigation" press=".onCriticalCenterPress" class="criticalCenterItem">
-                                            <HBox width="100%" alignItems="Center" justifyContent="SpaceBetween">
-                                                <VBox width="42%">
-                                                    <Title text="{view>center}" level="H5" />
-                                                    <Text text="{view>zone}" />
-                                                </VBox>
-                                                <VBox width="25%" alignItems="End">
-                                                    <ObjectNumber number="{view>inefficiency}" state="Error" />
-                                                    <Text text="{= ${view>incidents} + ' incidencias'}" />
-                                                </VBox>
-                                                <ObjectStatus text="{view>status}" state="{view>state}" inverted="true" />
-                                            </HBox>
-                                        </CustomListItem>
-                                    </items>
-                                </List>
-                            </ScrollContainer>
-                        </content>
-                    </Panel>
-                </l:Grid>
+        <List items="{view>/zoneSummaries}" showSeparators="None" class="zoneCardList">
+          <CustomListItem type="Active" press=".onZonePress" class="zoneSummaryCard">
+            <customData><core:CustomData key="zoneId" value="{view>zoneId}"/></customData>
+            <VBox width="100%">
+              <HBox justifyContent="SpaceBetween" alignItems="Start">
+                <VBox>
+                  <Title text="{view>name}" level="H4"/>
+                  <Text text="{view>meta}" class="zoneMeta"/>
+                </VBox>
+                <ObjectStatus text="{view>riskText}" state="{view>state}" inverted="true"/>
+              </HBox>
+              <HBox justifyContent="SpaceBetween" alignItems="End" class="zoneMetricRow">
+                <VBox>
+                  <ObjectNumber number="{view>attendance}" unit="% asistencia" state="{view>state}"/>
+                  <Text text="{view>incidentSummary}" class="zoneIncidentSummary"/>
+                </VBox>
+                <ObjectStatus text="{view>inefficiencyText}" state="{view>state}"/>
+              </HBox>
             </VBox>
-        </content>
-    </Page>
+          </CustomListItem>
+        </List>
+
+        <Panel headerText="Ineficiencia por zona (%)" class="dashboardPanel inefficiencyPanel overviewBalancedPanel sapUiSmallMarginTop">
+          <content>
+            <viz:VizFrame id="inefficiencyChart" vizType="stacked_bar" width="100%" height="14rem" selectData=".onZoneChartSelect">
+              <viz:dataset>
+                <viz.data:FlattenedDataset data="{view>/zoneInefficiency}">
+                  <viz.data:dimensions><viz.data:DimensionDefinition name="Zona" value="{view>zone}"/></viz.data:dimensions>
+                  <viz.data:measures>
+                    <viz.data:MeasureDefinition name="Ausencias" value="{view>absentRate}"/>
+                    <viz.data:MeasureDefinition name="Retardos" value="{view>lateRate}"/>
+                  </viz.data:measures>
+                </viz.data:FlattenedDataset>
+              </viz:dataset>
+              <viz:feeds>
+                <viz.feeds:FeedItem uid="valueAxis" type="Measure" values="Ausencias,Retardos"/>
+                <viz.feeds:FeedItem uid="categoryAxis" type="Dimension" values="Zona"/>
+              </viz:feeds>
+            </viz:VizFrame>
+            <Text text="Las barras muestran ausencias y retardos por zona." class="chartHint"/>
+          </content>
+        </Panel>
+
+        <l:Grid defaultSpan="XL7 L7 M12 S12" hSpacing="1" vSpacing="1" class="sapUiSmallMarginTop overviewSecondaryGrid">
+          <Panel headerText="{= 'Tendencia de incidencias · ' + ${view>/periodLabel}}" class="dashboardPanel incidentTrendPanel overviewBalancedPanel">
+            <content>
+              <viz:VizFrame id="incidentTrendChart" vizType="line" width="100%" height="14rem">
+                <viz:dataset>
+                  <viz.data:FlattenedDataset data="{view>/incidentTrend}">
+                    <viz.data:dimensions><viz.data:DimensionDefinition name="Día" value="{view>day}"/></viz.data:dimensions>
+                    <viz.data:measures>
+                      <viz.data:MeasureDefinition name="Retardos" value="{view>late}"/>
+                      <viz.data:MeasureDefinition name="Ausencias" value="{view>absent}"/>
+                      <viz.data:MeasureDefinition name="Fuera de zona" value="{view>outsideZone}"/>
+                      <viz.data:MeasureDefinition name="Salida anticipada" value="{view>earlyExit}"/>
+                    </viz.data:measures>
+                  </viz.data:FlattenedDataset>
+                </viz:dataset>
+                <viz:feeds>
+                  <viz.feeds:FeedItem uid="valueAxis" type="Measure" values="Retardos,Ausencias,Fuera de zona,Salida anticipada"/>
+                  <viz.feeds:FeedItem uid="categoryAxis" type="Dimension" values="Día"/>
+                </viz:feeds>
+              </viz:VizFrame>
+            </content>
+          </Panel>
+          <Panel headerText="Retardos y salidas anticipadas" class="dashboardPanel criticalCentersPanel overviewBalancedPanel">
+            <layoutData><l:GridData span="XL5 L5 M12 S12"/></layoutData>
+            <content>
+              <HBox justifyContent="SpaceAround" width="100%" class="sapUiSmallMarginTop sapUiSmallMarginBottom">
+                <VBox alignItems="Center" class="sapUiSmallMargin">
+                  <Title text="Retardos" level="H4"/>
+                  <ObjectNumber number="{view>/lateCount}" state="Warning"/>
+                  <Text text="Total del periodo"/>
+                </VBox>
+                <VBox alignItems="Center" class="sapUiSmallMargin">
+                  <Title text="Salidas anticipadas" level="H4"/>
+                  <ObjectNumber number="{view>/earlyExitCount}" state="Information"/>
+                  <Text text="{view>/earlyExitNote}" wrapping="true"/>
+                </VBox>
+              </HBox>
+            </content>
+          </Panel>
+        </l:Grid>
+      </VBox>
+    </content>
+  </Page>
 </mvc:View>

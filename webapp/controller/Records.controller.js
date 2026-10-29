@@ -1,27 +1,50 @@
 sap.ui.define([
     "com/mitsu/monitorasistencia/controller/BaseController",
     "com/mitsu/monitorasistencia/model/formatter",
+    "com/mitsu/monitorasistencia/model/AttendanceApi",
+    "com/mitsu/monitorasistencia/model/MonitorData",
     "sap/ui/model/json/JSONModel",
-    "sap/m/MessageToast"
-], function (BaseController, formatter, JSONModel, MessageToast) {
+    "sap/m/MessageToast",
+    "sap/ui/export/Spreadsheet"
+], function (BaseController, formatter, AttendanceApi, MonitorData, JSONModel, MessageToast, Spreadsheet) {
     "use strict";
 
     return BaseController.extend("com.mitsu.monitorasistencia.controller.Records", {
         formatter: formatter,
 
         onInit: function () {
+            var oToday = new Date();
+            var sToday = oToday.getFullYear() + "-" +
+                String(oToday.getMonth() + 1).padStart(2, "0") + "-" +
+                String(oToday.getDate()).padStart(2, "0");
+            var aMonthOptions = [
+                "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+                "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
+            ].map(function (sMonth, iIndex) {
+                return { key: String(iIndex + 1).padStart(2, "0"), text: sMonth };
+            });
+            var aYearOptions = [];
+            for (var iYear = oToday.getFullYear() + 1; iYear >= oToday.getFullYear() - 10; iYear -= 1) {
+                aYearOptions.push({ key: String(iYear), text: String(iYear) });
+            }
+
             this.setModel(new JSONModel({
                 title: "Registros de asistencia",
                 employee: {},
                 allRecords: [],
                 records: [],
                 pageRecords: [],
+                centerOptions: [{ key: "all", text: "Todos" }],
                 selectedRecord: {},
                 center: "all",
                 scheduleId: "",
                 status: "all",
                 periodType: "month",
-                referenceDate: "2026-08-31",
+                referenceDate: sToday,
+                selectedMonth: String(oToday.getMonth() + 1).padStart(2, "0"),
+                selectedYear: String(oToday.getFullYear()),
+                monthOptions: aMonthOptions,
+                yearOptions: aYearOptions,
                 periodStart: null,
                 periodEnd: null,
                 periodLabel: "",
@@ -43,6 +66,7 @@ sap.ui.define([
                 },
                 statusCards: []
             }), "view");
+            this._attendanceApi = new AttendanceApi();
             this.getRouter().getRoute("records").attachPatternMatched(this._onRouteMatched, this);
         },
 
@@ -53,10 +77,15 @@ sap.ui.define([
 
         _loadRecords: function () {
             var oAttendanceModel = this.getModel("attendance");
-            var aEmployees = oAttendanceModel.getProperty("/employees") || [];
-            var aSchedules = oAttendanceModel.getProperty("/schedules") || [];
             var aRecords = (oAttendanceModel.getProperty("/records") || [])
                 .concat(oAttendanceModel.getProperty("/userPerformanceHistory") || []);
+            this._setRecords(aRecords, true);
+        },
+
+        _setRecords: function (aRecords, bResetFilters) {
+            var oAttendanceModel = this.getModel("attendance");
+            var aEmployees = oAttendanceModel.getProperty("/employees") || [];
+            var aSchedules = oAttendanceModel.getProperty("/schedules") || [];
             var oEmployee = aEmployees.find(function (oItem) { return oItem.id === this._employeeId; }.bind(this));
             var mEmployees = aEmployees.reduce(function (mResult, oItem) {
                 mResult[oItem.id] = oItem;
@@ -72,12 +101,17 @@ sap.ui.define([
                 var aLocationOptionalStatuses = ["Viaje de trabajo", "Vacaciones", "Paternidad", "Home office"];
                 var bLocationOptional = aLocationOptionalStatuses.indexOf(oRecord.status) !== -1;
                 var bHasDistance = typeof oRecord.distanceMeters === "number";
-                var bOutsideZone = !bLocationOptional && bHasDistance && oRecord.distanceMeters > 2;
+                var sGeoStatus = String(oRecord.geoStatus || "").toUpperCase();
+                var bBackendOutside = oRecord.isOutOfZone || /OUT|FUERA/.test(sGeoStatus);
+                var bBackendInside = /(^|\s)IN($|\s)|DENTRO/.test(sGeoStatus);
+                var bOutsideZone = !bLocationOptional && (bBackendOutside || (bHasDistance && oRecord.distanceMeters > 2));
                 var sEffectiveStatus = bOutsideZone ? "Fuera de zona" : oRecord.status;
                 var sGeofenceStatus = bLocationOptional ? "No aplica" :
-                    (bHasDistance ? (bOutsideZone ? "Fuera de zona" : "Dentro de zona") : "Sin ubicación");
+                    (bOutsideZone ? "Fuera de zona" :
+                        (bBackendInside ? (oRecord.geoStatusDescription || "Dentro de zona") :
+                            (bHasDistance ? "Dentro de zona" : "Sin ubicación")));
                 var sGeofenceState = bOutsideZone ? "Error" :
-                    (bHasDistance ? "Success" : (bLocationOptional ? "Information" : "None"));
+                    (bHasDistance || bBackendInside ? "Success" : (bLocationOptional ? "Information" : "None"));
                 var sDistanceLabel = bHasDistance ? oRecord.distanceMeters.toFixed(1) + " m" :
                     (bLocationOptional ? "No aplica" : "Sin dato");
 
@@ -90,7 +124,7 @@ sap.ui.define([
                     center: oRecord.center || oRecordEmployee.center || "Sin centro",
                     shift: oRecord.shift || oRecordEmployee.shift || "Sin turno",
                     scheduled: oRecord.scheduled || oSchedule.shortDescription || "Sin horario",
-                    scheduleId: oRecordEmployee.scheduleId || "",
+                    scheduleId: oRecord.scheduleId || oRecordEmployee.scheduleId || "",
                     scheduleName: oSchedule.name || oRecordEmployee.scheduleName || "Sin horario asignado",
                     scheduleDescription: oSchedule.description || oSchedule.shortDescription || "No existe una regla semanal asociada",
                     mealCheckOut: oRecord.mealCheckOut || "—",
@@ -106,15 +140,26 @@ sap.ui.define([
                 return oRecord.employeeId === this._employeeId;
             }.bind(this));
             var oViewModel = this.getModel("view");
+            var aCenterOptions = Array.from(new Set(aEnrichedRecords.map(function (oRecord) {
+                return String(oRecord.center || "").trim();
+            }).filter(Boolean))).sort().map(function (sCenter) {
+                return { key: sCenter, text: sCenter };
+            });
 
             oViewModel.setProperty("/employee", oEmployee || {});
             oViewModel.setProperty("/title", oEmployee ? "Historial de asistencia: " + oEmployee.name : "Registros de asistencia");
             oViewModel.setProperty("/allRecords", aFilteredByEmployee);
-            oViewModel.setProperty("/center", "all");
-            oViewModel.setProperty("/scheduleId", "");
-            oViewModel.setProperty("/status", "all");
+            oViewModel.setProperty("/centerOptions", [{ key: "all", text: "Todos" }].concat(aCenterOptions));
+            if (bResetFilters) {
+                oViewModel.setProperty("/center", "all");
+                oViewModel.setProperty("/scheduleId", "");
+                oViewModel.setProperty("/status", "all");
+            }
             this._updatePeriodRange();
             this._applyFilters();
+            if (bResetFilters) {
+                this._reloadRecordsForPeriod();
+            }
         },
 
         _applyFilters: function () {
@@ -217,9 +262,68 @@ sap.ui.define([
             oViewModel.setProperty("/periodLabel", sLabel);
         },
 
+        _syncPeriodSelectors: function () {
+            var oViewModel = this.getModel("view");
+            var oReference = this._parseDisplayDate(oViewModel.getProperty("/referenceDate"));
+            if (!oReference) {
+                return;
+            }
+            oViewModel.setProperty("/selectedMonth", String(oReference.getMonth() + 1).padStart(2, "0"));
+            oViewModel.setProperty("/selectedYear", String(oReference.getFullYear()));
+        },
+
+        _applyMonthYearSelection: function () {
+            var oViewModel = this.getModel("view");
+            var iYear = Number(oViewModel.getProperty("/selectedYear"));
+            var iMonth = Number(oViewModel.getProperty("/selectedMonth")) || 1;
+            if (!Number.isInteger(iYear) || iYear < 1900 || iYear > 9999) {
+                return;
+            }
+            var sReferenceDate = iYear + "-" + String(iMonth).padStart(2, "0") + "-01";
+            oViewModel.setProperty("/referenceDate", sReferenceDate);
+            this._updatePeriodRange();
+            this._applyFilters();
+        },
+
         _formatShortDate: function (oDate) {
             return String(oDate.getDate()).padStart(2, "0") + "/" +
                 String(oDate.getMonth() + 1).padStart(2, "0") + "/" + oDate.getFullYear();
+        },
+
+        _formatODataDate: function (oDate) {
+            return oDate.getFullYear() +
+                String(oDate.getMonth() + 1).padStart(2, "0") +
+                String(oDate.getDate()).padStart(2, "0");
+        },
+
+        _reloadRecordsForPeriod: function () {
+            var oViewModel = this.getModel("view");
+            var oStart = oViewModel.getProperty("/periodStart");
+            var oEnd = oViewModel.getProperty("/periodEnd");
+            if (!(oStart instanceof Date) || !(oEnd instanceof Date)) {
+                return Promise.resolve();
+            }
+
+            var aFilters = [
+                { field: "DateFrom", value: this._formatODataDate(oStart) },
+                { field: "DateTo", value: this._formatODataDate(oEnd) }
+            ];
+            var sPersonalNumber = this.getModel("view").getProperty("/employee/number");
+            if (this._employeeId !== "all" && sPersonalNumber) {
+                aFilters.push({ field: "PersonalNumber", value: sPersonalNumber });
+            }
+
+            this.getView().setBusy(true);
+            return this._attendanceApi.getAttendanceHistory(aFilters).then(function (aRows) {
+                var aSchedules = this.getModel("attendance").getProperty("/schedules") || [];
+                var aMappedRecords = MonitorData.mapAttendanceRecords(aRows, aSchedules);
+                this._setRecords(aMappedRecords, false);
+            }.bind(this)).catch(function (oError) {
+                MessageToast.show("No fue posible consultar el periodo seleccionado en SAP");
+                console.error("Error al consultar AttendanceHistorySet por rango", oError);
+            }).finally(function () {
+                this.getView().setBusy(false);
+            }.bind(this));
         },
 
         _createStatusCards: function (aRecords, iTotal) {
@@ -305,16 +409,24 @@ sap.ui.define([
         },
 
         onPeriodChange: function () {
+            this._syncPeriodSelectors();
             this._updatePeriodRange();
             this._applyFilters();
+            this._reloadRecordsForPeriod();
         },
 
         onReferenceDateChange: function (oEvent) {
             var sValue = oEvent.getParameter("value") || oEvent.getSource().getValue();
             if (this._parseDisplayDate(sValue)) {
                 this.getModel("view").setProperty("/referenceDate", sValue);
+                this._syncPeriodSelectors();
             }
             this.onPeriodChange();
+        },
+
+        onMonthYearChange: function () {
+            this._applyMonthYearSelection();
+            this._reloadRecordsForPeriod();
         },
 
         onRecordSelectionChange: function (oEvent) {
@@ -367,7 +479,50 @@ sap.ui.define([
         },
 
         onExport: function () {
-            MessageToast.show("Aquí se conectará la exportación a Excel");
+            var oViewModel = this.getModel("view");
+            var aRecords = oViewModel.getProperty("/records") || [];
+            if (!aRecords.length) {
+                MessageToast.show("No hay registros para exportar con los filtros seleccionados");
+                return;
+            }
+
+            var aColumns = [
+                { label: "Fecha", property: "date", width: 12 },
+                { label: "Número de empleado", property: "employeeNumber", width: 18 },
+                { label: "Colaborador", property: "employee", width: 28 },
+                { label: "Centro de trabajo", property: "center", width: 24 },
+                { label: "Horario", property: "scheduleName", width: 18 },
+                { label: "Jornada asignada", property: "scheduled", width: 28 },
+                { label: "Entrada", property: "entry", width: 10 },
+                { label: "Inicio de comida", property: "mealCheckOut", width: 16 },
+                { label: "Fin de comida", property: "mealCheckIn", width: 16 },
+                { label: "Salida", property: "exit", width: 10 },
+                { label: "Horas", property: "hours", width: 10 },
+                { label: "Distancia", property: "distanceLabel", width: 14 },
+                { label: "Estatus", property: "status", width: 16 },
+                { label: "Observaciones", property: "observation", width: 36 }
+            ];
+            var sPeriod = String(oViewModel.getProperty("/periodLabel") || "periodo")
+                .normalize("NFD")
+                .replace(/[\u0300-\u036f]/g, "")
+                .replace(/[^a-zA-Z0-9]+/g, "-")
+                .replace(/^-|-$/g, "")
+                .toLowerCase();
+            var oSpreadsheet = new Spreadsheet({
+                workbook: { columns: aColumns },
+                dataSource: aRecords,
+                fileName: "registros-asistencia-" + sPeriod + ".xlsx",
+                worker: false
+            });
+
+            oSpreadsheet.build().then(function () {
+                MessageToast.show(aRecords.length + " registros exportados");
+            }).catch(function (oError) {
+                MessageToast.show("No fue posible exportar los registros");
+                console.error("Error al exportar registros", oError);
+            }).finally(function () {
+                oSpreadsheet.destroy();
+            });
         },
 
         onNewIncident: function () {

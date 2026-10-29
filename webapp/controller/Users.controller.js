@@ -57,14 +57,15 @@ sap.ui.define([
                 var bSearch = !sSearch || sHaystack.includes(sSearch);
                 return bStatus && bSchedule && bSearch;
             });
-            var aCenters = Array.from(new Set(aEmployees.map(function (oEmployee) { return oEmployee.centerId; })));
+            var oSapSummary = this.getModel("attendance").getProperty("/employeeSummary") || {};
+            var aCenters = Array.from(new Set(aEmployees.map(function (oEmployee) { return oEmployee.centerId; }).filter(Boolean)));
 
             oViewModel.setProperty("/employees", aFiltered);
             oViewModel.setProperty("/stats", {
-                total: aEmployees.length,
-                active: aEmployees.filter(function (oEmployee) { return oEmployee.active; }).length,
-                inactive: aEmployees.filter(function (oEmployee) { return !oEmployee.active; }).length,
-                centers: aCenters.length
+                total: Number(oSapSummary.total) || aEmployees.length,
+                active: Number(oSapSummary.active) || aEmployees.filter(function (oEmployee) { return oEmployee.active; }).length,
+                inactive: Number(oSapSummary.inactive) || aEmployees.filter(function (oEmployee) { return !oEmployee.active; }).length,
+                centers: Number(oSapSummary.centers) || aCenters.length
             });
         },
 
@@ -77,23 +78,12 @@ sap.ui.define([
             this._applyFilters();
         },
 
-        onToggleUserStatus: function (oEvent) {
-            var oEmployee = oEvent.getSource().getBindingContext("view").getObject();
-            oEmployee.active = !oEmployee.active;
-            oEmployee.lastUpdate = "31/08/2026 12:00";
-            this.getModel("attendance").refresh(true);
-            this._applyFilters();
-            MessageToast.show(oEmployee.name + (oEmployee.active ? " fue activado" : " fue dado de baja"));
+        onToggleUserStatus: function () {
+            MessageToast.show("EmployeeSet está disponible sólo para consulta; SAP aún no expone el alta o baja de colaboradores.");
         },
 
         onOpenUserDialog: function () {
-            this.byId("userName").setValue("");
-            this.byId("userNumber").setValue("");
-            this.byId("userCenter").setSelectedIndex(0);
-            this.byId("userSchedule").setSelectedIndex(0);
-            this.byId("userRole").setSelectedKey("Empleado");
-            this.byId("userActive").setState(true);
-            this.byId("userDialog").open();
+            MessageToast.show("SAP aún no expone un servicio para crear colaboradores; la pantalla permanece en modo consulta.");
         },
 
         onCloseUserDialog: function () {
@@ -101,60 +91,7 @@ sap.ui.define([
         },
 
         onSaveUser: function () {
-            var sName = this.byId("userName").getValue().trim();
-            var sNumber = this.byId("userNumber").getValue().trim();
-            var sCenterId = this.byId("userCenter").getSelectedKey();
-            var sScheduleId = this.byId("userSchedule").getSelectedKey();
-            var sRole = this.byId("userRole").getSelectedKey();
-
-            if (!sName || !sNumber || !sCenterId || !sScheduleId) {
-                MessageToast.show("Completa los campos obligatorios");
-                return;
-            }
-
-            var oAttendanceModel = this.getModel("attendance");
-            var aEmployees = oAttendanceModel.getProperty("/employees");
-            var oCenter = (oAttendanceModel.getProperty("/centers") || []).find(function (oItem) { return oItem.id === sCenterId; });
-            var oSchedule = (oAttendanceModel.getProperty("/schedules") || []).find(function (oItem) { return oItem.id === sScheduleId; });
-            var aWords = sName.split(/\s+/);
-
-            if (!oCenter || !oSchedule) {
-                MessageToast.show("Selecciona un centro y un horario válidos");
-                return;
-            }
-
-            if (aEmployees.some(function (oEmployee) { return oEmployee.number.toUpperCase() === sNumber.toUpperCase(); })) {
-                MessageToast.show("El número de empleado ya existe");
-                return;
-            }
-
-            aEmployees.push({
-                id: "emp-" + Date.now(),
-                number: sNumber.toUpperCase(),
-                name: sName,
-                initials: aWords.slice(0, 2).map(function (sWord) { return sWord.charAt(0).toUpperCase(); }).join(""),
-                centerId: sCenterId,
-                center: oCenter.name,
-                zoneId: oCenter.zoneId,
-                shift: oSchedule.type,
-                scheduleId: oSchedule.id,
-                scheduleName: oSchedule.name,
-                scheduleCode: oSchedule.code,
-                scheduleDescription: oSchedule.shortDescription,
-                role: sRole,
-                entry: "—",
-                exit: "—",
-                hours: "0:00",
-                status: "Incompleto",
-                active: this.byId("userActive").getState(),
-                lastUpdate: "31/08/2026 12:00"
-            });
-
-            oAttendanceModel.refresh(true);
-            this.getModel("view").setProperty("/allEmployees", aEmployees);
-            this._applyFilters();
-            this.onCloseUserDialog();
-            MessageToast.show("Usuario creado");
+            MessageToast.show("No se enviaron cambios: falta el endpoint de mantenimiento de colaboradores en SAP.");
         },
 
         onExport: function () {

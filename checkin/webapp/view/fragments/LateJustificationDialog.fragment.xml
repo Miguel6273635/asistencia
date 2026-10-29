@@ -1,0 +1,32 @@
+<core:FragmentDefinition xmlns="sap.m" xmlns:core="sap.ui.core">
+  <Dialog id="lateJustificationDialog" title="Justificación de retraso" contentWidth="30rem"
+    draggable="true" resizable="true" stretchOnPhone="true">
+    <content>
+      <VBox class="sapUiMediumMargin">
+        <MessageStrip text="La entrada se registrará como tardía. Captura el motivo antes de enviar el marcaje a SAP."
+          type="Warning" showIcon="true" class="sapUiSmallMarginBottom" />
+        <Label text="Motivo" labelFor="lateReasonSelect" required="true" />
+        <Select id="lateReasonSelect" width="100%" selectedKey="{attendance>/today/lateJustification/reason}"
+          change=".onLateJustificationChange">
+          <core:Item key="" text="Selecciona un motivo" />
+          <core:Item key="Laboral" text="Laboral" />
+          <core:Item key="Personal" text="Personal" />
+        </Select>
+        <Label text="Comentario" labelFor="lateCommentInput" class="sapUiSmallMarginTop" />
+        <TextArea id="lateCommentInput" value="{attendance>/today/lateJustification/comment}"
+          placeholder="Describe brevemente la causa del retraso" rows="4" maxLength="160" width="100%"
+          liveChange=".onLateJustificationChange" />
+        <CheckBox text="Recuperaré el tiempo" selected="{attendance>/today/lateJustification/recoverTime}"
+          class="sapUiSmallMarginTop" />
+        <MessageStrip visible="{= !!${attendance>/today/lateJustification/error} }"
+          text="{attendance>/today/lateJustification/error}" type="Error" showIcon="true" class="sapUiSmallMarginTop" />
+      </VBox>
+    </content>
+    <beginButton>
+      <Button text="Guardar justificación" type="Emphasized" press=".onSaveLateJustification" />
+    </beginButton>
+    <endButton>
+      <Button text="Cancelar" press=".onCancelLateJustification" />
+    </endButton>
+  </Dialog>
+</core:FragmentDefinition>

@@ -1,0 +1,83 @@
+_schema-version: "3.3"
+ID: mitsu-checkin
+version: 0.1.3
+description: Aplicación BTP de marcajes para el personal de Mitsubishi
+
+modules:
+  - name: mitsu-checkin-destination-content
+    type: com.sap.application.content
+    requires:
+      - name: mitsu-checkin-xsuaa
+      - name: mitsu-checkin-html5-repo
+      - name: mitsu-checkin-destination
+        parameters:
+          content-target: true
+    parameters:
+      content:
+        instance:
+          destinations:
+            - Name: mitsu-checkin-html5-repo
+              ServiceInstanceName: mitsu-checkin-html5-repo
+              ServiceKeyName: mitsu-checkin-html5-repo-key
+              sap.cloud.service: mitsu.checkin
+            - Name: mitsu-checkin-xsuaa
+              Authentication: OAuth2UserTokenExchange
+              ServiceInstanceName: mitsu-checkin-xsuaa
+              ServiceKeyName: mitsu-checkin-xsuaa-key
+              sap.cloud.service: mitsu.checkin
+          existing_destinations_policy: update
+    build-parameters:
+      no-source: true
+
+  - name: mitsu-checkin-content
+    type: com.sap.application.content
+    path: .
+    requires:
+      - name: mitsu-checkin-html5-repo
+        parameters:
+          content-target: true
+    build-parameters:
+      build-result: resources
+      requires:
+        - name: mitsu-checkin-ui
+          artifacts:
+            - checkin.zip
+          target-path: resources/
+
+  - name: mitsu-checkin-ui
+    type: html5
+    path: .
+    build-parameters:
+      builder: custom
+      commands:
+        - npm install
+        - npm run build
+        - npm run package:html5
+      supported-platforms: []
+
+resources:
+  - name: mitsu-checkin-html5-repo
+    type: org.cloudfoundry.managed-service
+    parameters:
+      service: html5-apps-repo
+      service-plan: app-host
+      service-keys:
+        - name: mitsu-checkin-html5-repo-key
+
+  - name: mitsu-checkin-destination
+    type: org.cloudfoundry.managed-service
+    parameters:
+      service: destination
+      service-plan: lite
+      config:
+        HTML5Runtime_enabled: true
+        version: 1.0.0
+
+  - name: mitsu-checkin-xsuaa
+    type: org.cloudfoundry.managed-service
+    parameters:
+      service: xsuaa
+      service-plan: application
+      path: xs-security.json
+      service-keys:
+        - name: mitsu-checkin-xsuaa-key

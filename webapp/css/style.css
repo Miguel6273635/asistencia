@@ -1659,6 +1659,108 @@ body > div,
     }
 }
 
+/* Precarga masiva de usuarios: revisión, corrección y carga parcial. */
+.bulkUserDialog .sapMDialogSection {
+    background: #f5f8fa;
+}
+
+.bulkImportToolbar.sapMTB {
+    min-height: 3.4rem;
+    border-bottom: 1px solid #ccd8e2;
+    background: linear-gradient(100deg, #ffffff 0%, #f7fbff 70%, #edf6ff 100%);
+}
+
+.bulkImportContent {
+    height: 100%;
+}
+
+.bulkSummaryRow {
+    gap: 0.65rem;
+}
+
+.bulkSummaryCard {
+    min-width: 10.5rem;
+    padding: 0.55rem 0.75rem;
+    box-sizing: border-box;
+    border: 1px solid #d7e1e8;
+    border-left: 0.22rem solid #0a6ed1;
+    border-radius: 0.6rem;
+    background: #ffffff;
+}
+
+.bulkSummaryCard > .sapMText {
+    color: var(--monitor-muted);
+    font-size: 0.72rem;
+    font-weight: 700;
+}
+
+.bulkSummaryCard .sapMObjectNumberText {
+    font-size: 1.15rem;
+}
+
+.bulkSummarySuccess {
+    border-left-color: #188918;
+    background: linear-gradient(105deg, rgba(24, 137, 24, 0.055), #ffffff 72%);
+}
+
+.bulkSummaryError {
+    border-left-color: #c00000;
+    background: linear-gradient(105deg, rgba(192, 0, 0, 0.055), #ffffff 72%);
+}
+
+.bulkImportTableScroll {
+    height: clamp(22rem, calc(100dvh - 20rem), 33rem) !important;
+    border: 1px solid #d3dde5;
+    border-radius: 0.65rem;
+    background: #ffffff;
+}
+
+.bulkImportTable {
+    min-width: 132rem;
+}
+
+.bulkImportTable .sapMListTblHeaderCell {
+    position: sticky;
+    z-index: 4;
+    top: 0;
+    background: #eef4f8;
+    box-shadow: inset 0 -1px 0 #c8d5df;
+}
+
+.bulkImportTable .sapMListTblHeaderCell .sapMText {
+    color: #354b61;
+    font-size: 0.7rem;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+
+.bulkImportTable .sapMListTblCell {
+    padding: 0.3rem 0.22rem !important;
+    vertical-align: top;
+}
+
+.bulkImportTable .sapMInputBase,
+.bulkImportTable .sapMSlt {
+    min-width: 100%;
+}
+
+.bulkImportTable .sapMObjStatus {
+    margin-top: 0.35rem;
+}
+
+@media (max-width: 60rem) {
+    .bulkImportToolbar.sapMTB {
+        height: auto;
+        flex-wrap: wrap;
+        padding-top: 0.35rem;
+        padding-bottom: 0.35rem;
+    }
+
+    .bulkImportTableScroll {
+        height: calc(100dvh - 18rem) !important;
+    }
+}
+
 /* Resumen: tratamiento visual compacto de las dos gráficas operativas. */
 .overviewPage .overviewInefficiencyChart,
 .overviewPage .overviewIncidentTrendChart {

@@ -1,0 +1,144 @@
+.compactShell {
+  gap: 0.75rem;
+  padding-top: 0.75rem !important;
+  padding-bottom: 0.75rem !important;
+}
+
+.compactWelcome {
+  gap: 0.35rem;
+  padding: 0.65rem 1rem;
+}
+
+.compactWelcome .employeeName {
+  font-size: 1.1rem;
+}
+
+.compactWelcome .todayClock {
+  gap: 0;
+}
+
+.singleScreenView,
+.singleScreenGrid {
+  width: 100%;
+  min-height: 0;
+}
+
+.singleScreenGrid {
+  display: grid !important;
+  grid-template-columns: minmax(34rem, 1.15fr) minmax(28rem, 0.85fr);
+  gap: 0.75rem;
+}
+
+.compactAttendancePanel,
+.compactHistoryPanel {
+  min-width: 0;
+  padding: 0.8rem;
+  align-self: stretch;
+}
+
+.compactAttendancePanel .timeline {
+  padding: 0.35rem 0.25rem 0;
+}
+
+.compactAttendancePanel .markActions {
+  gap: 0.4rem;
+}
+
+.compactAttendancePanel .markActions > .sapMBtn {
+  flex: 1 1 9rem;
+}
+
+.compactHistoryPanel .historyTable {
+  width: 100%;
+}
+
+.compactHistoryPanel .sapMListTblHeaderCell,
+.compactHistoryPanel .sapMListTblCell {
+  padding-right: 0.4rem;
+  padding-left: 0.4rem;
+}
+
+@media (max-width: 1180px) {
+  .singleScreenGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .compactWelcome .todayClock {
+    width: auto;
+    margin-top: 0.4rem;
+  }
+
+  .singleScreenGrid {
+    display: flex !important;
+    flex-direction: column;
+  }
+}
+
+.checkinRoot {
+  width: 100%;
+  height: 100%;
+}
+
+.identityScreen {
+  width: 100%;
+  min-height: 100%;
+  padding: 1.25rem;
+  box-sizing: border-box;
+  background:
+    radial-gradient(circle at 85% 15%, rgba(8, 119, 249, 0.13), transparent 28rem),
+    linear-gradient(145deg, #eef5fb, #f8fbfd 52%, #edf5fb);
+}
+
+.identityCard {
+  width: min(30rem, 100%);
+  padding: 2rem;
+  gap: 1.3rem;
+  box-sizing: border-box;
+  border: 1px solid #d5e2ec;
+  border-top: 4px solid var(--brand);
+  border-radius: 1rem;
+  background: #fff;
+  box-shadow: 0 1rem 3rem rgba(16, 43, 67, 0.14);
+}
+
+.identityBrand,
+.identityForm {
+  gap: 0.65rem;
+}
+
+.identityLogo.sapFAvatar {
+  color: #fff;
+  background: linear-gradient(145deg, var(--brand), var(--brand-dark));
+  box-shadow: 0 0.5rem 1.2rem rgba(8, 119, 249, 0.25);
+}
+
+.identityBrand .sapMTitle {
+  color: var(--navy);
+}
+
+.identitySubtitle,
+.identityHelp {
+  color: var(--muted);
+}
+
+.identityHelp {
+  font-size: 0.72rem;
+}
+
+.identityForm .sapMInputBaseContentWrapper,
+.identityForm .sapMBtnInner {
+  min-height: 2.75rem;
+  border-radius: 0.55rem;
+}
+
+@media (max-width: 520px) {
+  .identityScreen {
+    padding: 0.75rem;
+  }
+
+  .identityCard {
+    padding: 1.25rem;
+  }
+}

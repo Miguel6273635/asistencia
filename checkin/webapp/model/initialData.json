@@ -1,0 +1,56 @@
+{
+  "employee": {
+    "id": "",
+    "name": "",
+    "role": "",
+    "position": "",
+    "center": "",
+    "centerCode": "",
+    "address": "",
+    "schedule": "",
+    "scheduleCode": "",
+    "scheduleDetail": "",
+    "initials": "",
+    "email": "",
+    "zone": ""
+  },
+  "today": {
+    "dateText": "",
+    "nextAction": "CHECK_IN",
+    "entry": "—",
+    "mealStart": "—",
+    "mealEnd": "—",
+    "exit": "—",
+    "currentTime": "",
+    "status": "",
+    "isLate": false,
+    "isLateNow": false,
+    "isEarlyExit": false,
+    "isTravel": false,
+    "mealStartAllowed": true,
+    "mealEndAllowed": true,
+    "checkInText": "Registrar entrada",
+    "checkOutText": "Registrar salida",
+    "validationMessage": "",
+    "validationType": "Information",
+    "scheduleLabel": "",
+    "lateJustificationButtonText": "Justificar retraso",
+    "lateJustification": {
+      "reason": "",
+      "comment": "",
+      "recoverTime": false,
+      "saved": false,
+      "error": ""
+    }
+  },
+  "schedule": {
+    "code": "",
+    "name": "",
+    "detail": "",
+    "start": "",
+    "end": "",
+    "mealStart": "",
+    "mealEnd": ""
+  },
+  "history": []
+}

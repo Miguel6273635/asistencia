@@ -1,0 +1,32 @@
+{
+  "welcomeFile": "/index.html",
+  "authenticationMethod": "route",
+  "routes": [
+    {
+       "source": "^/sap/opu/odata/sap/(.*)$",
+      "target": "/sap/opu/odata/sap/$1",
+      "destination": "onPremECC_QAS_APP",
+      "authenticationType": "xsuaa",
+      "csrfProtection": false
+    },
+    {
+      "source": "^/api/attendance/(.*)$",
+      "target": "/attendance/$1",
+      "destination": "AttendanceBackend",
+      "authenticationType": "xsuaa",
+      "csrfProtection": true
+    },
+    {
+      "source": "^/resources/(.*)$",
+      "target": "/resources/$1",
+      "authenticationType": "none",
+      "destination": "ui5"
+    },
+    {
+      "source": "^(.*)$",
+      "target": "$1",
+      "service": "html5-apps-repo-rt",
+      "authenticationType": "xsuaa"
+    }
+  ]
+}
