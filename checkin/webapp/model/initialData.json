@@ -27,6 +27,8 @@
     "isLateNow": false,
     "isEarlyExit": false,
     "isTravel": false,
+    "isMealWindowRestricted": false,
+    "isWithinMealWindow": false,
     "mealStartAllowed": true,
     "mealEndAllowed": true,
     "checkInText": "Registrar entrada",

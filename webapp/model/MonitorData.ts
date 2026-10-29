@@ -161,7 +161,11 @@ function mapRecords(rows: ODataRow[], schedules: Record<string, unknown>[]): Rec
             isAbsent: bool(row.IsAbsent),
             isIncomplete: bool(row.IsIncomplete),
             isOutOfZone: bool(row.IsOutOfZone),
+            isEarlyExit: bool(row.IsEarlyExit) || bool(row.EarlyExit) || bool(row.IsEarly),
             observation: text(row.Observation),
+            message: text(row.Message),
+            justification: text(row.Justification) || text(row.JustificationText) || text(row.Message),
+            approvalStatus: text(row.StatusReq),
             geoStatus: text(row.GeoStatus),
             geoStatusDescription: text(row.GeoStatusDescripcion)
         };
@@ -174,7 +178,6 @@ export function mapAttendanceRecords(
 ): Record<string, unknown>[] {
     return mapRecords(rows, schedules);
 }
-
 
 function mapEmployees(rows: ODataRow[], history: ODataRow[]): Record<string, unknown>[] {
     const employees = new Map<string, Record<string, unknown>>();

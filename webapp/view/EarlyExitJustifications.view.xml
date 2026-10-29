@@ -1,0 +1,26 @@
+<mvc:View controllerName="com.mitsu.monitorasistencia.controller.Justifications" xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m" xmlns:core="sap.ui.core">
+    <Page showHeader="false" class="monitorPage justificationReviewPage">
+        <content>
+            <VBox class="pageContainer compactPage">
+                <Breadcrumbs currentLocationText="Salidas anticipadas"><Link text="Resumen" press=".onBack" /></Breadcrumbs>
+                <HBox justifyContent="SpaceBetween" alignItems="Center" wrap="Wrap" class="reviewPageHeading">
+                    <VBox><Title text="{review>/title}" level="H1" class="pageTitle" /><Text text="{review>/subtitle}" class="pageSubtitle" /></VBox>
+                    <ObjectStatus text="{review>/periodLabel}" state="Information" inverted="true" />
+                </HBox>
+                <HBox wrap="Wrap" class="reviewKpiRow">
+                    <VBox class="reviewKpiCard"><Text text="Salidas anticipadas" /><ObjectNumber number="{review>/count}" state="Error" /></VBox>
+                    <VBox class="reviewKpiCard reviewKpiPending"><Text text="Justificaciones pendientes" /><ObjectNumber number="{review>/pendingCount}" state="Error" /></VBox>
+                </HBox>
+                <Panel headerText="Detalle de salidas anticipadas" class="dashboardPanel reviewTablePanel">
+                    <headerToolbar><OverflowToolbar><Title text="Detalle de salidas anticipadas" /><ToolbarSpacer /><SearchField width="20rem" placeholder="Buscar empleado, centro o justificación" liveChange=".onSearch" /></OverflowToolbar></headerToolbar>
+                    <content>
+                        <Table items="{review>/filteredRows}" growing="true" growingScrollToLoad="true" noDataText="No hay salidas anticipadas para el periodo seleccionado" sticky="ColumnHeaders" class="reviewTable">
+                            <columns><Column width="14rem"><Text text="Empleado" /></Column><Column width="7rem"><Text text="Núm. empleado" /></Column><Column width="7rem"><Text text="Fecha" /></Column><Column width="11rem"><Text text="Centro" /></Column><Column width="12rem"><Text text="Horario" /></Column><Column width="6rem" hAlign="Center"><Text text="Salida" /></Column><Column minScreenWidth="Tablet" demandPopin="true"><Text text="Justificación" /></Column><Column width="8rem"><Text text="Estado" /></Column><Column width="7rem" hAlign="Center"><Text text="Aceptar" /></Column></columns>
+                            <items><ColumnListItem><cells><Link text="{review>employee}" press=".onEmployeePress" /><Text text="{review>personalNumber}" /><Text text="{review>date}" /><Text text="{review>center}" /><Text text="{review>schedule}" /><ObjectStatus text="{review>eventTime}" state="Error" /><Text text="{review>justification}" wrapping="true" /><ObjectStatus text="{review>approvalText}" state="{review>approvalState}" inverted="true" /><Button icon="sap-icon://accept" type="Accept" tooltip="Aceptar justificación" enabled="{= ${review>hasJustification} &amp;&amp; !${review>approved} }" press=".onApprove" /></cells></ColumnListItem></items>
+                        </Table>
+                    </content>
+                </Panel>
+            </VBox>
+        </content>
+    </Page>
+</mvc:View>

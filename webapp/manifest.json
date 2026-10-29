@@ -18,6 +18,10 @@
       }
     }
   },
+  "sap.cloud": {
+    "public": true,
+    "service": "mitsu.monitorasistencia"
+  },
   "sap.ui": {
     "technology": "UI5",
     "deviceTypes": {
@@ -113,6 +117,16 @@
           "target": "userPerformance"
         },
         {
+          "pattern": "justifications/late",
+          "name": "lateJustifications",
+          "target": "lateJustifications"
+        },
+        {
+          "pattern": "justifications/early-exit",
+          "name": "earlyExitJustifications",
+          "target": "earlyExitJustifications"
+        },
+        {
           "pattern": "map",
           "name": "map",
           "target": "map"
@@ -161,6 +175,14 @@
         "userPerformance": {
           "viewId": "userPerformance",
           "viewName": "UserPerformance"
+        },
+        "lateJustifications": {
+          "viewId": "lateJustifications",
+          "viewName": "LateJustifications"
+        },
+        "earlyExitJustifications": {
+          "viewId": "earlyExitJustifications",
+          "viewName": "EarlyExitJustifications"
         },
         "map": {
           "viewId": "map",

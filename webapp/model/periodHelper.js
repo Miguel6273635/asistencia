@@ -25,18 +25,9 @@ sap.ui.define([], function () {
         return [oDate.getFullYear(), String(oDate.getMonth() + 1).padStart(2, "0"), String(oDate.getDate()).padStart(2, "0")].join("-");
     }
 
-    function startOfWeek(oDate) {
-        var oStart = new Date(oDate.getFullYear(), oDate.getMonth(), oDate.getDate());
-        var iDay = oStart.getDay() || 7;
-        oStart.setDate(oStart.getDate() - iDay + 1);
-        return oStart;
-    }
-
     function endOfPeriod(oStart, sGranularity) {
         var oEnd = new Date(oStart.getTime());
-        if (sGranularity === "week") {
-            oEnd.setDate(oEnd.getDate() + 6);
-        } else if (sGranularity === "month") {
+        if (sGranularity === "month") {
             oEnd = new Date(oStart.getFullYear(), oStart.getMonth() + 1, 0);
         } else if (sGranularity === "year") {
             oEnd = new Date(oStart.getFullYear(), 11, 31);
@@ -47,21 +38,25 @@ sap.ui.define([], function () {
     function getPeriod(sGranularity, vReferenceDate) {
         var oReference = parseDate(vReferenceDate) || new Date();
         var oStart;
+        var oEnd;
         if (sGranularity === "month") {
             oStart = new Date(oReference.getFullYear(), oReference.getMonth(), 1);
+            oEnd = endOfPeriod(oStart, sGranularity);
         } else if (sGranularity === "year") {
             oStart = new Date(oReference.getFullYear(), 0, 1);
+            oEnd = endOfPeriod(oStart, sGranularity);
         } else {
-            oStart = startOfWeek(oReference);
             sGranularity = "week";
+            oEnd = new Date(oReference.getFullYear(), oReference.getMonth(), oReference.getDate());
+            oStart = new Date(oEnd.getTime());
+            oStart.setDate(oStart.getDate() - 6);
         }
-        var oEnd = endOfPeriod(oStart, sGranularity);
         return {
             granularity: sGranularity,
             start: oStart,
             end: oEnd,
-            label: "Hace " + String(oStart.getDate()).padStart(2, "0") + "/" + String(oStart.getMonth() + 1).padStart(2, "0") +
-                " - " + String(oEnd.getDate()).padStart(2, "0") + "/" + String(oEnd.getMonth() + 1).padStart(2, "0") + "/" + oEnd.getFullYear()
+            label: String(oStart.getDate()).padStart(2, "0") + "/" + String(oStart.getMonth() + 1).padStart(2, "0") + "/" + oStart.getFullYear() +
+                " – " + String(oEnd.getDate()).padStart(2, "0") + "/" + String(oEnd.getMonth() + 1).padStart(2, "0") + "/" + oEnd.getFullYear()
         };
     }
 

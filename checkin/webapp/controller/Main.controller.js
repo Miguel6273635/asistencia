@@ -48,6 +48,19 @@ sap.ui.define([
     return clock ? Number(parts[0]) * 60 + Number(parts[1]) : null;
   }
 
+  function shiftOverlapsWindow(startMinutes, endMinutes, windowStart, windowEnd) {
+    if (startMinutes === null || endMinutes === null) {
+      return false;
+    }
+
+    var normalizedEnd = endMinutes <= startMinutes ? endMinutes + 1440 : endMinutes;
+    return [-1440, 0, 1440, 2880].some(function (dayOffset) {
+      var normalizedWindowStart = windowStart + dayOffset;
+      var normalizedWindowEnd = windowEnd + dayOffset;
+      return startMinutes < normalizedWindowEnd && normalizedEnd > normalizedWindowStart;
+    });
+  }
+
   function normalizeWords(value) {
     return String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
   }
@@ -352,23 +365,51 @@ sap.ui.define([
       var model = this.getView().getModel("attendance");
       if (!model) { return; }
 
+      var MEAL_WINDOW_START = 12 * 60;
+      var MEAL_WINDOW_END = 14 * 60;
       var current = now || new Date();
       var currentMinutes = current.getHours() * 60 + current.getMinutes();
       var schedule = model.getProperty("/schedule") || {};
       var employee = model.getProperty("/employee") || {};
-      var nextAction = model.getProperty("/today/nextAction") || "CHECK_IN";
       var startMinutes = clockMinutes(schedule.start);
       var endMinutes = clockMinutes(schedule.end);
-      var mealStartMinutes = clockMinutes(schedule.mealStart);
-      var mealEndMinutes = clockMinutes(schedule.mealEnd);
       var hasEntry = model.getProperty("/today/entry") && model.getProperty("/today/entry") !== "—";
+      var hasMealStart = model.getProperty("/today/mealStart") && model.getProperty("/today/mealStart") !== "—";
+      var hasMealEnd = model.getProperty("/today/mealEnd") && model.getProperty("/today/mealEnd") !== "—";
+      var hasExit = model.getProperty("/today/exit") && model.getProperty("/today/exit") !== "—";
+      var isMealWindowRestricted = shiftOverlapsWindow(startMinutes, endMinutes, MEAL_WINDOW_START, MEAL_WINDOW_END);
+      var isWithinMealWindow = currentMinutes >= MEAL_WINDOW_START && currentMinutes <= MEAL_WINDOW_END;
+      var nextAction = "CHECK_IN";
+
+      if (hasEntry) {
+        if (hasExit) {
+          nextAction = null;
+        } else if (isMealWindowRestricted) {
+          if (!isWithinMealWindow) {
+            nextAction = "CHECK_OUT";
+          } else if (!hasMealStart) {
+            nextAction = "MEAL_START";
+          } else if (!hasMealEnd) {
+            nextAction = "MEAL_END";
+          } else {
+            nextAction = "CHECK_OUT";
+          }
+        } else if (!hasMealStart) {
+          nextAction = "MEAL_START";
+        } else if (!hasMealEnd) {
+          nextAction = "MEAL_END";
+        } else {
+          nextAction = "CHECK_OUT";
+        }
+      }
+
       var historyTravel = Boolean(model.getProperty("/today/isTravel"));
       var employeeTravel = [employee.status, employee.statusDescription, employee.registerType]
         .some(isTravelStatus);
       var isLateNow = !hasEntry && startMinutes !== null && currentMinutes > startMinutes;
       var isEarlyExit = nextAction === "CHECK_OUT" && endMinutes !== null && currentMinutes < endMinutes;
-      var mealStartAllowed = mealStartMinutes === null || currentMinutes >= mealStartMinutes;
-      var mealEndAllowed = mealEndMinutes === null || currentMinutes >= mealEndMinutes;
+      var mealStartAllowed = !isMealWindowRestricted || isWithinMealWindow;
+      var mealEndAllowed = !isMealWindowRestricted || isWithinMealWindow;
       var scheduleLabel = schedule.start && schedule.end ? schedule.start + "–" + schedule.end : "";
       var messageType = "Information";
       var message = scheduleLabel ? "Horario de hoy: " + scheduleLabel + "." : "SAP no expuso las horas del turno; se validará la secuencia de marcajes.";
@@ -379,20 +420,29 @@ sap.ui.define([
       } else if (isLateNow && nextAction === "CHECK_IN") {
         message = "Entrada tarde";
         messageType = "Warning";
+      } else if (hasEntry && isMealWindowRestricted && currentMinutes < MEAL_WINDOW_START) {
+        message = "La comida se habilitará de 12:00 a 14:00. Por ahora puedes registrar la salida.";
+        messageType = "Information";
+      } else if (hasEntry && isMealWindowRestricted && currentMinutes > MEAL_WINDOW_END && (!hasMealStart || !hasMealEnd)) {
+        message = "La ventana de comida terminó a las 14:00. Solo puedes registrar la salida.";
+        messageType = "Warning";
+      } else if (hasEntry && isMealWindowRestricted && isWithinMealWindow && (nextAction === "MEAL_START" || nextAction === "MEAL_END")) {
+        message = "Horario de comida disponible de 12:00 a 14:00.";
+        messageType = "Information";
+      } else if (hasEntry && !isMealWindowRestricted && (nextAction === "MEAL_START" || nextAction === "MEAL_END")) {
+        message = "Este turno no coincide con la ventana diurna de comida; el marcaje de comida es libre.";
+        messageType = "Information";
       } else if (isEarlyExit) {
         message = "Salida temprana: el horario termina a las " + schedule.end + ". Confirma antes de registrar.";
         messageType = "Warning";
-      } else if (nextAction === "MEAL_START" && !mealStartAllowed) {
-        message = "El horario de comida inicia a las " + schedule.mealStart + ".";
-        messageType = "Warning";
-      } else if (nextAction === "MEAL_END" && !mealEndAllowed) {
-        message = "El regreso de comida está previsto a partir de las " + schedule.mealEnd + ".";
-        messageType = "Warning";
       }
 
+      model.setProperty("/today/nextAction", nextAction);
       model.setProperty("/today/isLateNow", isLateNow);
       model.setProperty("/today/isEarlyExit", isEarlyExit);
       model.setProperty("/today/isTravel", historyTravel || employeeTravel);
+      model.setProperty("/today/isMealWindowRestricted", isMealWindowRestricted);
+      model.setProperty("/today/isWithinMealWindow", isWithinMealWindow);
       model.setProperty("/today/mealStartAllowed", mealStartAllowed);
       model.setProperty("/today/mealEndAllowed", mealEndAllowed);
       model.setProperty("/today/checkInText", isLateNow ? "Registrar entrada tarde" : "Registrar entrada");
@@ -411,14 +461,18 @@ sap.ui.define([
       if (explicitFalse(employee.authorisedRegister)) {
         return false;
       }
-      if (expectedCode && Object.keys(ACTION_CODES).some(function (key) { return ACTION_CODES[key] === expectedCode; })) {
-        return ACTION_CODES[action] === expectedCode;
-      }
       if (action === "MEAL_START" && model.getProperty("/today/mealStartAllowed") === false) {
         return false;
       }
       if (action === "MEAL_END" && model.getProperty("/today/mealEndAllowed") === false) {
         return false;
+      }
+      if (action === "CHECK_OUT" && model.getProperty("/today/isMealWindowRestricted") === true &&
+          model.getProperty("/today/isWithinMealWindow") === false) {
+        return true;
+      }
+      if (expectedCode && Object.keys(ACTION_CODES).some(function (key) { return ACTION_CODES[key] === expectedCode; })) {
+        return ACTION_CODES[action] === expectedCode;
       }
       return true;
     },
