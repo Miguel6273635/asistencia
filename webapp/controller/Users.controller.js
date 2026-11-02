@@ -1,9 +1,11 @@
 sap.ui.define([
     "com/mitsu/monitorasistencia/controller/BaseController",
     "com/mitsu/monitorasistencia/model/formatter",
+    "com/mitsu/monitorasistencia/model/AttendanceApi",
     "sap/ui/model/json/JSONModel",
+    "sap/m/MessageBox",
     "sap/m/MessageToast"
-], function (BaseController, formatter, JSONModel, MessageToast) {
+], function (BaseController, formatter, AttendanceApi, JSONModel, MessageBox, MessageToast) {
     "use strict";
 
     return BaseController.extend("com.mitsu.monitorasistencia.controller.Users", {
@@ -16,8 +18,12 @@ sap.ui.define([
                 search: "",
                 status: "all",
                 scheduleId: "",
+                uploadEntitySet: "EmployeesUploadSet",
+                uploadJson: "",
+                uploadBusy: false,
                 stats: { total: 0, active: 0, inactive: 0, centers: 0 }
             }), "view");
+            this._attendanceApi = new AttendanceApi();
             this.getRouter().getRoute("users").attachPatternMatched(this._onRouteMatched, this);
         },
 
@@ -83,7 +89,7 @@ sap.ui.define([
         },
 
         onOpenUserDialog: function () {
-            MessageToast.show("SAP aún no expone un servicio para crear colaboradores; la pantalla permanece en modo consulta.");
+            this.onOpenUploadDialog();
         },
 
         onCloseUserDialog: function () {
@@ -91,7 +97,121 @@ sap.ui.define([
         },
 
         onSaveUser: function () {
-            MessageToast.show("No se enviaron cambios: falta el endpoint de mantenimiento de colaboradores en SAP.");
+            this.onSubmitEmployeeUpload();
+        },
+
+        _createUploadTemplate: function () {
+            var oNow = new Date();
+            var sDate = oNow.getFullYear() + String(oNow.getMonth() + 1).padStart(2, "0") + String(oNow.getDate()).padStart(2, "0");
+            var sTime = String(oNow.getHours()).padStart(2, "0") + String(oNow.getMinutes()).padStart(2, "0") + String(oNow.getSeconds()).padStart(2, "0");
+            var sRequestId = sDate + "-" + sTime;
+            return {
+                RequestId: sRequestId,
+                Operation: "CREATE",
+                ProcessingMode: "PARTIAL",
+                ToEmployeesUpload: [{
+                    RequestId: sRequestId,
+                    ItemNo: "00001",
+                    PersonnelNumber: "",
+                    HireDate: sDate,
+                    Position: "",
+                    PersonnelArea: "",
+                    EmployeeGroup: "",
+                    EmployeeSubgroup: "",
+                    FirstName: "",
+                    LastName: "",
+                    BirthDate: "",
+                    Language: "ES",
+                    BirthCountry: "MX",
+                    Gender: "X",
+                    PersonnelSubarea: "",
+                    AttendanceChannel: "APP",
+                    Zone: "",
+                    City: "",
+                    Region: "",
+                    Municipality: "",
+                    Country: "MX",
+                    ResidenceType: "0",
+                    Schedule: "",
+                    Email: ""
+                }]
+            };
+        },
+
+        onOpenUploadDialog: function () {
+            var oViewModel = this.getModel("view");
+            if (!oViewModel.getProperty("/uploadJson")) {
+                oViewModel.setProperty("/uploadJson", JSON.stringify(this._createUploadTemplate(), null, 2));
+            }
+            this.byId("employeeUploadDialog").open();
+        },
+
+        onCloseUploadDialog: function () {
+            if (!this.getModel("view").getProperty("/uploadBusy")) {
+                this.byId("employeeUploadDialog").close();
+            }
+        },
+
+        _validateUploadPayload: function (oPayload) {
+            var aHeaderFields = ["RequestId", "Operation", "ProcessingMode"];
+            var aItemFields = [
+                "RequestId", "ItemNo", "PersonnelNumber", "HireDate", "Position", "PersonnelArea",
+                "EmployeeGroup", "EmployeeSubgroup", "FirstName", "LastName", "AttendanceChannel",
+                "Zone", "Schedule", "Email"
+            ];
+            var sMissingHeader = aHeaderFields.find(function (sField) { return !String(oPayload && oPayload[sField] || "").trim(); });
+            if (sMissingHeader) {
+                throw new Error("Falta el campo de cabecera " + sMissingHeader + ".");
+            }
+            if (!Array.isArray(oPayload.ToEmployeesUpload) || !oPayload.ToEmployeesUpload.length) {
+                throw new Error("ToEmployeesUpload debe contener por lo menos un empleado.");
+            }
+            oPayload.ToEmployeesUpload.forEach(function (oItem, iIndex) {
+                var sMissingItem = aItemFields.find(function (sField) { return !String(oItem && oItem[sField] || "").trim(); });
+                if (sMissingItem) {
+                    throw new Error("Empleado " + (iIndex + 1) + ": falta " + sMissingItem + ".");
+                }
+                if (oItem.RequestId !== oPayload.RequestId) {
+                    throw new Error("Empleado " + (iIndex + 1) + ": RequestId debe coincidir con la cabecera.");
+                }
+                if (!/^\d{8}$/.test(String(oItem.HireDate))) {
+                    throw new Error("Empleado " + (iIndex + 1) + ": HireDate debe usar el formato AAAAMMDD.");
+                }
+                if (!/^\S+@\S+\.\S+$/.test(String(oItem.Email))) {
+                    throw new Error("Empleado " + (iIndex + 1) + ": Email no tiene un formato válido.");
+                }
+            });
+            return oPayload;
+        },
+
+        onSubmitEmployeeUpload: function () {
+            var oViewModel = this.getModel("view");
+            var oPayload;
+            try {
+                oPayload = this._validateUploadPayload(JSON.parse(oViewModel.getProperty("/uploadJson") || "{}"));
+            } catch (oError) {
+                MessageBox.error("No se puede enviar la carga. " + oError.message);
+                return;
+            }
+
+            var sEntitySet = String(oViewModel.getProperty("/uploadEntitySet") || "EmployeesUploadSet").trim();
+            oViewModel.setProperty("/uploadBusy", true);
+            console.info("[EmployeeUpload][POST]", sEntitySet, JSON.parse(JSON.stringify(oPayload)));
+            this._attendanceApi.uploadEmployees(oPayload, sEntitySet).then(function (oResponse) {
+                console.info("[EmployeeUpload][RESPONSE]", oResponse);
+                this.byId("employeeUploadDialog").close();
+                oViewModel.setProperty("/uploadJson", "");
+                MessageBox.success(oPayload.ToEmployeesUpload.length + " empleado(s) enviados a SAP.", {
+                    details: JSON.stringify(oResponse, null, 2)
+                });
+            }.bind(this)).catch(function (oError) {
+                console.error("[EmployeeUpload][ERROR]", oError, oError.responseBody || "");
+                MessageBox.error("SAP rechazó la carga de usuarios.", {
+                    details: [oError.message, oError.responseBody].filter(Boolean).join("\n\n")
+                });
+            }).finally(function () {
+                oViewModel.setProperty("/uploadBusy", false);
+            });
         },
 
         onExport: function () {
@@ -104,6 +224,15 @@ sap.ui.define([
                 zoneId: oEmployee.zoneId,
                 employeeId: oEmployee.id
             });
+        },
+
+        onOpenUserPerformance: function (oEvent) {
+            var oListItem = oEvent.getParameter && oEvent.getParameter("listItem");
+            var oContext = (oListItem || oEvent.getSource()).getBindingContext("view");
+            var oEmployee = oContext && oContext.getObject();
+            if (oEmployee && oEmployee.id) {
+                this.navTo("userPerformance", { employeeId: oEmployee.id });
+            }
         },
 
         onNavOverview: function () {

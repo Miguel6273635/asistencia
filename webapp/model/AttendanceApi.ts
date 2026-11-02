@@ -9,6 +9,8 @@ export type AttendanceEntitySet =
     | "AttendanceHistorySet"
     | "AttendanceRecordSet"
     | "CatalogScheduleSet"
+    | "CatalogStatusSet"
+    | "CatalogZoneSet"
     | "ScheduleSummarySet"
     | "ScheduleTypeDistributionSet"
     | "EmployeeSet"
@@ -70,6 +72,40 @@ export interface AttendanceRecordPayload {
     IsLate?: string;
     StatusReq?: string;
     Message?: string;
+}
+
+export interface EmployeeUploadItem {
+    RequestId: string;
+    ItemNo: string;
+    PersonnelNumber: string;
+    HireDate: string;
+    Position: string;
+    PersonnelArea: string;
+    EmployeeGroup: string;
+    EmployeeSubgroup: string;
+    FirstName: string;
+    LastName: string;
+    BirthDate?: string;
+    Language?: string;
+    BirthCountry?: string;
+    Gender?: string;
+    PersonnelSubarea?: string;
+    AttendanceChannel?: string;
+    Zone?: string;
+    City?: string;
+    Region?: string;
+    Municipality?: string;
+    Country?: string;
+    ResidenceType?: string;
+    Schedule?: string;
+    Email: string;
+}
+
+export interface EmployeeUploadPayload {
+    RequestId: string;
+    Operation: string;
+    ProcessingMode: string;
+    ToEmployeesUpload: EmployeeUploadItem[];
 }
 
 export interface OverviewQuery {
@@ -232,6 +268,35 @@ export default class AttendanceApi {
             throw await this.toError(response, `AttendanceRecordSet respondió con HTTP ${response.status}`);
         }
 
+        const body = await response.json() as { d?: ODataRow };
+        return body.d ?? {};
+    }
+
+    public async uploadEmployees(
+        payload: EmployeeUploadPayload,
+        entitySet = "EmployeesUploadSet"
+    ): Promise<ODataRow> {
+        if (!/^[A-Za-z0-9_]+$/.test(entitySet)) {
+            throw new Error("El EntitySet de carga contiene caracteres no permitidos.");
+        }
+        const response = await fetch(`${this.serviceRoot}${entitySet}`, {
+            method: "POST",
+            credentials: "same-origin",
+            headers: {
+                Accept: "application/json",
+                "Content-Type": "application/json",
+                "X-CSRF-Token": await this.getCsrfToken()
+            },
+            body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+            throw await this.toError(response, `${entitySet} respondió con HTTP ${response.status}`);
+        }
+
+        if (response.status === 204) {
+            return {};
+        }
         const body = await response.json() as { d?: ODataRow };
         return body.d ?? {};
     }

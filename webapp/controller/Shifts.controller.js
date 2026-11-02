@@ -21,6 +21,7 @@ sap.ui.define([
                 typeStats: [],
                 search: "",
                 scheduleType: "all",
+                focusedScheduleId: "",
                 stats: {
                     active: 0,
                     coverage: "0.0",
@@ -62,6 +63,7 @@ sap.ui.define([
                 mSchedules[oDynamicSchedule.id] = oDynamicSchedule;
                 return oDynamicSchedule;
             });
+            var sFocusedScheduleId = oAttendanceModel.getProperty("/focusedScheduleId") || "";
 
             aEmployees.forEach(function (oEmployee) { mEmployees[oEmployee.id] = oEmployee; });
             aPeriodRecords = periodHelper.filterRecords(aFacts, oPeriod).map(function (oRecord) {
@@ -82,6 +84,7 @@ sap.ui.define([
             });
 
             oViewModel.setProperty("/periodLabel", oPeriod.label);
+            oViewModel.setProperty("/focusedScheduleId", sFocusedScheduleId);
             oViewModel.setProperty("/allSchedules", aSchedules);
             this._calculateStats(aSchedules);
             var oSapSummary = oAttendanceModel.getProperty("/scheduleSummary");

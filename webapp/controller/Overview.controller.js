@@ -574,8 +574,8 @@ sap.ui.define([
 
         onCriticalCenterPress: function (oEvent) {
             var oContext = oEvent.getSource().getBindingContext("view");
-            var sCenterId = oContext && oContext.getProperty("id");
-            if (sCenterId) { this.navTo("center", { centerId: sCenterId }); }
+            var sZoneId = oContext && oContext.getProperty("zoneId");
+            this.navTo("centers", { zoneId: sZoneId || "all" });
         },
 
         onApplyFilters: function () {

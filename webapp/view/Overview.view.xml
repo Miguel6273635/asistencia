@@ -61,7 +61,83 @@
                     <ToolbarSpacer />
                     <Button text="Aplicar filtros" type="Emphasized" icon="sap-icon://filter" press=".onApplyFilters" />
                 </OverflowToolbar>
+<!-- ****************************************************************************************************************************************** -->
+<!-- ** Lo módifiqué un poco Mike y también verás ajustes en el CSS, solo comenté tú codigo por si lo quieres regresar a la versión que tenías -->
+<!-- -->
 
+<List
+    items="{view>/zoneSummaries}"
+    showSeparators="None"
+    class="zoneCardList">
+
+    <CustomListItem
+        type="Active"
+        press=".onZonePress"
+        class="zoneSummaryCard">
+
+        <customData>
+            <core:CustomData
+                key="zoneId"
+                value="{view>zoneId}" />
+        </customData>
+
+        <VBox width="100%">
+
+            <!-- Encabezado: zona y riesgo -->
+            <HBox
+                justifyContent="SpaceBetween"
+                alignItems="Center"
+                class="zoneHeaderRow">
+
+                <Title
+                    text="{view>name}"
+                    level="H4"
+                    class="zoneTitle" />
+
+                <ObjectStatus
+                    text="{view>riskText}"
+                    state="{view>state}"
+                    inverted="true"
+                    class="zoneRiskStatus" />
+
+            </HBox>
+
+            <!-- Información general: una sola vez -->
+            <Text
+                text="{view>meta}"
+                class="zoneMeta" />
+
+            <!-- Indicadores de asistencia -->
+            <HBox
+                justifyContent="SpaceBetween"
+                alignItems="End"
+                class="zoneMetricRow">
+
+                <VBox>
+                    <ObjectNumber
+                        number="{view>attendance}"
+                        unit="% asistencia"
+                        state="{view>state}" />
+
+                    <Text
+                        text="{view>incidentSummary}"
+                        class="zoneIncidentSummary" />
+                </VBox>
+
+                <ObjectStatus
+                    text="{view>inefficiencyText}"
+                    state="{view>state}" />
+
+            </HBox>
+
+        </VBox>
+
+    </CustomListItem>
+
+</List>
+
+
+<!--
                 <List items="{view>/zoneSummaries}" showSeparators="None" class="zoneCardList">
                     <CustomListItem type="Active" press=".onZonePress" class="zoneSummaryCard">
                         <customData><core:CustomData key="zoneId" value="{view>zoneId}" /></customData>
@@ -77,7 +153,8 @@
                         </VBox>
                     </CustomListItem>
                 </List>
-
+-->
+<!-- ****************************************************************************************************************************************** -->
                 <l:Grid defaultSpan="XL8 L8 M12 S12" hSpacing="1" vSpacing="1" class="sapUiSmallMarginTop overviewPrimaryGrid">
                     <Panel headerText="Ineficiencia por zona (%)" class="dashboardPanel inefficiencyPanel overviewBalancedPanel">
                         <content>

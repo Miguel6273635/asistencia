@@ -240,10 +240,8 @@ sap.ui.define([
             var sLabel;
 
             if (sPeriodType === "week") {
-                var iDay = oStart.getDay() || 7;
-                oStart.setDate(oStart.getDate() - iDay + 1);
                 oEnd = new Date(oStart);
-                oEnd.setDate(oEnd.getDate() + 6);
+                oStart.setDate(oStart.getDate() - 6);
                 sLabel = "Semana del " + this._formatShortDate(oStart) + " al " + this._formatShortDate(oEnd);
             } else if (sPeriodType === "year") {
                 oStart = new Date(oReference.getFullYear(), 0, 1, 0, 0, 0, 0);
@@ -409,10 +407,13 @@ sap.ui.define([
         },
 
         onPeriodChange: function () {
-            this._syncPeriodSelectors();
-            this._updatePeriodRange();
-            this._applyFilters();
-            this._reloadRecordsForPeriod();
+            var sPeriodType = this.getModel("view").getProperty("/periodType");
+            if (sPeriodType === "week") {
+                this._updatePeriodRange();
+                this._applyFilters();
+                return;
+            }
+            this._applyMonthYearSelection();
         },
 
         onReferenceDateChange: function (oEvent) {
@@ -420,19 +421,33 @@ sap.ui.define([
             if (this._parseDisplayDate(sValue)) {
                 this.getModel("view").setProperty("/referenceDate", sValue);
                 this._syncPeriodSelectors();
+                this._updatePeriodRange();
+                this._applyFilters();
             }
-            this.onPeriodChange();
         },
 
         onMonthYearChange: function () {
             this._applyMonthYearSelection();
-            this._reloadRecordsForPeriod();
+        },
+
+        onApplyFilters: function () {
+            var sPeriodType = this.getModel("view").getProperty("/periodType");
+            if (sPeriodType === "month" || sPeriodType === "year") {
+                this._applyMonthYearSelection();
+            } else {
+                this._updatePeriodRange();
+                this._applyFilters();
+            }
+            this._reloadRecordsForPeriod().then(function () {
+                MessageToast.show("Filtros aplicados: " + this.getModel("view").getProperty("/periodLabel"));
+            }.bind(this));
         },
 
         onRecordSelectionChange: function (oEvent) {
             var oListItem = oEvent.getParameter("listItem");
             if (oListItem) {
                 this.getModel("view").setProperty("/selectedRecord", oListItem.getBindingContext("view").getObject());
+                this.byId("recordDetailDialog").open();
             }
         },
 
@@ -449,6 +464,10 @@ sap.ui.define([
         },
 
         onCloseDetail: function () {
+            this.byId("recordDetailDialog").close();
+        },
+
+        onDetailAfterClose: function () {
             this.getModel("view").setProperty("/selectedRecord", {});
             this.byId("recordsTable").removeSelections(true);
         },
@@ -471,13 +490,6 @@ sap.ui.define([
             this.navTo("overview");
         },
 
-        onNavCenter: function () {
-            var sCenterId = this.getModel("view").getProperty("/employee/centerId");
-            if (sCenterId) {
-                this.navTo("center", { centerId: sCenterId });
-            }
-        },
-
         onExport: function () {
             var oViewModel = this.getModel("view");
             var aRecords = oViewModel.getProperty("/records") || [];
@@ -497,8 +509,6 @@ sap.ui.define([
                 { label: "Inicio de comida", property: "mealCheckOut", width: 16 },
                 { label: "Fin de comida", property: "mealCheckIn", width: 16 },
                 { label: "Salida", property: "exit", width: 10 },
-                { label: "Horas", property: "hours", width: 10 },
-                { label: "Distancia", property: "distanceLabel", width: 14 },
                 { label: "Estatus", property: "status", width: 16 },
                 { label: "Observaciones", property: "observation", width: 36 }
             ];
