@@ -2727,3 +2727,128 @@ body > div,
 .centersCompactKpis .kpiCard {
     flex: 1 1 20rem;
 }
+
+/* ==============================================
+   MONITOR ASISTENCIA
+   NAVEGACIÓN HORIZONTAL DE USUARIOS
+   ============================================== */
+
+.usersPage .usersTableHorizontalLayout {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: stretch !important;
+    width: 100% !important;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    gap: 0;
+}
+
+/* Contenedor de la tabla */
+
+.usersPage .usersTableHorizontalLayout .usersTableScroll {
+    flex: 1 1 0% !important;
+    min-width: 0 !important;
+    width: 0 !important;
+    max-width: none !important;
+    overflow: hidden;
+}
+
+/* Área que se mueve horizontalmente */
+
+.usersPage .usersTableScroll .sapMScrollContScroll {
+    overflow-x: auto !important;
+    overflow-y: auto !important;
+    scroll-behavior: smooth;
+    scrollbar-width: thin;
+    scrollbar-color: #9bafbf #f1f5f9;
+}
+
+/* Mantener las columnas distribuidas */
+
+.usersPage .usersWideTable {
+    min-width: 170rem;
+}
+
+/* Rieles laterales */
+
+.usersPage .usersScrollSide {
+    flex: 0 0 2.5rem !important;
+    width: 2.5rem !important;
+    min-width: 2.5rem !important;
+    max-width: 2.5rem !important;
+    background: #f3f7fb;
+    border: 1px solid #d3e1ef;
+    box-sizing: border-box;
+    z-index: 2;
+}
+
+.usersPage .usersScrollSideLeft {
+    border-radius: 0.6rem 0 0 0.6rem;
+    border-right: none;
+}
+
+.usersPage .usersScrollSideRight {
+    border-radius: 0 0.6rem 0.6rem 0;
+    border-left: none;
+}
+
+/* Botones de navegación */
+
+.usersPage .usersScrollSideButton {
+    width: 2.2rem;
+    height: 3rem;
+}
+
+.usersPage .usersScrollSideButton .sapMBtnInner {
+    border: none !important;
+    background: transparent !important;
+    border-radius: 0.5rem !important;
+}
+
+.usersPage .usersScrollSideButton .sapUiIcon {
+    color: #0a6ed1 !important;
+    font-size: 1.2rem !important;
+}
+
+/* Efecto al pasar el cursor */
+
+.usersPage .usersScrollSideButton:hover .sapMBtnInner {
+    background: #dceafa !important;
+}
+
+/* Scroll horizontal visible */
+
+.usersPage .usersTableScroll .sapMScrollContScroll::-webkit-scrollbar {
+    width: 9px;
+    height: 12px;
+}
+
+.usersPage .usersTableScroll .sapMScrollContScroll::-webkit-scrollbar-track {
+    background: #edf2f7;
+    border-radius: 6px;
+}
+
+.usersPage .usersTableScroll .sapMScrollContScroll::-webkit-scrollbar-thumb {
+    background: #9bafbf;
+    border-radius: 6px;
+    border: 2px solid #edf2f7;
+}
+
+.usersPage .usersTableScroll .sapMScrollContScroll::-webkit-scrollbar-thumb:hover {
+    background: #0a6ed1;
+}
+
+/* Adaptación a pantallas pequeñas */
+
+@media (max-width: 768px) {
+    .usersPage .usersScrollSide {
+        flex-basis: 2rem !important;
+        width: 2rem !important;
+        min-width: 2rem !important;
+    }
+
+    .usersPage .usersScrollSideButton {
+        width: 1.8rem;
+    }
+}
