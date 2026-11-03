@@ -109,8 +109,26 @@ function inferScheduleType(row: ODataRow): string {
     return "Diurno";
 }
 
+function isOutsideZone(row: ODataRow): boolean {
+    const geoStatus = [
+        row.GeoStatus,
+        row.GeoStatusDescripcion,
+        row.GeoStatusDescription,
+        row.LocationStatus,
+        row.DayStatus
+    ].map((value) => text(value).toUpperCase()).filter(Boolean).join(" ");
+    const explicitOutside = bool(row.IsOutOfZone) || bool(row.OutOfZone) ||
+        /(^|\s)(OUT|OUTSIDE)(\s|$)|FUERA(?:\s+DE)?\s+ZONA|FUERA\s+DE\s+GEOCERCA|OUT_OF_ZONE/.test(geoStatus);
+    const explicitInside = /(^|\s)IN(?:SIDE)?(\s|$)|DENTRO(?:\s+DE)?\s+(?:ZONA|GEOCERCA)/.test(geoStatus);
+    const distanceText = text(row.DistanceMeters || row.Distance || row.DistanceFromCenter);
+    const hasDistance = distanceText !== "" && Number.isFinite(Number(distanceText.replace(",", ".")));
+    const outsideByDistance = hasDistance && Number(distanceText.replace(",", ".")) > 2;
+
+    return explicitOutside || (!explicitInside && outsideByDistance);
+}
+
 function attendanceStatus(row: ODataRow): string {
-    if (bool(row.IsOutOfZone)) { return "Fuera de zona"; }
+    if (isOutsideZone(row)) { return "Fuera de zona"; }
     if (bool(row.IsAbsent)) { return "Ausente"; }
     if (bool(row.IsIncomplete)) { return "Incompleto"; }
     const raw = text(row.DayStatus).toUpperCase();
@@ -193,7 +211,7 @@ function mapRecords(rows: ODataRow[], schedules: Record<string, unknown>[]): Rec
             isLate: bool(row.IsLate),
             isAbsent: bool(row.IsAbsent),
             isIncomplete: bool(row.IsIncomplete),
-            isOutOfZone: bool(row.IsOutOfZone),
+            isOutOfZone: isOutsideZone(row),
             isEarlyExit: bool(row.IsEarlyExit) || bool(row.EarlyExit) || bool(row.IsEarly),
             observation: text(row.Observation),
             message: text(row.Message),
@@ -395,13 +413,92 @@ function mapCenters(rows: ODataRow[], history: ODataRow[], employees: Record<str
 }
 
 function coordinate(value: unknown, longitude = false): number | null {
-    const raw = text(value);
+    const raw = text(value).replace(",", ".");
     if (!raw) { return null; }
     const trailingNegative = /-$/.test(raw);
     const parsed = Number(raw.replace(/-$/, ""));
     if (!Number.isFinite(parsed)) { return null; }
-    if (trailingNegative) { return -Math.abs(parsed); }
-    return longitude && parsed > 0 ? -parsed : parsed;
+    const normalized = trailingNegative ? -Math.abs(parsed) : (longitude && parsed > 0 ? -parsed : parsed);
+    if ((!longitude && Math.abs(normalized) > 90) || (longitude && Math.abs(normalized) > 180)) { return null; }
+    return normalized;
+}
+
+function distanceMeters(latitudeA: number, longitudeA: number, latitudeB: number, longitudeB: number): number {
+    const radians = (degrees: number): number => degrees * Math.PI / 180;
+    const latitudeDelta = radians(latitudeB - latitudeA);
+    const longitudeDelta = radians(longitudeB - longitudeA);
+    const a = Math.sin(latitudeDelta / 2) ** 2 +
+        Math.cos(radians(latitudeA)) * Math.cos(radians(latitudeB)) * Math.sin(longitudeDelta / 2) ** 2;
+    return 6371000 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function mapGeofenceStatus(
+    row: ODataRow,
+    latitudeEmployee: number | null,
+    longitudeEmployee: number | null,
+    latitudeCenter: number | null,
+    longitudeCenter: number | null
+): { label: string; state: string; type: string; distance: number | null } {
+    const rawStatus = [
+        row.GeoStatus,
+        row.GeoStatusDescripcion,
+        row.GeoStatusDescription,
+        row.LocationStatus
+    ].map(text).filter(Boolean).join(" ").toUpperCase();
+    const outsideFlag = /^(X|TRUE|1|YES|SI|SÍ)$/i.test(text(row.IsOutOfZone || row.OutOfZone));
+    const insideFlag = /^(X|TRUE|1|YES|SI|SÍ)$/i.test(text(row.IsInsideZone || row.InsideZone));
+    const backendDistance = number(row.DistanceMeters || row.Distance || row.DistanceFromCenter);
+    const calculatedDistance = latitudeEmployee !== null && longitudeEmployee !== null &&
+        latitudeCenter !== null && longitudeCenter !== null
+        ? distanceMeters(latitudeEmployee, longitudeEmployee, latitudeCenter, longitudeCenter)
+        : null;
+    const effectiveDistance = backendDistance > 0 ? backendDistance : calculatedDistance;
+    const allowedRadius = Math.max(0, number(
+        row.RadiusMeters || row.AllowedRadius || row.Radius || row.RadioCoordenadas || row.Radio
+    )) || 2;
+
+    if (outsideFlag || /OUT(?:SIDE)?|FUERA|OUT_OF_ZONE/.test(rawStatus)) {
+        return { label: "Fuera de zona", state: "Error", type: "Error", distance: effectiveDistance };
+    }
+    if (insideFlag || /(^|\s)IN(?:SIDE)?($|\s)|DENTRO/.test(rawStatus)) {
+        return { label: "Dentro de zona", state: "Success", type: "Success", distance: effectiveDistance };
+    }
+    if (effectiveDistance !== null) {
+        const outside = effectiveDistance > allowedRadius;
+        return {
+            label: outside ? "Fuera de zona" : "Dentro de zona",
+            state: outside ? "Error" : "Success",
+            type: outside ? "Error" : "Success",
+            distance: effectiveDistance
+        };
+    }
+    return { label: "Sin información de zona", state: "None", type: "Default", distance: null };
+}
+
+function separateOverlappingPersonnel(personnel: Record<string, unknown>[]): void {
+    const groups = new Map<string, Record<string, unknown>[]>();
+    personnel.forEach((person) => {
+        const key = text(person.position).split(";").slice(0, 2).join(";");
+        if (!key) { return; }
+        const group = groups.get(key) || [];
+        group.push(person);
+        groups.set(key, group);
+    });
+    groups.forEach((group) => {
+        if (group.length < 2) { return; }
+        group.sort((a, b) => text(a.number).localeCompare(text(b.number)));
+        group.forEach((person, index) => {
+            const original = text(person.position).split(";").map(Number);
+            const ring = Math.floor(index / 8) + 1;
+            const angle = (index % 8) * Math.PI / 4;
+            const latitudeOffset = Math.sin(angle) * 0.000045 * ring;
+            const longitudeScale = Math.max(0.2, Math.cos(original[1] * Math.PI / 180));
+            const longitudeOffset = Math.cos(angle) * 0.000045 * ring / longitudeScale;
+            person.rawPosition = person.position;
+            person.position = `${original[0] + longitudeOffset};${original[1] + latitudeOffset};0`;
+            person.positionAdjusted = true;
+        });
+    });
 }
 
 function mapLocations(
@@ -421,7 +518,9 @@ function mapLocations(
         const zoneId = operationalZoneId(employeeZoneId && employeeZoneId !== "sin-zona" ? employeeZoneId : (text(center.zoneId) || row.Zone));
         const latitudeCenter = coordinate(row.LatitudeCenter);
         const longitudeCenter = coordinate(row.LongitudeCenter, true);
-        if (code && latitudeCenter !== null && longitudeCenter !== null && !locationsByCenter.has(code)) {
+        const hasCenterCoordinates = latitudeCenter !== null && longitudeCenter !== null &&
+            !(latitudeCenter === 0 && longitudeCenter === 0);
+        if (code && hasCenterCoordinates && !locationsByCenter.has(code)) {
             locationsByCenter.set(code, {
                 id: code.toLowerCase(), zoneId, name: text(center.name) || code, code,
                 position: `${longitudeCenter};${latitudeCenter};0`, type: "Default", icon: "sap-icon://building",
@@ -430,22 +529,36 @@ function mapLocations(
         }
         const latitudeEmployee = coordinate(row.LatitudeEmp);
         const longitudeEmployee = coordinate(row.LongitudeEmp, true);
-        if (text(row.PersonalNumber) && latitudeEmployee !== null && longitudeEmployee !== null) {
+        const hasEmployeeCoordinates = latitudeEmployee !== null && longitudeEmployee !== null &&
+            !(latitudeEmployee === 0 && longitudeEmployee === 0);
+        if (text(row.PersonalNumber)) {
             const name = text(row.FullName) || text(employee.name) || text(row.PersonalNumber);
-            const geoStatus = text(row.GeoStatus);
-            const state = /OUT|FUERA/i.test(geoStatus) ? "Error" : (/IN/i.test(geoStatus) ? "Success" : "None");
+            const geofence = mapGeofenceStatus(
+                row,
+                hasEmployeeCoordinates ? latitudeEmployee : null,
+                hasEmployeeCoordinates ? longitudeEmployee : null,
+                hasCenterCoordinates ? latitudeCenter : null,
+                hasCenterCoordinates ? longitudeCenter : null
+            );
+            const distanceLabel = geofence.distance === null ? "Sin dato" : `${geofence.distance.toFixed(1)} m`;
             mapPersonnel.push({
                 employeeId: `employee-${text(row.PersonalNumber)}`,
                 number: text(row.PersonalNumber), name,
                 initials: name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part.charAt(0)).join(""),
                 zoneId, centerId: code.toLowerCase(), center: text(center.name) || text(employee.center) || code,
-                position: `${longitudeEmployee};${latitudeEmployee};0`, role: text(employee.role) || "Colaborador",
-                locationStatus: geoStatus || "Ubicación registrada", type: state === "Error" ? "Error" : "Success", state,
+                position: hasEmployeeCoordinates ? `${longitudeEmployee};${latitudeEmployee};0` : "",
+                hasCoordinates: hasEmployeeCoordinates,
+                role: text(employee.role) || "Colaborador",
+                locationStatus: geofence.label, type: geofence.type, state: geofence.state,
                 lastLocation: text(row.LastSignal) || text(row.LastUpdate) || "Sin hora reportada",
-                accuracy: "Sin dato", tooltip: `${name} · ${geoStatus || "ubicación registrada"}`
+                accuracy: distanceLabel,
+                latitude: hasEmployeeCoordinates ? latitudeEmployee : null,
+                longitude: hasEmployeeCoordinates ? longitudeEmployee : null,
+                tooltip: `${name} · ${geofence.label} · ${distanceLabel}`
             });
         }
     });
+    separateOverlappingPersonnel(mapPersonnel);
     const centerList = Array.from(locationsByCenter.values());
     const zoneGroups = new Map<string, Record<string, unknown>[]>();
     centerList.forEach((center) => {
@@ -455,18 +568,28 @@ function mapLocations(
         group.push(center);
         zoneGroups.set(zoneId, group);
     });
-    const mapZones = Array.from(zoneGroups.entries()).map(([zoneId, group]) => {
-        const coordinates = group.map((center) => text(center.position).split(";").map(Number));
+    const zoneIds = new Set<string>([
+        ...Array.from(zoneGroups.keys()),
+        ...mapPersonnel.map((person) => text(person.zoneId)).filter((zoneId) => zoneId && zoneId !== "sin-zona")
+    ]);
+    const mapZones = Array.from(zoneIds).map((zoneId) => {
+        const group = zoneGroups.get(zoneId) || [];
+        const personnelInZone = mapPersonnel.filter((person) => person.zoneId === zoneId);
+        const personnelWithCoordinates = personnelInZone.filter((person) => person.hasCoordinates);
+        const coordinateSources = group.length ? group : personnelWithCoordinates;
+        const coordinates = coordinateSources.map((item) => text(item.rawPosition || item.position).split(";").map(Number));
+        if (!coordinates.length) { return null; }
         const longitude = coordinates.reduce((sum, item) => sum + item[0], 0) / coordinates.length;
         const latitude = coordinates.reduce((sum, item) => sum + item[1], 0) / coordinates.length;
-        const visible = mapPersonnel.filter((person) => person.zoneId === zoneId).length;
+        const visible = personnelWithCoordinates.length;
         return {
             id: zoneId, name: displayZone(zoneId), position: `${longitude};${latitude};0`,
             centerPosition: `${longitude};${latitude}`, zoomLevel: 6,
             text: zoneId.charAt(0).toUpperCase(), type: "Default", centers: group.length,
-            users: visible, online: visible, tooltip: `${displayZone(zoneId)} · ${group.length} centros · ${visible} ubicaciones`
+            users: personnelInZone.length, online: visible,
+            tooltip: `${displayZone(zoneId)} · ${group.length} centros · ${visible} ubicaciones`
         };
-    });
+    }).filter(Boolean);
     return { mapZones, mapCenters: centerList, mapPersonnel };
 }
 

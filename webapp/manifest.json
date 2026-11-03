@@ -16,6 +16,22 @@
           "odataVersion": "2.0"
         }
       }
+    },
+    "crossNavigation": {
+      "inbounds": {
+        "ZMonitorAsistencia-display": {
+          "semanticObject": "ZMonitorAsistencia",
+          "action": "display",
+          "title": "Monitor de Asistencia",
+          "subTitle": "Control de asistencia y horarios",
+          "info": "Mitsubishi Electric",
+          "icon": "sap-icon://employee",
+          "signature": {
+            "parameters": {},
+            "additionalParameters": "allowed"
+          }
+        }
+      }
     }
   },
   "sap.cloud": {

@@ -82,7 +82,7 @@
                                                 click=".onCenterSpotPress" />
                                         </vbm:items>
                                     </vbm:Spots>
-                                    <vbm:Spots items="{map>/currentPersonnel}" visible="{= ${map>/mode} === 'zone'}">
+                                    <vbm:Spots items="{map>/currentPersonnelSpots}" visible="{= ${map>/mode} === 'zone'}">
                                         <vbm:items>
                                             <vbm:Spot
                                                 key="{map>employeeId}"
@@ -103,10 +103,9 @@
                         <content>
                             <VBox class="mapSideContent">
                                 <HBox wrap="Wrap" class="mapLegend">
-                                    <ObjectStatus text="En servicio" state="Success" />
-                                    <ObjectStatus text="En traslado" state="Warning" />
-                                    <ObjectStatus text="Sin señal" state="None" />
-                                    <ObjectStatus text="Alerta" state="Error" />
+                                    <ObjectStatus text="Dentro de zona: {map>/insideCount}" state="Success" />
+                                    <ObjectStatus text="Fuera de zona: {map>/outsideCount}" state="Error" />
+                                    <ObjectStatus text="Sin información: {map>/unknownCount}" state="None" />
                                 </HBox>
 
                                 <List

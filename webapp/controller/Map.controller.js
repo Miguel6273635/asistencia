@@ -49,6 +49,10 @@ sap.ui.define([
                 zoneSpots: [],
                 currentCenters: [],
                 currentPersonnel: [],
+                currentPersonnelSpots: [],
+                insideCount: 0,
+                outsideCount: 0,
+                unknownCount: 0,
                 selectedPerson: {},
                 hasSelectedPerson: false,
                 mapConfiguration: MAP_CONFIGURATION
@@ -85,6 +89,10 @@ sap.ui.define([
             var aZones = oAttendanceModel.getProperty("/mapZones") || [];
             var aCenters = oAttendanceModel.getProperty("/mapCenters") || [];
             var aPersonnel = oAttendanceModel.getProperty("/mapPersonnel") || [];
+            var iInside = aPersonnel.filter(function (oPerson) { return oPerson.locationStatus === "Dentro de zona"; }).length;
+            var iOutside = aPersonnel.filter(function (oPerson) { return oPerson.locationStatus === "Fuera de zona"; }).length;
+            var iUnknown = aPersonnel.length - iInside - iOutside;
+            var iLocated = aPersonnel.filter(function (oPerson) { return oPerson.hasCoordinates; }).length;
 
             oMapModel.setProperty("/mode", "general");
             oMapModel.setProperty("/title", "Mapa general de ubicaciones");
@@ -94,11 +102,15 @@ sap.ui.define([
             oMapModel.setProperty("/mapPanelTitle", "Cobertura por zona");
             oMapModel.setProperty("/sidePanelTitle", "Zonas operativas");
             oMapModel.setProperty("/summaryText", aZones.length + " zonas · " + aCenters.length +
-                " centros · " + aPersonnel.length + " ubicaciones con coordenadas");
+                " centros · " + aPersonnel.length + " personas · " + iLocated + " con coordenadas");
             oMapModel.setProperty("/zoneOptions", [{ id: "all", name: "Todas las zonas" }].concat(aZones));
             oMapModel.setProperty("/zoneSpots", aZones);
             oMapModel.setProperty("/currentCenters", []);
             oMapModel.setProperty("/currentPersonnel", []);
+            oMapModel.setProperty("/currentPersonnelSpots", []);
+            oMapModel.setProperty("/insideCount", iInside);
+            oMapModel.setProperty("/outsideCount", iOutside);
+            oMapModel.setProperty("/unknownCount", iUnknown);
             oMapModel.setProperty("/selectedPerson", {});
             oMapModel.setProperty("/hasSelectedPerson", false);
             this._setMapPosition("-99.1700;19.4250", 9);
@@ -124,6 +136,10 @@ sap.ui.define([
             var oSelectedPerson = sEmployeeId ? aPersonnel.find(function (oPerson) {
                 return oPerson.employeeId === sEmployeeId;
             }) : null;
+            var iInside = aPersonnel.filter(function (oPerson) { return oPerson.locationStatus === "Dentro de zona"; }).length;
+            var iOutside = aPersonnel.filter(function (oPerson) { return oPerson.locationStatus === "Fuera de zona"; }).length;
+            var iUnknown = aPersonnel.length - iInside - iOutside;
+            var aPersonnelSpots = aPersonnel.filter(function (oPerson) { return oPerson.hasCoordinates; });
 
             oMapModel.setProperty("/mode", "zone");
             oMapModel.setProperty("/title", oZone.name);
@@ -131,15 +147,20 @@ sap.ui.define([
             oMapModel.setProperty("/currentLocationText", oZone.name);
             oMapModel.setProperty("/currentZoneId", sZoneId);
             oMapModel.setProperty("/mapPanelTitle", "Mapa de " + oZone.name.toLowerCase());
-            oMapModel.setProperty("/sidePanelTitle", "Personal localizado · " + aPersonnel.length);
-            oMapModel.setProperty("/summaryText", oZone.centers + " centros · " + aPersonnel.length + " personas visibles");
+            oMapModel.setProperty("/sidePanelTitle", "Personal recibido · " + aPersonnel.length);
+            oMapModel.setProperty("/summaryText", oZone.centers + " centros · " + aPersonnel.length +
+                " personas · " + aPersonnelSpots.length + " con coordenadas");
             oMapModel.setProperty("/zoneOptions", [{ id: "all", name: "Todas las zonas" }].concat(aZones));
             oMapModel.setProperty("/currentCenters", aCenters);
             oMapModel.setProperty("/currentPersonnel", aPersonnel);
+            oMapModel.setProperty("/currentPersonnelSpots", aPersonnelSpots);
+            oMapModel.setProperty("/insideCount", iInside);
+            oMapModel.setProperty("/outsideCount", iOutside);
+            oMapModel.setProperty("/unknownCount", iUnknown);
             oMapModel.setProperty("/selectedPerson", oSelectedPerson || {});
             oMapModel.setProperty("/hasSelectedPerson", Boolean(oSelectedPerson));
 
-            if (oSelectedPerson) {
+            if (oSelectedPerson && oSelectedPerson.hasCoordinates) {
                 this._setMapPosition(this._positionWithoutAltitude(oSelectedPerson.position), 15);
             } else {
                 this._setMapPosition(oZone.centerPosition, oZone.zoomLevel);
