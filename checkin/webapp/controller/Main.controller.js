@@ -32,6 +32,24 @@ sap.ui.define([
     CHECK_OUT: "P20"
   };
 
+  // Fecha inicial solicitada para la consulta temporal de marcajes. DateTo se
+  // calcula siempre con la fecha actual y el correo ingresado cambia en cada acceso.
+  var HISTORY_START_DATE = "2026-10-28";
+
+  function localIsoDate(date) {
+    return date.getFullYear() + "-" + String(date.getMonth() + 1).padStart(2, "0") + "-" + String(date.getDate()).padStart(2, "0");
+  }
+
+  function employeeInitials(name) {
+    return String(name || "")
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map(function (part) { return part.charAt(0).toUpperCase(); })
+      .join("") || "US";
+  }
+
   function normalizeClock(value) {
     var text = String(value || "").trim();
     var duration = text.match(/^PT(\d+)H(\d+)M/i);
@@ -130,7 +148,36 @@ sap.ui.define([
       if (IdentityService.hasActiveIdentity()) {
         this.getView().getModel("app").setProperty("/requiresIdentity", false);
         this._loadEmployeeAfterInitialData(false);
+      } else {
+        this.getView().getModel("app").setProperty("/requiresIdentity", true);
       }
+    },
+
+    _initializeAuthenticatedIdentity: function () {
+      var appModel = this.getView().getModel("app");
+      // La vista principal nunca se bloquea con una pantalla intermedia.
+      // La identidad y el perfil se resuelven en segundo plano.
+      appModel.setProperty("/requiresIdentity", false);
+      appModel.setProperty("/identityLoading", true);
+      appModel.setProperty("/identityLookupError", "");
+      appModel.setProperty("/employeeError", "");
+      appModel.setProperty("/employeeLoading", true);
+
+      Diagnostics.info("IDENTITY", "Consultando el usuario de la sesión BTP", {});
+      return IdentityService.loadAuthenticatedIdentity().then(function (identity) {
+        this._activeIdentity = identity;
+        appModel.setProperty("/requiresIdentity", false);
+        Diagnostics.info("IDENTITY", "Se usará la identidad autenticada para consultar EmployeeSet", identity);
+        this._loadEmployeeAfterInitialData(false);
+      }.bind(this)).catch(function (error) {
+        Diagnostics.error("IDENTITY", "No fue posible iniciar con la identidad BTP", error);
+        appModel.setProperty("/identityLookupError", error.message);
+        appModel.setProperty("/employeeError", error.message);
+        appModel.setProperty("/requiresIdentity", false);
+        appModel.setProperty("/employeeLoading", false);
+      }).finally(function () {
+        appModel.setProperty("/identityLoading", false);
+      });
     },
 
     onExit: function () {
@@ -142,6 +189,12 @@ sap.ui.define([
           dialog.destroy();
         });
         this._lateJustificationDialogPromise = null;
+      }
+      if (this._earlyExitJustificationDialogPromise) {
+        this._earlyExitJustificationDialogPromise.then(function (dialog) {
+          dialog.destroy();
+        });
+        this._earlyExitJustificationDialogPromise = null;
       }
     },
 
@@ -197,12 +250,122 @@ sap.ui.define([
           IdentityService.clearIdentity();
           this._activeIdentity = null;
           appModel.setProperty("/identityLookupError", error.message);
+          appModel.setProperty("/employeeError", error.message);
           appModel.setProperty("/requiresIdentity", true);
         } else {
           appModel.setProperty("/employeeError", error.message);
         }
       }.bind(this)).finally(function () {
         appModel.setProperty("/employeeLoading", false);
+      });
+    },
+
+    onIdentitySubmit: function () {
+      var appModel = this.getView().getModel("app");
+      var email = String(appModel.getProperty("/identityInput") || "").trim().toLowerCase();
+
+      appModel.setProperty("/identityLookupError", "");
+
+      if (!email) {
+        appModel.setProperty("/identityLookupError", "Escribe el correo del empleado.");
+        return;
+      }
+
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        appModel.setProperty("/identityLookupError", "El correo no tiene un formato válido.");
+        return;
+      }
+
+      appModel.setProperty("/identityInput", email);
+      IdentityService.setAuthenticatedIdentity({
+        personalNumber: "",
+        email: email,
+        userName: email,
+        displayName: "",
+        device: "",
+        source: "manual-email"
+      });
+      this._activeIdentity = IdentityService.getActiveIdentity();
+      this._loadProfileFromHistory(email);
+    },
+
+    onIdentityInputLiveChange: function () {
+      this.getView().getModel("app").setProperty("/identityLookupError", "");
+    },
+
+    _loadProfileFromHistory: function (email) {
+      var appModel = this.getView().getModel("app");
+      var attendanceModel = this.getView().getModel("attendance");
+      var dataSource = this.getOwnerComponent().getManifestEntry("/sap.app/dataSources/attendanceOData");
+      var dateTo = localIsoDate(new Date());
+
+      appModel.setProperty("/employeeLoading", true);
+      appModel.setProperty("/historyLoading", true);
+      appModel.setProperty("/employeeError", "");
+      appModel.setProperty("/historyError", "");
+      appModel.setProperty("/identityLookupError", "");
+
+      Diagnostics.info("FLOW", "Consultando el historial con el correo ingresado", {
+        entitySet: "AttendanceHistorySet",
+        identifier: email,
+        filterField: "Email",
+        dateFrom: HISTORY_START_DATE.replace(/-/g, ""),
+        dateTo: dateTo.replace(/-/g, "")
+      });
+
+      return AttendanceService.readHistory(dataSource.uri, email, HISTORY_START_DATE, "", {
+        dateTo: dateTo,
+        filterField: "Email"
+      }).then(function (history) {
+        if (!history.length) {
+          throw new Error("No se encontraron marcajes para " + email + " en el periodo solicitado.");
+        }
+
+        var profile = history[0].employee || {};
+        var employee = {
+          id: profile.id || email,
+          name: profile.name || email,
+          initials: employeeInitials(profile.name || email),
+          role: "Colaborador Mitsubishi",
+          position: profile.position || "Colaborador",
+          center: profile.center || "Centro no asignado",
+          centerCode: profile.centerCode || "",
+          address: "",
+          schedule: profile.schedule || profile.scheduleCode || "",
+          scheduleCode: profile.scheduleCode || "",
+          scheduleDetail: profile.scheduleDetail || "",
+          workStart: "",
+          workEnd: "",
+          mealStart: "",
+          mealEnd: "",
+          email: profile.email || email,
+          zone: profile.zone || ""
+        };
+
+        attendanceModel.setProperty("/employee", employee);
+        attendanceModel.setProperty("/history", history);
+        appModel.setProperty("/employeeSource", "AttendanceHistorySet");
+        appModel.setProperty("/requiresIdentity", false);
+        this._applyTodayFromHistory(history);
+
+        Diagnostics.info("FLOW", "Perfil creado desde AttendanceHistorySet", {
+          employee: employee,
+          historyCount: history.length
+        });
+
+        return this._loadSchedule(employee).then(function () {
+          return history;
+        });
+      }.bind(this)).catch(function (error) {
+        Diagnostics.error("FLOW", "No fue posible identificar al colaborador desde AttendanceHistorySet", error);
+        appModel.setProperty("/identityLookupError", error.message);
+        appModel.setProperty("/requiresIdentity", true);
+        IdentityService.clearIdentity();
+        this._activeIdentity = null;
+        return [];
+      }.bind(this)).finally(function () {
+        appModel.setProperty("/employeeLoading", false);
+        appModel.setProperty("/historyLoading", false);
       });
     },
 
@@ -232,52 +395,28 @@ sap.ui.define([
       }.bind(this));
     },
 
-    onIdentitySubmit: function () {
-      var appModel = this.getView().getModel("app");
-      var value = String(appModel.getProperty("/identityInput") || "").trim();
-      var identity = { personalNumber: "", email: "", device: "" };
-
-      if (!value) {
-        appModel.setProperty("/identityLookupError", "Escribe el número de nómina o el correo del empleado.");
-        return;
-      }
-
-      if (value.indexOf("@") >= 0) {
-        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
-          appModel.setProperty("/identityLookupError", "El correo no tiene un formato válido.");
-          return;
-        }
-        identity.email = value.toLowerCase();
-      } else {
-        if (!/^\d{1,8}$/.test(value)) {
-          appModel.setProperty("/identityLookupError", "La nómina debe contener solamente números y máximo 8 posiciones.");
-          return;
-        }
-        identity.personalNumber = value.padStart(8, "0");
-        appModel.setProperty("/identityInput", identity.personalNumber);
-      }
-
-      IdentityService.setAuthenticatedIdentity(identity);
-      Diagnostics.info("IDENTITY", "Identidad temporal aceptada", identity);
-      this._loadEmployeeAfterInitialData(true);
-    },
-
-    onIdentityInputLiveChange: function () {
-      this.getView().getModel("app").setProperty("/identityLookupError", "");
+    onRetryIdentity: function () {
+      IdentityService.clearIdentity();
+      this._initializeAuthenticatedIdentity();
     },
 
     onRefreshData: function () {
       var appModel = this.getView().getModel("app");
 
       if (!IdentityService.hasActiveIdentity()) {
-        MessageToast.show("No hay un empleado activo para actualizar");
+        appModel.setProperty("/requiresIdentity", true);
         return;
       }
 
       appModel.setProperty("/employeeError", "");
       appModel.setProperty("/historyError", "");
       MessageToast.show("Actualizando datos desde SAP");
-      this._loadEmployee(false);
+      var identity = IdentityService.getActiveIdentity();
+      if (identity.source === "manual-email" && identity.email) {
+        this._loadProfileFromHistory(identity.email);
+      } else {
+        this._loadEmployee(false);
+      }
     },
 
     _loadHistory: function (employee, rejectOnError) {
@@ -315,7 +454,8 @@ sap.ui.define([
 
     _applyTodayFromHistory: function (history) {
       var model = this.getView().getModel("attendance");
-      var today = history[0] || {};
+      var todayIso = localIsoDate(new Date());
+      var today = history.filter(function (item) { return item.isoDate === todayIso; })[0] || {};
       var entry = today.entry || "—";
       var mealStart = today.mealStart || "—";
       var mealEnd = today.mealEnd || "—";
@@ -415,7 +555,7 @@ sap.ui.define([
       var message = scheduleLabel ? "Horario de hoy: " + scheduleLabel + "." : "SAP no expuso las horas del turno; se validará la secuencia de marcajes.";
 
       if (historyTravel || employeeTravel) {
-        message = "Viaje de trabajo identificado. Los marcajes se envían sin solicitar ubicación.";
+        message = "Viaje de trabajo identificado. La ubicación se solicitará al confirmar el marcaje.";
         messageType = "Information";
       } else if (isLateNow && nextAction === "CHECK_IN") {
         message = "Entrada tarde";
@@ -468,7 +608,7 @@ sap.ui.define([
         return false;
       }
       if (action === "CHECK_OUT" && model.getProperty("/today/isMealWindowRestricted") === true &&
-          model.getProperty("/today/isWithinMealWindow") === false) {
+        model.getProperty("/today/isWithinMealWindow") === false) {
         return true;
       }
       if (expectedCode && Object.keys(ACTION_CODES).some(function (key) { return ACTION_CODES[key] === expectedCode; })) {
@@ -494,20 +634,10 @@ sap.ui.define([
       this._showSection("attendance");
     },
 
-    onShowProfile: function () {
-      this._showSection("profile");
-    },
-
     _showSection: function (section) {
-      var attendanceSelected = section === "attendance";
-      this.byId("attendanceView").setVisible(attendanceSelected);
-      this.byId("profileView").setVisible(!attendanceSelected);
-      this._selectedSection = attendanceSelected ? "attendance" : "profile";
+      this.byId("attendanceView").setVisible(true);
+      this._selectedSection = "attendance";
       this.byId("navigationList").setSelectedKey(this._selectedSection);
-    },
-
-    onRequestProfileUpdate: function () {
-      MessageToast.show("La solicitud de actualización se habilitará al conectar Recursos Humanos");
     },
 
     onCheckIn: function () {
@@ -573,6 +703,65 @@ sap.ui.define([
       });
     },
 
+    onOpenEarlyExitJustification: function () {
+      var model = this.getView().getModel("attendance");
+      var justification = model.getProperty("/today/earlyExitJustification") || {};
+      this._earlyExitJustificationSnapshot = JSON.parse(JSON.stringify(justification));
+      model.setProperty("/today/earlyExitJustification/error", "");
+      this._getEarlyExitJustificationDialog().then(function (dialog) {
+        dialog.open();
+      });
+    },
+
+    _getEarlyExitJustificationDialog: function () {
+      if (!this._earlyExitJustificationDialogPromise) {
+        this._earlyExitJustificationDialogPromise = Fragment.load({
+          id: this.getView().getId(),
+          name: "com.mitsu.checkin.view.fragments.EarlyExitJustificationDialog",
+          controller: this
+        }).then(function (dialog) {
+          this.getView().addDependent(dialog);
+          return dialog;
+        }.bind(this));
+      }
+      return this._earlyExitJustificationDialogPromise;
+    },
+
+    onEarlyExitJustificationChange: function () {
+      this.getView().getModel("attendance").setProperty("/today/earlyExitJustification/error", "");
+    },
+
+    onSaveEarlyExitJustification: function () {
+      var model = this.getView().getModel("attendance");
+      var reason = String(model.getProperty("/today/earlyExitJustification/reason") || "").trim();
+
+      if (!reason) {
+        model.setProperty("/today/earlyExitJustification/error", "Selecciona el motivo de la salida anticipada.");
+        return;
+      }
+
+      model.setProperty("/today/earlyExitJustification/reason", reason);
+      model.setProperty("/today/earlyExitJustification/comment", String(model.getProperty("/today/earlyExitJustification/comment") || "").trim());
+      model.setProperty("/today/earlyExitJustification/saved", true);
+      model.setProperty("/today/earlyExitJustification/error", "");
+      model.setProperty("/today/earlyExitJustificationButtonText", "Editar justificación");
+      this._earlyExitJustificationSnapshot = null;
+      this._getEarlyExitJustificationDialog().then(function (dialog) {
+        dialog.close();
+      });
+      MessageToast.show("Justificación de salida guardada");
+    },
+
+    onCancelEarlyExitJustification: function () {
+      if (this._earlyExitJustificationSnapshot) {
+        this.getView().getModel("attendance").setProperty("/today/earlyExitJustification", this._earlyExitJustificationSnapshot);
+      }
+      this._earlyExitJustificationSnapshot = null;
+      this._getEarlyExitJustificationDialog().then(function (dialog) {
+        dialog.close();
+      });
+    },
+
     onMealStart: function () {
       this._confirmAction("MEAL_START");
     },
@@ -586,6 +775,15 @@ sap.ui.define([
     },
 
     _confirmAction: function (requestedAction) {
+
+      if (this._markRequestInProgress) {
+        MessageToast.show(
+          "Existe un marcaje en proceso de confirmación. " +
+          "Evita enviarlo nuevamente."
+        );
+        return;
+      }
+
       var model = this.getView().getModel("attendance");
       var action = model.getProperty("/today/nextAction");
       if (action !== requestedAction) {
@@ -610,6 +808,11 @@ sap.ui.define([
         this.onOpenLateJustification();
         return;
       }
+      if (isEarlyExit && !model.getProperty("/today/earlyExitJustification/saved")) {
+        MessageToast.show("Agrega la justificación antes de registrar la salida anticipada");
+        this.onOpenEarlyExitJustification();
+        return;
+      }
       var confirmationText = config.title + "?";
       if (isLateEntry) {
         confirmationText = "La entrada se registrará como tardía. ¿Deseas continuar?";
@@ -629,68 +832,420 @@ sap.ui.define([
       });
     },
 
+
     _register: function (action) {
-      var dataSource = this.getOwnerComponent().getManifestEntry("/sap.app/dataSources/attendanceOData");
-      var employee = this.getView().getModel("attendance").getProperty("/employee");
+
+      var appModel = this.getView().getModel("app");
+      var attendanceModel = this.getView().getModel("attendance");
+
+      var dataSource = this.getOwnerComponent()
+        .getManifestEntry("/sap.app/dataSources/attendanceOData");
+
+      var employee = attendanceModel.getProperty("/employee");
       var config = ACTION_CONFIG[action];
-      var wasLateEntry = action === "CHECK_IN" && Boolean(this.getView().getModel("attendance").getProperty("/today/isLateNow"));
-      var wasEarlyExit = action === "CHECK_OUT" && Boolean(this.getView().getModel("attendance").getProperty("/today/isEarlyExit"));
-      var lateJustification = this.getView().getModel("attendance").getProperty("/today/lateJustification") || {};
-      Diagnostics.info("FLOW", "Enviando marcaje a SAP", {
-        action: action,
-        serviceRoot: dataSource.uri,
-        employeeId: employee && employee.id,
-        isLate: wasLateEntry,
-        isEarlyExit: wasEarlyExit,
-        lateJustification: wasLateEntry ? lateJustification : null,
-        coordinates: null
-      });
-      AttendanceService.mark(dataSource.uri, action, employee, this._activeIdentity && this._activeIdentity.device, {
-        isLate: wasLateEntry,
-        isEarlyExit: wasEarlyExit,
-        lateJustification: wasLateEntry ? lateJustification : null
-      }).then(function (result) {
-        Diagnostics.info("FLOW", "SAP respondió al POST; se confirmará el marcaje en el historial", {
+
+      // Evitar múltiples POST simultáneos.
+      if (this._markRequestInProgress) {
+        MessageToast.show(
+          "Ya existe un marcaje en proceso."
+        );
+        return;
+      }
+
+      this._markRequestInProgress = true;
+      appModel.setProperty("/busy", true);
+
+      var wasLateEntry = action === "CHECK_IN" &&
+        Boolean(attendanceModel.getProperty("/today/isLateNow"));
+
+      var wasEarlyExit = action === "CHECK_OUT" &&
+        Boolean(attendanceModel.getProperty("/today/isEarlyExit"));
+
+      var lateJustification =
+        attendanceModel.getProperty(
+          "/today/lateJustification"
+        ) || {};
+
+      var earlyExitJustification =
+        attendanceModel.getProperty(
+          "/today/earlyExitJustification"
+        ) || {};
+
+      Diagnostics.info(
+        "FLOW",
+        "Iniciando proceso de marcaje",
+        {
           action: action,
-          sapStatus: result.sapStatus,
-          sapMessage: result.sapMessage,
-          sapEntity: result.sapEntity
+          employeeId: employee && employee.id,
+          isLate: wasLateEntry,
+          isEarlyExit: wasEarlyExit
+        }
+      );
+
+      // Primero recuperar ubicación.
+      return AttendanceService.captureLocation()
+
+        .then(function (location) {
+
+          location = location || {};
+
+          // La ubicación es informativa para el usuario.
+          // SAP determina GeoStatus.
+          if (location.warning) {
+
+            Diagnostics.warn(
+              "LOCATION",
+              "Advertencia de ubicación",
+              {
+                message: location.warning,
+                accuracy: location.accuracy
+              }
+            );
+
+            MessageToast.show(
+              location.warning,
+              { duration: 5000 }
+            );
+          }
+
+          Diagnostics.info(
+            "FLOW",
+            "Enviando marcaje a SAP",
+            {
+              action: action,
+              employeeId: employee && employee.id,
+              hasLocation: Boolean(
+                location.latitude &&
+                location.longitude
+              ),
+              accuracy: location.accuracy
+            }
+          );
+
+          return AttendanceService.mark(
+            dataSource.uri,
+            action,
+            employee,
+            this._activeIdentity &&
+            this._activeIdentity.device,
+            {
+              isLate: wasLateEntry,
+              isEarlyExit: wasEarlyExit,
+              lateJustification: wasLateEntry
+                ? lateJustification
+                : null,
+              earlyExitJustification: wasEarlyExit
+                ? earlyExitJustification
+                : null,
+              location: location
+            }
+          );
+
+        }.bind(this))
+
+        .then(function (result) {
+
+          var sapStatus = String(
+            result.sapStatus || ""
+          ).trim().toUpperCase();
+
+          if (sapStatus !== "OK") {
+            throw new Error(
+              result.sapMessage ||
+              "SAP no confirmó el marcaje."
+            );
+          }
+
+          Diagnostics.info(
+            "MARK",
+            "Marcaje confirmado por SAP",
+            {
+              action: action,
+              sapStatus: sapStatus,
+              sapMessage: result.sapMessage,
+              sapGeoStatus: result.sapGeoStatus,
+              sapEntity: result.sapEntity
+            }
+          );
+
+          // Mensaje de éxito basado en la respuesta SAP.
+          var successMessage = wasEarlyExit
+            ? "Salida temprana registrada"
+            : (
+              wasLateEntry
+                ? "Entrada tarde registrada"
+                : config.title + " correctamente"
+            );
+
+          MessageToast.show(successMessage, {
+            duration: 4000
+          });
+
+          // Evitar otro POST mientras no se sincronice la UI.
+          attendanceModel.setProperty(
+            "/today/nextAction",
+            null
+          );
+
+          // Actualización del historial independiente.
+          this._confirmMarkInHistory(
+            employee,
+            config.field,
+            3
+          ).then(function (confirmation) {
+
+            if (confirmation.confirmed) {
+
+              Diagnostics.info(
+                "HISTORY",
+                "Marcaje visible en AttendanceHistorySet",
+                confirmation
+              );
+
+            } else {
+
+              Diagnostics.warn(
+                "HISTORY",
+                "SAP confirmó el marcaje, pero " +
+                "el historial aún no lo refleja.",
+                confirmation
+              );
+
+              MessageToast.show(
+                "Marcaje aceptado por SAP. " +
+                "El historial todavía no está actualizado.",
+                { duration: 6000 }
+              );
+            }
+
+          }).catch(function (historyError) {
+
+            Diagnostics.warn(
+              "HISTORY",
+              "No fue posible actualizar el historial",
+              {
+                message: historyError.message
+              }
+            );
+
+            MessageToast.show(
+              "Marcaje aceptado por SAP. " +
+              "Actualiza los datos para consultar el historial.",
+              { duration: 6000 }
+            );
+
+          }).finally(function () {
+
+            // Recuperar las acciones según el historial.
+            this._markRequestInProgress = false;
+            this._updateActionUI();
+
+          }.bind(this));
+
+          return result;
+
+        }.bind(this))
+
+        .catch(function (error) {
+
+          Diagnostics.error(
+            "FLOW",
+            "No fue posible confirmar el marcaje",
+            error
+          );
+
+          var message = error.message ||
+            "Ocurrió un problema durante el marcaje.";
+
+          if (
+            error.name === "RequestTimeoutError" ||
+            error.name === "UnconfirmedMarkError" ||
+            error.status === 504
+          ) {
+
+            MessageBox.warning(
+              "No fue posible confirmar el resultado " +
+              "del marcaje. " +
+              "Consulta el historial antes de volver " +
+              "a registrarlo. Detalle: " + message
+            );
+
+          } else {
+
+            MessageBox.error(
+              "No fue posible registrar el evento en SAP. " +
+              message
+            );
+          }
+
+          this._markRequestInProgress = false;
+
+        }.bind(this))
+
+        .finally(function () {
+
+          appModel.setProperty("/busy", false);
+
         });
-        return this._confirmMarkInHistory(employee, config.field, 3).then(function (registeredValue) {
-          return {
-            result: result,
-            registeredValue: registeredValue
-          };
-        });
-      }.bind(this)).then(function (confirmation) {
-        this.getView().getModel("app").setProperty("/busy", false);
-        this._updateActionUI();
-        Diagnostics.info("FLOW", "Marcaje confirmado en AttendanceHistorySet", confirmation);
-        MessageToast.show(wasEarlyExit ? "Salida temprana registrada" : (wasLateEntry ? "Entrada tarde registrada" : config.title + " correctamente"));
-      }.bind(this)).catch(function (error) {
-        Diagnostics.error("FLOW", "No fue posible registrar el marcaje", error);
-        this.getView().getModel("app").setProperty("/busy", false);
-        MessageBox.error("No fue posible registrar el evento en SAP. " + error.message);
-      }.bind(this));
     },
 
-    _confirmMarkInHistory: function (employee, field, attemptsRemaining) {
-      return this._loadHistory(employee, true).then(function () {
-        var registeredValue = this.getView().getModel("attendance").getProperty("/today/" + field);
-        if (registeredValue && registeredValue !== "—") {
-          return registeredValue;
-        }
 
-        if (attemptsRemaining <= 1) {
-          throw new Error("SAP respondió al POST, pero el marcaje no aparece en AttendanceHistorySet. Revisa StatusReq y Message en la respuesta del POST.");
-        }
+    _confirmMarkInHistory: function (
+      employee,
+      field,
+      attemptsRemaining
+    ) {
 
+      var attendanceModel =
+        this.getView().getModel("attendance");
+
+      var appModel =
+        this.getView().getModel("app");
+
+      var dataSource = this.getOwnerComponent()
+        .getManifestEntry(
+          "/sap.app/dataSources/attendanceOData"
+        );
+
+      var now = new Date();
+      var todayIso = localIsoDate(now);
+
+      var identity = this._activeIdentity ||
+        IdentityService.getActiveIdentity() || {};
+
+      var historyIdentifier =
+        identity.personalNumber ||
+        identity.email ||
+        employee.id;
+
+      var delays = [1500, 3000, 5000];
+
+      var maxAttempts = Math.max(
+        1,
+        Math.min(attemptsRemaining || 3, delays.length)
+      );
+
+      var lastError = null;
+
+      appModel.setProperty("/historyLoading", true);
+
+      function wait(ms) {
         return new Promise(function (resolve) {
-          setTimeout(resolve, 700);
-        }).then(function () {
-          return this._confirmMarkInHistory(employee, field, attemptsRemaining - 1);
-        }.bind(this));
-      }.bind(this));
+          window.setTimeout(resolve, ms);
+        });
+      }
+
+      var checkAttempt = function (attempt) {
+
+        return wait(delays[attempt - 1])
+          .then(function () {
+
+            Diagnostics.info(
+              "HISTORY",
+              "Verificando marcaje en historial",
+              {
+                attempt: attempt,
+                maxAttempts: maxAttempts,
+                employeeId: employee.id,
+                field: field,
+                date: todayIso
+              }
+            );
+
+            return AttendanceService.readHistory(
+              dataSource.uri,
+              historyIdentifier,
+              todayIso,
+              employee.id
+            );
+
+          })
+          .then(function (history) {
+
+            var today = history.filter(function (day) {
+              return day.isoDate === todayIso;
+            })[0];
+
+            var registeredValue =
+              today && today[field];
+
+            var confirmed = Boolean(
+              registeredValue &&
+              registeredValue !== "—"
+            );
+
+            if (confirmed) {
+
+              // Aplicar datos solamente cuando
+              // el marcaje esperado está visible.
+              attendanceModel.setProperty(
+                "/history",
+                history
+              );
+
+              this._applyTodayFromHistory(history);
+
+              appModel.setProperty(
+                "/historyError",
+                ""
+              );
+
+              return {
+                confirmed: true,
+                registeredValue: registeredValue,
+                attempts: attempt
+              };
+            }
+
+            if (attempt < maxAttempts) {
+              return checkAttempt(attempt + 1);
+            }
+
+            return {
+              confirmed: false,
+              registeredValue: null,
+              attempts: attempt,
+              reason: "NOT_VISIBLE_YET"
+            };
+
+          }.bind(this))
+          .catch(function (error) {
+
+            lastError = error;
+
+            Diagnostics.warn(
+              "HISTORY",
+              "No fue posible verificar el marcaje",
+              {
+                attempt: attempt,
+                message: error.message
+              }
+            );
+
+            if (attempt < maxAttempts) {
+              return checkAttempt(attempt + 1);
+            }
+
+            return {
+              confirmed: false,
+              registeredValue: null,
+              attempts: attempt,
+              reason: "HISTORY_REQUEST_FAILED",
+              message: lastError.message
+            };
+
+          });
+
+      }.bind(this);
+
+      return checkAttempt(1).finally(function () {
+
+        appModel.setProperty(
+          "/historyLoading",
+          false
+        );
+
+      });
     },
 
     _updateActionUI: function () {

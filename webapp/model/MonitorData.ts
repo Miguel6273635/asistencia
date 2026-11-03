@@ -33,14 +33,47 @@ function slug(value: unknown): string {
         .replace(/^-|-$/g, "") || "sin-zona";
 }
 
+const OPERATIONAL_ZONES = [
+    { id: "centro", name: "Zona Centro", aliases: ["CENTRO", "ZC"] },
+    { id: "norte", name: "Zona Norte", aliases: ["NORTE", "ZN"] },
+    { id: "sur", name: "Zona Sur", aliases: ["SUR", "ZS"] },
+    { id: "este", name: "Zona Este", aliases: ["ESTE", "ZE"] },
+    { id: "oeste", name: "Zona Oeste", aliases: ["OESTE", "ZO"] }
+] as const;
+
+type OperationalZone = typeof OPERATIONAL_ZONES[number];
+
+function normalizedZoneToken(value: unknown): string {
+    return text(value)
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toUpperCase()
+        .replace(/^ZONA\s+/, "")
+        .trim();
+}
+
+function operationalZone(value: unknown): OperationalZone | undefined {
+    const token = normalizedZoneToken(value);
+    return OPERATIONAL_ZONES.find((zone) => zone.id.toUpperCase() === token ||
+        zone.name.replace(/^Zona\s+/i, "").toUpperCase() === token ||
+        (zone.aliases as readonly string[]).indexOf(token) >= 0);
+}
+
+function operationalZoneId(value: unknown): string {
+    return operationalZone(value)?.id || "sin-zona";
+}
+
 function displayZone(value: unknown): string {
-    const zone = text(value).replace(/^ZONA\s+/i, "");
-    return zone ? `Zona ${zone.charAt(0).toUpperCase()}${zone.slice(1).toLowerCase()}` : "Sin zona";
+    return operationalZone(value)?.name || "Sin zona";
 }
 
 function displayDate(value: unknown): string {
     const raw = text(value).replace(/-/g, "");
     return /^\d{8}$/.test(raw) ? `${raw.slice(6, 8)}/${raw.slice(4, 6)}/${raw.slice(0, 4)}` : "";
+}
+
+function compactDate(value: unknown): string {
+    return text(value).replace(/[^0-9]/g, "").slice(0, 8);
 }
 
 function usableTime(value: unknown): string {
@@ -146,7 +179,7 @@ function mapRecords(rows: ODataRow[], schedules: Record<string, unknown>[]): Rec
             workDate: text(row.WorkDate),
             center: text(row.CenterOffice) || centerCode,
             centerId: centerCode.toLowerCase(),
-            zoneId: slug(row.Zone),
+            zoneId: operationalZoneId(row.Zone),
             shift: text(row.ScheduleDescription) || text(schedule.name) || scheduleCode,
             scheduleId: `schedule-${slug(scheduleCode)}`,
             scheduled: text(row.ScheduleDetail) || text(schedule.shortDescription),
@@ -190,11 +223,13 @@ function mapEmployees(rows: ODataRow[], history: ODataRow[]): Record<string, unk
         const candidate: Record<string, unknown> = {
             id: `employee-${personalNumber}`,
             number: personalNumber,
+            PersonnelNumber: personalNumber,
             name: text(row.FullName) || personalNumber,
             initials: text(row.FullName).split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part.charAt(0)).join(""),
             centerId: text(row.CenterCode).toLowerCase(),
             center: text(row.CenterOffice),
-            zoneId: slug(row.Zone),
+            centerCode: text(row.CenterCode) || text(row.PersonnelArea),
+            zoneId: operationalZoneId(row.Zone),
             shift: text(row.Hourly) || text(row.Shift),
             scheduleId: `schedule-${slug(row.ScheduleCode)}`,
             scheduleCode: text(row.ScheduleCode),
@@ -205,6 +240,27 @@ function mapEmployees(rows: ODataRow[], history: ODataRow[]): Record<string, unk
             active: text(row.Status) !== "0",
             email: text(row.Email),
             lastUpdate: text(row.LastUpdate),
+            HireDate: text(row.HireDate),
+            Position: text(row.Position),
+            PersonnelArea: text(row.PersonnelArea) || text(row.CenterCode),
+            EmployeeGroup: text(row.EmployeeGroup),
+            EmployeeSubgroup: text(row.EmployeeSubgroup),
+            FirstName: text(row.FirstName) || text(row.FullName),
+            LastName: text(row.LastName),
+            BirthDate: text(row.BirthDate),
+            Language: text(row.Language),
+            BirthCountry: text(row.BirthCountry),
+            Gender: text(row.Gender),
+            PersonnelSubarea: text(row.PersonnelSubarea) || text(row.Base),
+            AttendanceChannel: text(row.AttendanceChannel) || text(row.Chanel),
+            Zone: text(row.Zone),
+            City: text(row.City),
+            Region: text(row.Region),
+            Municipality: text(row.Municipality),
+            Country: text(row.Country),
+            ResidenceType: text(row.ResidenceType),
+            Schedule: text(row.ScheduleCode) || text(row.Schedule),
+            Email: text(row.Email),
             _score: score
         };
         const existing = employees.get(personalNumber);
@@ -222,24 +278,46 @@ function mapEmployees(rows: ODataRow[], history: ODataRow[]): Record<string, unk
         if (existing) {
             if (!existing.centerId) { existing.centerId = text(row.CenterCode).toLowerCase(); }
             if (!existing.center) { existing.center = text(row.CenterOffice); }
-            if (existing.zoneId === "sin-zona") { existing.zoneId = slug(row.Zone); }
+            if (existing.zoneId === "sin-zona") { existing.zoneId = operationalZoneId(row.Zone); }
             if (existing.scheduleId === "schedule-sin-zona") { existing.scheduleId = `schedule-${slug(row.Schedule)}`; }
             return;
         }
         employees.set(personalNumber, {
             id: `employee-${personalNumber}`,
             number: personalNumber,
+            PersonnelNumber: personalNumber,
             name: text(row.FullName) || personalNumber,
             initials: text(row.FullName).split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part.charAt(0)).join(""),
             centerId: text(row.CenterCode).toLowerCase(),
             center: text(row.CenterOffice),
-            zoneId: slug(row.Zone),
+            zoneId: operationalZoneId(row.Zone),
             shift: text(row.ScheduleDescription),
             scheduleId: `schedule-${slug(row.Schedule)}`,
             scheduleName: text(row.Schedule),
             role: "Colaborador",
             status: "Activo",
-            active: true
+            active: true,
+            HireDate: text(row.HireDate),
+            Position: text(row.Position),
+            PersonnelArea: text(row.PersonnelArea) || text(row.CenterCode),
+            EmployeeGroup: text(row.EmployeeGroup),
+            EmployeeSubgroup: text(row.EmployeeSubgroup),
+            FirstName: text(row.FirstName) || text(row.FullName),
+            LastName: text(row.LastName),
+            BirthDate: text(row.BirthDate),
+            Language: text(row.Language),
+            BirthCountry: text(row.BirthCountry),
+            Gender: text(row.Gender),
+            PersonnelSubarea: text(row.PersonnelSubarea) || text(row.Base),
+            AttendanceChannel: text(row.AttendanceChannel) || text(row.Chanel),
+            Zone: text(row.Zone),
+            City: text(row.City),
+            Region: text(row.Region),
+            Municipality: text(row.Municipality),
+            Country: text(row.Country),
+            ResidenceType: text(row.ResidenceType),
+            Schedule: text(row.Schedule) || text(row.ScheduleCode),
+            Email: text(row.Email)
         });
     });
     return Array.from(employees.values()).map((employee) => {
@@ -260,7 +338,7 @@ function mapCenters(rows: ODataRow[], history: ODataRow[], employees: Record<str
             id: code.toLowerCase(),
             name: text(row.CenterOffice) || code,
             code,
-            zoneId: slug(zone),
+            zoneId: operationalZoneId(zone),
             zone: displayZone(zone),
             users: number(row.UsersCount),
             present: number(row.PresentCount),
@@ -281,7 +359,7 @@ function mapCenters(rows: ODataRow[], history: ODataRow[], employees: Record<str
         const existing = centers.get(code);
         if (existing) {
             if (existing.zoneId === "sin-zona") {
-                existing.zoneId = slug(row.Zone);
+                existing.zoneId = operationalZoneId(row.Zone);
                 existing.zone = displayZone(row.Zone);
             }
             return;
@@ -290,7 +368,7 @@ function mapCenters(rows: ODataRow[], history: ODataRow[], employees: Record<str
             id: code.toLowerCase(),
             name: text(row.CenterOffice) || code,
             code,
-            zoneId: slug(row.Zone),
+            zoneId: operationalZoneId(row.Zone),
             zone: displayZone(row.Zone),
             users: 0,
             present: 0,
@@ -307,7 +385,7 @@ function mapCenters(rows: ODataRow[], history: ODataRow[], employees: Record<str
         if (!/^ML\d+/i.test(code) || centers.has(code)) { return; }
         centers.set(code, {
             id: code.toLowerCase(), name: text(employee.center) || code, code,
-            zoneId: text(employee.zoneId), zone: displayZone(employee.zoneId),
+            zoneId: operationalZoneId(employee.zoneId), zone: displayZone(employee.zoneId),
             users: 0, present: 0, late: 0, absent: 0, outside: 0,
             attendance: 0, inefficiency: 0, incidents: 0, evaluated: 0,
             source: "sap", active: true
@@ -336,11 +414,11 @@ function mapLocations(
     const locationsByCenter = new Map<string, Record<string, unknown>>();
     const mapPersonnel: Record<string, unknown>[] = [];
     rows.forEach((row) => {
-        const code = text(row.Center);
+        const code = text(row.CenterOffice) || text(row.CenterCode) || text(row.Center);
         const center = centersByCode.get(code) || {};
         const employee = employeesByNumber.get(text(row.PersonalNumber)) || {};
         const employeeZoneId = text(employee.zoneId);
-        const zoneId = employeeZoneId && employeeZoneId !== "sin-zona" ? employeeZoneId : (text(center.zoneId) || slug(row.Zone));
+        const zoneId = operationalZoneId(employeeZoneId && employeeZoneId !== "sin-zona" ? employeeZoneId : (text(center.zoneId) || row.Zone));
         const latitudeCenter = coordinate(row.LatitudeCenter);
         const longitudeCenter = coordinate(row.LongitudeCenter, true);
         if (code && latitudeCenter !== null && longitudeCenter !== null && !locationsByCenter.has(code)) {
@@ -395,12 +473,15 @@ function mapLocations(
 function mapOverview(zoneRows: ODataRow[], indicators: ODataRow[], centerRows: ODataRow[], trendRows: ODataRow[]): Record<string, unknown> {
     const groupedZones = new Map<string, ODataRow[]>();
     zoneRows.forEach((row) => {
-        const key = slug(row.Zone);
+        const key = operationalZoneId(row.Zone);
+        if (key === "sin-zona") { return; }
         const group = groupedZones.get(key) || [];
         group.push(row);
         groupedZones.set(key, group);
     });
-    const zones = Array.from(groupedZones.entries()).map(([zoneId, rows]) => {
+    const zones = OPERATIONAL_ZONES.map((configuredZone) => {
+        const zoneId = configuredZone.id;
+        const rows = groupedZones.get(zoneId) || [];
         const first = rows[0] || {};
         const users = rows.reduce((sum, row) => sum + number(row.UsersCount), 0);
         const evaluated = rows.reduce((sum, row) => sum + number(row.EvaluatedCount), 0) || users;
@@ -411,10 +492,10 @@ function mapOverview(zoneRows: ODataRow[], indicators: ODataRow[], centerRows: O
         const attendance = evaluated ? present * 100 / evaluated : 0;
         const inefficiency = evaluated ? (late + absent + outside) * 100 / evaluated : 0;
         const riskInfo = risk(inefficiency, first.RiskLevel);
-        const zoneName = displayZone(first.Zone);
+        const zoneName = configuredZone.name;
         const explicitCenters = Math.max(...rows.map((row) => number(row.CentersCount)), 0);
         const centers = explicitCenters || new Set(centerRows
-            .filter((row) => slug(row.Zone) === zoneId && text(row.CenterCode))
+            .filter((row) => operationalZoneId(row.Zone) === zoneId && text(row.CenterCode))
             .map((row) => text(row.CenterCode))).size;
         return {
             zoneId,
@@ -496,24 +577,41 @@ async function request(name: string, call: () => Promise<ODataRow[]>, errors: st
     }
 }
 
-export async function loadMonitorData(periodType = "SEMANA 43"): Promise<MonitorDataResult> {
+export async function loadMonitorData(
+    periodType = "SEMANA 43",
+    dateFrom = `${new Date().getFullYear()}0101`,
+    dateTo = `${new Date().getFullYear()}1231`
+): Promise<MonitorDataResult> {
     const api = new AttendanceApi();
     const errors: string[] = [];
     const periodFilter: ODataFilter[] = [{ field: "PeriodType", value: periodType }];
-    const [zoneRows, indicators, centerRows, scheduleRows, historyRows, employeeRows, employeeSummaryRows,
-        scheduleSummaryRows, trendRows, distributionRows, mapRows] = await Promise.all([
+    const historyFilter: ODataFilter[] = [
+        { field: "DateFrom", value: dateFrom },
+        { field: "DateTo", value: dateTo }
+    ];
+    const [zoneRows, indicators, centerRows, scheduleRows, rawHistoryRows, employeeRows, employeeSummaryRows,
+        scheduleSummaryRows, trendRows, distributionRows, mapRows, centerCatalogRows, zoneAttendanceRows, baseRows] = await Promise.all([
         request("ZoneSummarySet", () => api.getCollection("ZoneSummarySet", { filters: periodFilter }), errors),
         request("CriticalIndicatorsSet", () => api.getCollection("CriticalIndicatorsSet", { filters: periodFilter }), errors),
         request("CenterOfficeSummarySet", () => api.getCollection("CenterOfficeSummarySet", { filters: periodFilter }), errors),
         request("CatalogScheduleSet", () => api.getCollection("CatalogScheduleSet"), errors),
-        request("AttendanceHistorySet", () => api.getCollection("AttendanceHistorySet", { filters: periodFilter }), errors),
+        request("AttendanceHistorySet", () => api.getCollection("AttendanceHistorySet", { filters: historyFilter }), errors),
         request("EmployeeSet", () => api.getCollection("EmployeeSet"), errors),
         request("EmployeeSummarySet", () => api.getCollection("EmployeeSummarySet"), errors),
         request("ScheduleSummarySet", () => api.getCollection("ScheduleSummarySet", { filters: periodFilter }), errors),
         request("IncidentTrendSet", () => api.getCollection("IncidentTrendSet", { filters: periodFilter }), errors),
         request("ScheduleDistributionSet", () => api.getCollection("ScheduleDistributionSet", { filters: periodFilter }), errors),
-        request("GeneralMapUbicationsSet", () => api.getCollection("GeneralMapUbicationsSet"), errors)
+        request("GeneralMapUbicationsSet", () => api.getCollection("GeneralMapUbicationsSet"), errors),
+        request("CenterOfficeSet", () => api.getCollection("CenterOfficeSet"), errors),
+        request("ZoneAttendanceSet", () => api.getCollection("ZoneAttendanceSet"), errors),
+        request("BasesSet", () => api.getCollection("BasesSet"), errors)
     ]);
+    // El backend puede devolver jornadas fuera del rango solicitado. El filtrado
+    // defensivo evita contaminar los totales mensuales y anuales de la interfaz.
+    const historyRows = rawHistoryRows.filter((row) => {
+        const workDate = compactDate(row.WorkDate);
+        return Boolean(workDate) && workDate >= dateFrom && workDate <= dateTo;
+    });
     const scheduleSummary = scheduleSummaryRows[0] || {};
     const schedules = mapSchedules(scheduleRows, number(scheduleSummary.ActiveSchedules));
     const records = mapRecords(historyRows, schedules);
@@ -521,12 +619,14 @@ export async function loadMonitorData(periodType = "SEMANA 43"): Promise<Monitor
     const centers = mapCenters(centerRows, historyRows, employees);
     const locations = mapLocations(mapRows, centers, employees);
     const overview = mapOverview(zoneRows, indicators, centerRows, trendRows);
-    const zoneNames = new Map<string, string>();
-    (overview.zoneSummaries as Record<string, unknown>[]).forEach((zone) => zoneNames.set(text(zone.zoneId), text(zone.name)));
-    centers.forEach((center) => zoneNames.set(text(center.zoneId), text(center.zone)));
-    const zones = [{ id: "all", name: "Todas las zonas" }].concat(Array.from(zoneNames.entries())
-        .filter(([id]) => id !== "sin-zona")
-        .map(([id, name]) => ({ id, name })));
+    const zones = [{ id: "all", name: "Todas las zonas" }].concat(OPERATIONAL_ZONES.map((zone) => ({
+        id: zone.id,
+        name: zone.name
+    })));
+    const effectiveStatusCatalog = [
+        "Presente", "Retardo", "Ausente", "Incompleto", "Viaje de trabajo",
+        "Vacaciones", "Paternidad", "Home office", "Fuera de zona"
+    ].map((status) => ({ key: status, text: status }));
     const employeeSummary = employeeSummaryRows[0] || {};
     const derivedActiveEmployees = employees.filter((employee) => Boolean(employee.active)).length;
     const derivedInactiveEmployees = employees.length - derivedActiveEmployees;
@@ -536,6 +636,7 @@ export async function loadMonitorData(periodType = "SEMANA 43"): Promise<Monitor
         data: {
             serviceState: { loading: false, live: true, periodType, errors },
             zones,
+            statusCatalog: [{ key: "all", text: "Todos" }].concat(effectiveStatusCatalog),
             centers,
             schedules,
             employees,
@@ -553,7 +654,13 @@ export async function loadMonitorData(periodType = "SEMANA 43"): Promise<Monitor
             sapEmployees: employeeRows,
             sapEmployeeSummary: employeeSummaryRows,
             sapAttendanceHistory: historyRows,
+            sapAttendanceHistoryRaw: rawHistoryRows,
             sapMapLocations: mapRows,
+            sapCenterCatalog: centerCatalogRows,
+            sapZoneAttendance: zoneAttendanceRows,
+            sapBases: baseRows,
+            sapZoneCatalog: zoneAttendanceRows,
+            sapStatusCatalog: [],
             mapZones: locations.mapZones,
             mapCenters: locations.mapCenters,
             mapPersonnel: locations.mapPersonnel,
@@ -579,10 +686,23 @@ export function emptyMonitorData(error?: string): Record<string, unknown> {
     return {
         serviceState: { loading: false, live: false, errors: error ? [error] : [] },
         zones: [{ id: "all", name: "Todas las zonas" }],
+        statusCatalog: [
+            { key: "all", text: "Todos" },
+            { key: "Presente", text: "Presente" },
+            { key: "Retardo", text: "Retardo" },
+            { key: "Ausente", text: "Ausente" },
+            { key: "Incompleto", text: "Incompleto" },
+            { key: "Viaje de trabajo", text: "Viaje de trabajo" },
+            { key: "Vacaciones", text: "Vacaciones" },
+            { key: "Paternidad", text: "Paternidad" },
+            { key: "Home office", text: "Home office" },
+            { key: "Fuera de zona", text: "Fuera de zona" }
+        ],
         centers: [], schedules: [], employees: [], records: [], userPerformanceHistory: [],
         sapOverview: null, sapZoneSummaries: [], sapCriticalIndicators: [], sapCenterSummaries: [],
         sapScheduleDistribution: [], sapIncidentTrend: [], sapScheduleSummary: [], sapScheduleTypes: [],
         sapEmployees: [], sapEmployeeSummary: [], sapAttendanceHistory: [], sapMapLocations: [],
+        sapZoneCatalog: [], sapStatusCatalog: [],
         mapZones: [], mapCenters: [], mapPersonnel: [],
         employeeSummary: { total: 0, active: 0, inactive: 0, centers: 0 },
         configuration: { lateTolerance: 10, earlyEntry: 20, automaticAbsence: "10:00", refreshMinutes: 5 }

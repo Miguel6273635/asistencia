@@ -59,7 +59,6 @@ sap.ui.define([
                 users: "users",
                 userPerformance: "users",
                 centers: "centers",
-                center: "centers",
                 settings: "settings"
             };
 

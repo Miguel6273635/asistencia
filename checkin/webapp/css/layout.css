@@ -30,7 +30,8 @@
 }
 
 .compactAttendancePanel,
-.compactHistoryPanel {
+.compactHistoryPanel,
+.compactEmployeePanel {
   min-width: 0;
   padding: 0.8rem;
   align-self: stretch;
@@ -42,6 +43,16 @@
 
 .compactAttendancePanel .markActions {
   gap: 0.4rem;
+}
+
+.validationStrip {
+  border-radius: 0.55rem;
+  margin-top: 0.15rem;
+}
+
+.historyStatus {
+  font-weight: 700;
+  color: var(--navy);
 }
 
 .compactAttendancePanel .markActions > .sapMBtn {
@@ -56,6 +67,71 @@
 .compactHistoryPanel .sapMListTblCell {
   padding-right: 0.4rem;
   padding-left: 0.4rem;
+}
+
+.compactEmployeePanel {
+  gap: 0.75rem;
+}
+
+.compactProfileGroups {
+  width: 100%;
+  gap: 0.75rem;
+}
+
+.compactProfileGroup {
+  flex: 1 1 13.5rem;
+  min-width: 0;
+  gap: 0;
+  padding: 0.75rem 0.85rem;
+  border: 1px solid var(--line);
+  border-radius: 0.7rem;
+  background: #fbfdff;
+}
+
+.compactProfileTitle {
+  gap: 0.5rem;
+  padding-bottom: 0.35rem;
+}
+
+.compactProfileTitle .sapUiIcon {
+  color: var(--brand);
+}
+
+.compactProfileTitle .sapMTitle {
+  color: var(--navy);
+  font-size: 0.9rem;
+}
+
+.compactProfileField {
+  width: 100%;
+  gap: 1rem;
+  padding: 0.55rem 0;
+  border-bottom: 1px solid #e8eef3;
+}
+
+.compactProfileField:last-child {
+  border-bottom: 0;
+}
+
+.compactProfileField .sapMText {
+  font-size: 0.75rem;
+}
+
+.compactProfileField > .sapMText:first-child {
+  flex: 0 0 40%;
+  color: var(--muted);
+}
+
+.compactProfileField .compactProfileValue {
+  flex: 1 1 60%;
+  min-width: 0;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.scheduleProfileGroup {
+  background: linear-gradient(145deg, #f8fbff, #f2f8fd);
+  border-color: #cfe3f4;
 }
 
 @media (max-width: 1180px) {

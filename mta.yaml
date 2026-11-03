@@ -1,0 +1,85 @@
+_schema-version: "3.3"
+ID: mitsu-monitor-asistencia
+version: 0.3.0
+description: Monitor de asistencia para Mitsubishi Electric
+
+modules:
+  - name: mitsu-monitor-destination-content
+    type: com.sap.application.content
+    requires:
+      - name: mitsu-monitor-xsuaa
+      - name: mitsu-monitor-html5-repo
+      - name: mitsu-monitor-destination
+        parameters:
+          content-target: true
+    parameters:
+      content:
+        instance:
+          destinations:
+            - Name: mitsu-monitor-html5-repo
+              ServiceInstanceName: mitsu-monitor-html5-repo
+              ServiceKeyName: mitsu-monitor-html5-repo-key
+              sap.cloud.service: mitsu.monitorasistencia
+
+            - Name: mitsu-monitor-xsuaa
+              Authentication: OAuth2UserTokenExchange
+              ServiceInstanceName: mitsu-monitor-xsuaa
+              ServiceKeyName: mitsu-monitor-xsuaa-key
+              sap.cloud.service: mitsu.monitorasistencia
+
+          existing_destinations_policy: update
+    build-parameters:
+      no-source: true
+
+  - name: mitsu-monitor-content
+    type: com.sap.application.content
+    path: .
+    requires:
+      - name: mitsu-monitor-html5-repo
+        parameters:
+          content-target: true
+    build-parameters:
+      build-result: resources
+      requires:
+        - name: mitsu-monitor-ui
+          artifacts:
+            - monitor-asistencia.zip
+          target-path: resources/
+
+  - name: mitsu-monitor-ui
+    type: html5
+    path: .
+    build-parameters:
+      builder: custom
+      commands:
+        - npm install
+        - npm run build
+        - npm run package:html5
+      supported-platforms: []
+
+resources:
+  - name: mitsu-monitor-html5-repo
+    type: org.cloudfoundry.managed-service
+    parameters:
+      service: html5-apps-repo
+      service-plan: app-host
+      service-keys:
+        - name: mitsu-monitor-html5-repo-key
+
+  - name: mitsu-monitor-destination
+    type: org.cloudfoundry.managed-service
+    parameters:
+      service: destination
+      service-plan: lite
+      config:
+        HTML5Runtime_enabled: true
+        version: 1.0.0
+
+  - name: mitsu-monitor-xsuaa
+    type: org.cloudfoundry.managed-service
+    parameters:
+      service: xsuaa
+      service-plan: application
+      path: xs-security.json
+      service-keys:
+        - name: mitsu-monitor-xsuaa-key

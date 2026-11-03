@@ -61,83 +61,7 @@
                     <ToolbarSpacer />
                     <Button text="Aplicar filtros" type="Emphasized" icon="sap-icon://filter" press=".onApplyFilters" />
                 </OverflowToolbar>
-<!-- ****************************************************************************************************************************************** -->
-<!-- ** Lo módifiqué un poco Mike y también verás ajustes en el CSS, solo comenté tú codigo por si lo quieres regresar a la versión que tenías -->
-<!-- -->
 
-<List
-    items="{view>/zoneSummaries}"
-    showSeparators="None"
-    class="zoneCardList">
-
-    <CustomListItem
-        type="Active"
-        press=".onZonePress"
-        class="zoneSummaryCard">
-
-        <customData>
-            <core:CustomData
-                key="zoneId"
-                value="{view>zoneId}" />
-        </customData>
-
-        <VBox width="100%">
-
-            <!-- Encabezado: zona y riesgo -->
-            <HBox
-                justifyContent="SpaceBetween"
-                alignItems="Center"
-                class="zoneHeaderRow">
-
-                <Title
-                    text="{view>name}"
-                    level="H4"
-                    class="zoneTitle" />
-
-                <ObjectStatus
-                    text="{view>riskText}"
-                    state="{view>state}"
-                    inverted="true"
-                    class="zoneRiskStatus" />
-
-            </HBox>
-
-            <!-- Información general: una sola vez -->
-            <Text
-                text="{view>meta}"
-                class="zoneMeta" />
-
-            <!-- Indicadores de asistencia -->
-            <HBox
-                justifyContent="SpaceBetween"
-                alignItems="End"
-                class="zoneMetricRow">
-
-                <VBox>
-                    <ObjectNumber
-                        number="{view>attendance}"
-                        unit="% asistencia"
-                        state="{view>state}" />
-
-                    <Text
-                        text="{view>incidentSummary}"
-                        class="zoneIncidentSummary" />
-                </VBox>
-
-                <ObjectStatus
-                    text="{view>inefficiencyText}"
-                    state="{view>state}" />
-
-            </HBox>
-
-        </VBox>
-
-    </CustomListItem>
-
-</List>
-
-
-<!--
                 <List items="{view>/zoneSummaries}" showSeparators="None" class="zoneCardList">
                     <CustomListItem type="Active" press=".onZonePress" class="zoneSummaryCard">
                         <customData><core:CustomData key="zoneId" value="{view>zoneId}" /></customData>
@@ -153,8 +77,7 @@
                         </VBox>
                     </CustomListItem>
                 </List>
--->
-<!-- ****************************************************************************************************************************************** -->
+
                 <l:Grid defaultSpan="XL8 L8 M12 S12" hSpacing="1" vSpacing="1" class="sapUiSmallMarginTop overviewPrimaryGrid">
                     <Panel headerText="Ineficiencia por zona (%)" class="dashboardPanel inefficiencyPanel overviewBalancedPanel">
                         <content>
@@ -182,9 +105,10 @@
                         </content>
                     </Panel>
 
-                    <Panel headerText="Indicadores críticos" class="dashboardPanel criticalSummaryPanel overviewBalancedPanel">
+                    <VBox class="overviewSideColumn">
                         <layoutData><l:GridData span="XL4 L4 M12 S12" /></layoutData>
-                        <content>
+                        <Panel headerText="Indicadores del periodo" class="dashboardPanel criticalSummaryPanel">
+                            <content>
                             <FlexBox wrap="Wrap" class="criticalMetricGrid">
                                 <VBox class="criticalMetric criticalMetricBlue">
                                     <HBox alignItems="Center"><core:Icon src="sap-icon://performance" /><Text text="Asistencia global" /></HBox>
@@ -196,26 +120,34 @@
                                     <ObjectNumber number="{view>/overviewSummary/incidents}" state="Warning" />
                                     <Text text="{view>/overviewSummary/incidentsDescription}" />
                                 </VBox>
-                                <VBox class="criticalMetric criticalMetricRed">
-                                    <HBox alignItems="Center"><core:Icon src="sap-icon://warning2" /><Text text="Mayor riesgo" /></HBox>
-                                    <Title text="{view>/overviewSummary/criticalZone}" level="H4" />
-                                    <Text text="{view>/overviewSummary/criticalZoneDescription}" />
-                                </VBox>
-                                <VBox class="criticalMetric criticalMetricViolet">
-                                    <HBox alignItems="Center"><core:Icon src="sap-icon://target-group" /><Text text="Brecha de meta" /></HBox>
-                                    <ObjectNumber number="{view>/overviewSummary/targetGap}" state="Error" />
-                                    <Text text="{view>/overviewSummary/targetGapDescription}" />
-                                </VBox>
                             </FlexBox>
-                            <HBox alignItems="Center" class="overviewPriorityCallout">
-                                <core:Icon src="sap-icon://warning2" />
-                                <VBox>
-                                    <Text text="Prioridad del día" class="overviewPriorityLabel" />
-                                    <Text text="{view>/priorityText}" wrapping="true" />
+                            </content>
+                        </Panel>
+                        <Panel headerText="Revisión de incidencias" class="dashboardPanel incidentReviewPanel">
+                            <content>
+                                <VBox class="incidentReviewList">
+                                    <HBox alignItems="Center" class="incidentReviewCard incidentReviewLate">
+                                        <core:Icon src="sap-icon://lateness" class="incidentReviewIcon" />
+                                        <VBox class="incidentReviewBody">
+                                            <Title text="Retardos" level="H5" />
+                                            <Text text="Justificaciones pendientes de revisión" />
+                                        </VBox>
+                                        <ObjectNumber number="{view>/lateReviewCount}" state="Warning" class="incidentReviewCount" />
+                                        <Button text="Revisar" icon="sap-icon://navigation-right-arrow" type="Transparent" press=".onLateReviewPress" />
+                                    </HBox>
+                                    <HBox alignItems="Center" class="incidentReviewCard incidentReviewEarly">
+                                        <core:Icon src="sap-icon://log" class="incidentReviewIcon" />
+                                        <VBox class="incidentReviewBody">
+                                            <Title text="Salidas anticipadas" level="H5" />
+                                            <Text text="Justificaciones pendientes de revisión" />
+                                        </VBox>
+                                        <ObjectNumber number="{view>/earlyExitReviewCount}" state="Error" class="incidentReviewCount" />
+                                        <Button text="Revisar" icon="sap-icon://navigation-right-arrow" type="Transparent" press=".onEarlyExitReviewPress" />
+                                    </HBox>
                                 </VBox>
-                            </HBox>
-                        </content>
-                    </Panel>
+                            </content>
+                        </Panel>
+                    </VBox>
                 </l:Grid>
 
                 <l:Grid defaultSpan="XL7 L7 M12 S12" hSpacing="1" vSpacing="1" class="sapUiTinyMarginTop overviewSecondaryGrid">
@@ -267,23 +199,6 @@
                         </content>
                     </Panel>
                 </l:Grid>
-
-                <Panel headerText="Revisión de incidencias" class="dashboardPanel reviewIncidentsPanel sapUiTinyMarginTop">
-                    <content>
-                        <FlexBox wrap="Wrap" class="reviewTileRow">
-                            <GenericTile header="Retardos" subheader="Revisar justificaciones" press=".onLateReviewPress" class="reviewIncidentTile reviewLateTile">
-                                <TileContent footer="Abrir detalle">
-                                    <NumericContent value="{view>/lateReviewCount}" icon="sap-icon://lateness" valueColor="Critical" withMargin="false" />
-                                </TileContent>
-                            </GenericTile>
-                            <GenericTile header="Salidas anticipadas" subheader="Revisar justificaciones" press=".onEarlyExitReviewPress" class="reviewIncidentTile reviewEarlyTile">
-                                <TileContent footer="Abrir detalle">
-                                    <NumericContent value="{view>/earlyExitReviewCount}" icon="sap-icon://log" valueColor="Error" withMargin="false" />
-                                </TileContent>
-                            </GenericTile>
-                        </FlexBox>
-                    </content>
-                </Panel>
             </VBox>
         </content>
     </Page>

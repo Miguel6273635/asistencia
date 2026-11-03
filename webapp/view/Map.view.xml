@@ -19,9 +19,9 @@
                         <Text text="{map>/subtitle}" class="pageSubtitle" />
                     </VBox>
                     <ObjectStatus
-                        text="Datos de prueba"
+                        text="Datos SAP"
                         icon="sap-icon://database"
-                        state="Information"
+                        state="Success"
                         class="mapDemoBadge" />
                 </HBox>
 

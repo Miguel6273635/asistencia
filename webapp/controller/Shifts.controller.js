@@ -88,7 +88,7 @@ sap.ui.define([
             oViewModel.setProperty("/allSchedules", aSchedules);
             this._calculateStats(aSchedules);
             var oSapSummary = oAttendanceModel.getProperty("/scheduleSummary");
-            if (oAttendanceModel.getProperty("/serviceState/live") && oSapSummary) {
+            if (oAttendanceModel.getProperty("/serviceState/live") && oSapSummary && !aPeriodRecords.length) {
                 oViewModel.setProperty("/stats", {
                     active: oSapSummary.active,
                     coverage: Number(oSapSummary.coverage || 0).toFixed(1),
@@ -138,6 +138,9 @@ sap.ui.define([
 
             this.getModel("view").setProperty("/riskSchedules", aRiskSchedules);
             this.getModel("view").setProperty("/typeStats", aTypeStats);
+            console.groupCollapsed("[Monitor][FILTERS][Horarios][PERIOD]");
+            console.info({ period: oPeriod, employees: aEmployees.length, schedules: aSchedules.length, records: aPeriodRecords.length });
+            console.groupEnd();
         },
 
         _applyScheduleFilters: function () {
@@ -150,6 +153,9 @@ sap.ui.define([
                 var sHaystack = [oSchedule.code, oSchedule.name, oSchedule.description, oSchedule.type].join(" ").toLowerCase();
                 return bType && (!sSearch || sHaystack.indexOf(sSearch) !== -1);
             });
+            console.groupCollapsed("[Monitor][FILTERS][Horarios][CATALOG]");
+            console.info({ search: sSearch, scheduleType: sType, sourceRows: aSchedules.length, resultRows: aFiltered.length });
+            console.groupEnd();
 
             oViewModel.setProperty("/schedules", aFiltered);
         },

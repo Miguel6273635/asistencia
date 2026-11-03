@@ -10,6 +10,18 @@ sap.ui.define([
     CHECK_OUT: "P20"
   };
 
+// Configuración de geolocalización
+  var LOCATION_CAPTURE_TIMEOUT_MS = 45000;
+  var LOCATION_MAX_AGE_MS = 15000;
+  var LOCATION_MAX_ACCURACY_METERS = 200;
+
+// Configuración de peticiones HTTP
+  var HTTP_TIMEOUT = {
+      CSRF: 30000,
+      MARK: 120000,
+      HISTORY: 60000
+  };
+
   function pad(value) {
     return String(value).padStart(2, "0");
   }
@@ -20,6 +32,145 @@ sap.ui.define([
 
   function localTime(date) {
     return pad(date.getHours()) + ":" + pad(date.getMinutes()) + ":" + pad(date.getSeconds());
+  }
+
+  function geolocationError(error) {
+    if (!error) {
+      return "No fue posible obtener la ubicación del dispositivo.";
+    }
+    if (error.code === 1) {
+      return "No se autorizó el acceso a la ubicación. Permite la ubicación del sitio para registrar el marcaje.";
+    }
+    if (error.code === 2) {
+      return "El dispositivo no pudo determinar la ubicación actual. Verifica que la ubicación esté activada.";
+    }
+    if (error.code === 3) {
+      return "La consulta de ubicación agotó el tiempo de espera. Intenta nuevamente.";
+    }
+    return error.message || "No fue posible obtener la ubicación del dispositivo.";
+  }
+
+  function captureLocation() {
+    return new Promise(function (resolve, reject) {
+      if (!window.isSecureContext) {
+        reject(new Error("La ubicación solamente está disponible mediante una conexión HTTPS segura."));
+        return;
+      }
+      if (!navigator.geolocation) {
+        reject(new Error("Este navegador no permite obtener la ubicación del dispositivo."));
+        return;
+      }
+
+      var watchId = null;
+      var timeoutId = null;
+      var completed = false;
+      var bestLocation = null;
+      var lastError = null;
+
+      function cleanup() {
+        if (timeoutId !== null) {
+          window.clearTimeout(timeoutId);
+          timeoutId = null;
+        }
+        if (watchId !== null) {
+          navigator.geolocation.clearWatch(watchId);
+          watchId = null;
+        }
+      }
+
+      function finishWithError(message, details) {
+        if (completed) { return; }
+        completed = true;
+        cleanup();
+        Diagnostics.error("LOCATION", message, details || {});
+        reject(new Error(message));
+      }
+
+      function finishWithLocation(location) {
+        if (completed) { return; }
+        completed = true;
+        cleanup();
+        Diagnostics.info("LOCATION", "Ubicación actual y precisa obtenida para el marcaje", location);
+        resolve(location);
+      }
+
+      function mapPosition(position) {
+        var latitude = Number(position && position.coords && position.coords.latitude);
+        var longitude = Number(position && position.coords && position.coords.longitude);
+        var accuracy = Number(position && position.coords && position.coords.accuracy);
+        var timestamp = Number(position && position.timestamp) || Date.now();
+
+        if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+          return null;
+        }
+
+        return {
+          latitude: latitude.toFixed(8),
+          longitude: longitude.toFixed(8),
+          accuracy: Number.isFinite(accuracy) ? Math.round(accuracy) : Number.MAX_SAFE_INTEGER,
+          capturedAt: new Date(timestamp).toISOString(),
+          ageMs: Math.max(0, Date.now() - timestamp),
+          geoStatus: ""
+        };
+      }
+
+      function onPosition(position) {
+        var location = mapPosition(position);
+        if (!location) {
+          Diagnostics.warn("LOCATION", "El dispositivo devolvió coordenadas inválidas; se esperará otra lectura", {});
+          return;
+        }
+
+        Diagnostics.info("LOCATION", "Lectura de ubicación recibida del dispositivo", location);
+
+        if (location.ageMs > LOCATION_MAX_AGE_MS) {
+          Diagnostics.warn("LOCATION", "Se descartó una ubicación antigua", location);
+          return;
+        }
+
+        if (!bestLocation || location.accuracy < bestLocation.accuracy) {
+          bestLocation = location;
+        }
+
+        if (location.accuracy <= LOCATION_MAX_ACCURACY_METERS) {
+          finishWithLocation(location);
+        }
+      }
+
+      function onPositionError(error) {
+        lastError = error;
+        Diagnostics.warn("LOCATION", "El dispositivo reportó un problema al consultar la ubicación", {
+          code: error && error.code,
+          message: geolocationError(error)
+        });
+
+        if (error && error.code === 1) {
+          finishWithError(geolocationError(error), error);
+        }
+      }
+
+      timeoutId = window.setTimeout(function () {
+        if (bestLocation) {
+          finishWithError(
+            "La ubicación actual tiene una precisión aproximada de " + bestLocation.accuracy +
+              " m. Para evitar enviar una ubicación incorrecta no se registró el marcaje. Activa la ubicación precisa o el GPS del dispositivo e intenta nuevamente.",
+            bestLocation
+          );
+          return;
+        }
+        finishWithError(geolocationError(lastError), lastError || {});
+      }, LOCATION_CAPTURE_TIMEOUT_MS);
+
+      try {
+        watchId = navigator.geolocation.watchPosition(onPosition, onPositionError, {
+          enableHighAccuracy: true,
+          timeout: LOCATION_CAPTURE_TIMEOUT_MS,
+          maximumAge: 0
+        });
+      } catch (error) {
+        finishWithError(error.message || "No fue posible iniciar la consulta de ubicación del dispositivo.", error);
+      }
+    });
   }
 
   function odataResults(payload) {
@@ -227,6 +378,18 @@ sap.ui.define([
           status: "Sin marcajes",
           isLate: false,
           isTravel: false,
+          employee: {
+            id: String(record.PersonalNumber || "").trim(),
+            name: String(record.FullName || "").trim(),
+            email: String(record.Email || "").trim(),
+            center: String(record.CenterOffice || "").trim(),
+            centerCode: String(record.CenterCode || "").trim(),
+            zone: String(record.Zone || "").trim(),
+            scheduleCode: String(record.Schedule || "").trim(),
+            schedule: String(record.ScheduleDescription || record.Schedule || "").trim(),
+            scheduleDetail: String(record.ScheduleDetail || "").trim(),
+            position: String(record.Position || "").trim()
+          },
           rawRecords: []
         };
       }
@@ -278,6 +441,10 @@ sap.ui.define([
     });
   }
 
+
+  
+
+
   function requestCsrfToken(serviceRoot) {
     var requestId = Diagnostics.request("GET", serviceRoot, {
       purpose: "Solicitar token CSRF",
@@ -317,10 +484,14 @@ sap.ui.define([
       return EVENT_CODES[action];
     },
 
+    captureLocation: captureLocation,
+
     mark: function (serviceRoot, action, employee, device, options) {
       var now = new Date();
       var markOptions = options || {};
+      var location = markOptions.location || {};
       var justification = markOptions.lateJustification || {};
+      var earlyExitJustification = markOptions.earlyExitJustification || {};
       var justificationMessage = "";
       if (action === "CHECK_IN" && markOptions.isLate && justification.saved) {
         justificationMessage = "JUSTIFICACION RETRASO | Motivo: " + String(justification.reason || "").trim();
@@ -328,6 +499,14 @@ sap.ui.define([
           justificationMessage += " | Comentario: " + String(justification.comment).trim();
         }
         justificationMessage += " | Recupera tiempo: " + (justification.recoverTime ? "Si" : "No");
+        justificationMessage = justificationMessage.slice(0, 255);
+      }
+      if (action === "CHECK_OUT" && markOptions.isEarlyExit && earlyExitJustification.saved) {
+        justificationMessage = "JUSTIFICACION SALIDA ANTICIPADA | Motivo: " + String(earlyExitJustification.reason || "").trim();
+        if (String(earlyExitJustification.comment || "").trim()) {
+          justificationMessage += " | Comentario: " + String(earlyExitJustification.comment).trim();
+        }
+        justificationMessage += " | Recupera tiempo: " + (earlyExitJustification.recoverTime ? "Si" : "No");
         justificationMessage = justificationMessage.slice(0, 255);
       }
       var payload = {
@@ -339,9 +518,9 @@ sap.ui.define([
         EnterHour: localTime(now),
         Chanel: "BTP",
         Device: device || "",
-        Latitude: "",
-        Longitude: "",
-        GeoStatus: "",
+        Latitude: String(location.latitude || ""),
+        Longitude: String(location.longitude || ""),
+        GeoStatus: String(location.geoStatus || ""),
         IsLate: action === "CHECK_IN" && markOptions.isLate ? "X" : "",
         Id_log: "",
         StatusReq: "",
@@ -417,14 +596,19 @@ sap.ui.define([
       });
     },
 
-    readHistory: function (serviceRoot, identifier, selectedDate, expectedPersonalNumber) {
+    readHistory: function (serviceRoot, identifier, selectedDate, expectedPersonalNumber, options) {
       var root = String(serviceRoot || "").replace(/\/?$/, "/");
       var dateFrom = String(selectedDate || "").trim().replace(/-/g, "").replace(/'/g, "''");
+      var settings = options || {};
+      var dateTo = String(settings.dateTo || "").trim().replace(/-/g, "").replace(/'/g, "''");
 
       function requestHistory(identifierToSend, requestPurpose, filterField) {
         var safeIdentifier = String(identifierToSend || "").trim().replace(/'/g, "''");
         var field = filterField === "Email" ? "Email" : "PersonalNumber";
         var filter = field + " eq '" + safeIdentifier + "' and DateFrom eq '" + dateFrom + "'";
+        if (dateTo) {
+          filter += " and DateTo eq '" + dateTo + "'";
+        }
         var url = root + "AttendanceHistorySet?$filter=" + encodeURIComponent(filter) + "&$format=json";
         var requestId = Diagnostics.request("GET", url, {
           entitySet: "AttendanceHistorySet",
@@ -433,6 +617,7 @@ sap.ui.define([
           filter: filter,
           identifier: identifierToSend,
           dateFrom: dateFrom,
+          dateTo: dateTo,
           expectedPersonalNumber: expectedPersonalNumber
         });
 
@@ -480,7 +665,7 @@ sap.ui.define([
         });
       }
 
-      var primaryFilterField = String(identifier || "").indexOf("@") >= 0 ? "Email" : "PersonalNumber";
+      var primaryFilterField = settings.filterField || (String(identifier || "").indexOf("@") >= 0 ? "Email" : "PersonalNumber");
 
       return requestHistory(identifier, "Consulta principal por correo o nómina ingresada", primaryFilterField).then(function (primaryResult) {
         var primaryEmployeeRecords = recordsForEmployee(primaryResult);

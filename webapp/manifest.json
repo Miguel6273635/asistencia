@@ -4,7 +4,7 @@
     "id": "com.mitsu.monitorasistencia",
     "type": "application",
     "applicationVersion": {
-      "version": "0.2.0"
+      "version": "0.3.0"
     },
     "title": "Monitor de Asistencia",
     "description": "Control y monitoreo de asistencia, turnos y horarios",
@@ -40,6 +40,7 @@
         "sap.f": {},
         "sap.tnt": {},
         "sap.ui.layout": {},
+        "sap.ui.unified": {},
         "sap.ui.export": {},
         "sap.viz": {},
         "sap.ui.vbm": {}
@@ -90,11 +91,6 @@
           "pattern": "centers/{zoneId}",
           "name": "centers",
           "target": "centers"
-        },
-        {
-          "pattern": "center/{centerId}",
-          "name": "center",
-          "target": "center"
         },
         {
           "pattern": "records/{employeeId}",
@@ -155,10 +151,6 @@
         "centers": {
           "viewId": "centers",
           "viewName": "Centers"
-        },
-        "center": {
-          "viewId": "center",
-          "viewName": "Center"
         },
         "records": {
           "viewId": "records",

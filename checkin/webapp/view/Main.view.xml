@@ -6,18 +6,19 @@
         <VBox class="identityBrand" alignItems="Center">
           <Avatar displayShape="Square" displaySize="L" src="sap-icon://employee-approvals" class="identityLogo" />
           <Title text="Checkin" level="H1" />
-          <Text text="Consulta temporal de colaborador" class="identitySubtitle" />
+          <Text text="Consulta de colaborador" class="identitySubtitle" />
         </VBox>
         <VBox class="identityForm">
-          <Label text="Número de nómina o correo" labelFor="identityInput" required="true" />
-          <Input id="identityInput" value="{app>/identityInput}" placeholder="Ej. 00004281 o empleado@empresa.com"
-            type="Text" liveChange=".onIdentityInputLiveChange" submit=".onIdentitySubmit" />
-          <Text text="Para nómina puedes escribir 4281; se completará como 00004281." class="identityHelp" />
-          <MessageStrip visible="{= !!${app>/identityLookupError} }" text="{app>/identityLookupError}" type="Error" showIcon="true" />
-          <Button text="Consultar empleado" icon="sap-icon://search" type="Emphasized" press=".onIdentitySubmit"
-            enabled="{= !${app>/employeeLoading} }" width="100%" />
+          <Label text="Correo del empleado" labelFor="identityInput" required="true" />
+          <Input id="identityInput" value="{app>/identityInput}"
+            placeholder="empleado@empresa.com" type="Email"
+            liveChange=".onIdentityInputLiveChange" submit=".onIdentitySubmit" />
+          <MessageStrip visible="{= !!${app>/identityLookupError} }"
+            text="{app>/identityLookupError}" type="Error" showIcon="true" />
+          <Button text="Ingresar" icon="sap-icon://log" type="Emphasized"
+            press=".onIdentitySubmit" enabled="{= !${app>/employeeLoading} }" width="100%" />
         </VBox>
-        <MessageStrip text="Pantalla temporal de pruebas. Después será reemplazada por la identidad del login de BTP."
+        <MessageStrip text="Ingresa el correo con el que deseas consultar el perfil y los marcajes del colaborador."
           type="Information" showIcon="true" />
       </VBox>
     </VBox>
@@ -42,7 +43,6 @@
           <tnt:NavigationList id="navigationList" selectedKey="attendance">
             <tnt:NavigationListItem id="navToggleItem" key="toggleMenu" text="{= ${ui>/sideExpanded} ? 'Contraer menú' : 'Expandir menú' }" icon="sap-icon://menu2" />
             <tnt:NavigationListItem id="navAttendanceItem" key="attendance" text="Mi Asistencia" icon="sap-icon://home" />
-            <tnt:NavigationListItem id="navProfileItem" key="profile" text="Mis Datos" icon="sap-icon://person-placeholder" />
           </tnt:NavigationList>
         </tnt:item>
       </tnt:SideNavigation>
@@ -96,53 +96,62 @@
                     <HBox class="markActions" wrap="Wrap">
                       <Button id="checkInAction" text="{attendance>/today/checkInText}" icon="sap-icon://log" type="Emphasized" press=".onCheckIn" />
                       <Button id="lateJustificationAction" text="{attendance>/today/lateJustificationButtonText}" icon="sap-icon://notes"
-                        type="Attention" visible="{= ${attendance>/today/isLateNow} &amp;&amp; ${attendance>/today/nextAction} === 'CHECK_IN' }"
+                        type="Attention" visible="{= ${attendance>/today/nextAction} === 'CHECK_IN' }"
+                        enabled="{attendance>/today/isLateNow}"
+                        tooltip="{= ${attendance>/today/isLateNow} ? 'Capturar la justificación del retraso' : 'Se habilitará si la entrada se registra después del inicio del horario' }"
                         press=".onOpenLateJustification" />
                       <Button id="mealStartAction" text="Iniciar comida" icon="sap-icon://meal" enabled="false" press=".onMealStart" />
                       <Button id="mealEndAction" text="Finalizar comida" icon="sap-icon://meal" enabled="false" press=".onMealEnd" />
                       <Button id="checkOutAction" text="{attendance>/today/checkOutText}" icon="sap-icon://log" enabled="false" press=".onCheckOut" />
+                      <Button id="earlyExitJustificationAction" text="{attendance>/today/earlyExitJustificationButtonText}"
+                        icon="sap-icon://notes" type="Attention"
+                        visible="{= ${attendance>/today/nextAction} === 'CHECK_OUT' &amp;&amp; ${attendance>/today/isEarlyExit} }"
+                        tooltip="Capturar el motivo de la salida anticipada"
+                        press=".onOpenEarlyExitJustification" />
                     </HBox>
-                    <MessageStrip text="El marcaje se envía a SAP sin solicitar la ubicación del dispositivo." type="Information" showIcon="true" class="privacyStrip" />
+                    <MessageStrip visible="{= !!${app>/historyError} }" text="{app>/historyError}" type="Error" showIcon="true" />
+                    <MessageStrip text="Cada marcaje usa una ubicación reciente y precisa del dispositivo; no se utilizan coordenadas fijas. Si la precisión no es suficiente, el evento no se enviará a SAP." type="Information" showIcon="true" class="privacyStrip" />
                   </VBox>
 
-                  <VBox class="panel historyPanel compactHistoryPanel" busy="{app>/historyLoading}" busyIndicatorDelay="0">
-                    <HBox class="panelHeading" alignItems="Center"><core:Icon src="sap-icon://list" /><VBox><Title text="Marcajes de hoy" level="H2" /><Text text="Datos obtenidos de SAP" class="mutedText" /></VBox></HBox>
-                    <Table items="{attendance>/history}" class="historyTable" inset="false" noDataText="No hay marcajes registrados para hoy">
-                      <columns><Column><Text text="Fecha" /></Column><Column><Text text="Entrada" /></Column><Column><Text text="Inicio comida" /></Column><Column><Text text="Fin comida" /></Column><Column><Text text="Salida" /></Column><Column><Text text="Horas" /></Column><Column><Text text="Estatus" /></Column></columns>
-                      <items><ColumnListItem vAlign="Middle"><cells><Text text="{attendance>date}" class="strongText" /><Text text="{attendance>entry}" /><Text text="{attendance>mealStart}" /><Text text="{attendance>mealEnd}" /><Text text="{attendance>exit}" /><Text text="{attendance>hours}" class="strongText" /><Text text="{attendance>status}" class="historyStatus" /></cells></ColumnListItem></items>
-                    </Table>
-                    <MessageStrip visible="{= !!${app>/historyError} }" text="{app>/historyError}" type="Error" showIcon="true" />
+                  <VBox class="panel compactEmployeePanel" busy="{app>/employeeLoading}" busyIndicatorDelay="0">
+                    <HBox class="panelHeading" alignItems="Center">
+                      <core:Icon src="sap-icon://employee" />
+                      <VBox>
+                        <Title text="Datos del colaborador" level="H2" />
+                        <Text text="Información laboral y asignación" class="mutedText" />
+                      </VBox>
+                    </HBox>
+
+                    <HBox class="compactProfileGroups" alignItems="Stretch" wrap="Wrap">
+                      <VBox class="compactProfileGroup">
+                        <HBox class="compactProfileTitle" alignItems="Center">
+                          <core:Icon src="sap-icon://employee" />
+                          <Title text="Información laboral" level="H3" />
+                        </HBox>
+                        <HBox class="compactProfileField" justifyContent="SpaceBetween"><Text text="Núm. de empleado" /><Text text="{attendance>/employee/id}" wrapping="false" class="strongText compactProfileValue" /></HBox>
+                        <HBox class="compactProfileField" justifyContent="SpaceBetween"><Text text="Correo" /><Text text="{attendance>/employee/email}" wrapping="true" class="strongText compactProfileValue" /></HBox>
+                        <HBox class="compactProfileField" justifyContent="SpaceBetween"><Text text="Puesto" /><Text text="{attendance>/employee/position}" wrapping="true" class="strongText compactProfileValue" /></HBox>
+                        <HBox class="compactProfileField" justifyContent="SpaceBetween"><Text text="Centro" /><Text text="{attendance>/employee/center}" wrapping="true" class="strongText compactProfileValue" /></HBox>
+                      </VBox>
+
+                      <VBox class="compactProfileGroup scheduleProfileGroup">
+                        <HBox class="compactProfileTitle" alignItems="Center">
+                          <core:Icon src="sap-icon://calendar" />
+                          <Title text="Horario de hoy" level="H3" />
+                        </HBox>
+                        <HBox class="compactProfileField" justifyContent="SpaceBetween"><Text text="Fecha" /><Text text="{attendance>/today/dateText}" wrapping="true" class="strongText compactProfileValue" /></HBox>
+                        <HBox class="compactProfileField" justifyContent="SpaceBetween"><Text text="Turno" /><Text text="{= ${attendance>/employee/schedule} || ${attendance>/schedule/name} || 'Pendiente de SAP' }" wrapping="true" class="strongText compactProfileValue" /></HBox>
+                        <HBox class="compactProfileField" justifyContent="SpaceBetween"><Text text="Jornada" /><Text text="{= ${attendance>/schedule/start} &amp;&amp; ${attendance>/schedule/end} ? ${attendance>/schedule/start} + ' – ' + ${attendance>/schedule/end} : 'Pendiente de SAP' }" wrapping="false" class="strongText compactProfileValue" /></HBox>
+                        <HBox class="compactProfileField" justifyContent="SpaceBetween"><Text text="Base" /><Text text="{attendance>/employee/centerCode}" wrapping="true" class="strongText compactProfileValue" /></HBox>
+                        <HBox class="compactProfileField" justifyContent="SpaceBetween"><Text text="Zona" /><Text text="{attendance>/employee/zone}" wrapping="true" class="strongText compactProfileValue" /></HBox>
+                      </VBox>
+                    </HBox>
+
+                    <MessageStrip visible="{= !!${app>/employeeError} }" text="{app>/employeeError}" type="Error" showIcon="true" />
                   </VBox>
                 </HBox>
               </VBox>
 
-              <VBox id="profileView" visible="false" class="profileView">
-                <VBox class="panel profilePanel">
-                  <HBox class="profileHero" justifyContent="SpaceBetween" alignItems="Center" wrap="Wrap">
-                    <HBox alignItems="Center" class="employeeBlock">
-                      <Avatar initials="{attendance>/employee/initials}" displaySize="L" class="employeeAvatar" />
-                      <VBox><Text text="PERFIL DEL COLABORADOR" class="profileEyebrow" /><Title text="{attendance>/employee/name}" level="H1" /><Text text="{attendance>/employee/position} · {attendance>/employee/center}" class="mutedText" /></VBox>
-                    </HBox>
-                    <Button text="Solicitar actualización" icon="sap-icon://edit" type="Emphasized" press=".onRequestProfileUpdate" />
-                  </HBox>
-                  <MessageStrip text="Estos datos provienen de Recursos Humanos. Si necesitas corregirlos, envía una solicitud de actualización." type="Information" showIcon="true" />
-                  <HBox class="profileSections" wrap="Wrap">
-                    <VBox class="profileSection">
-                      <HBox class="profileSectionTitle" alignItems="Center"><core:Icon src="sap-icon://employee" /><Title text="Información laboral" level="H2" /></HBox>
-                      <HBox class="profileField" justifyContent="SpaceBetween"><Text text="Número de empleado" /><Text text="{attendance>/employee/id}" class="strongText" /></HBox>
-                      <HBox class="profileField" justifyContent="SpaceBetween"><Text text="Correo" /><Text text="{attendance>/employee/email}" class="strongText" /></HBox>
-                      <HBox class="profileField" justifyContent="SpaceBetween"><Text text="Puesto" /><Text text="{attendance>/employee/position}" class="strongText" /></HBox>
-                      <HBox class="profileField" justifyContent="SpaceBetween"><Text text="Centro de trabajo" /><Text text="{attendance>/employee/center}" class="strongText" /></HBox>
-                    </VBox>
-                    <VBox class="profileSection">
-                      <HBox class="profileSectionTitle" alignItems="Center"><core:Icon src="sap-icon://calendar" /><Title text="Asignación" level="H2" /></HBox>
-                      <HBox class="profileField" justifyContent="SpaceBetween"><Text text="Horario/turno" /><Text text="{attendance>/employee/schedule}" class="strongText" /></HBox>
-                      <HBox class="profileField" justifyContent="SpaceBetween"><Text text="Base" /><Text text="{attendance>/employee/centerCode}" class="strongText" /></HBox>
-                      <HBox class="profileField" justifyContent="SpaceBetween"><Text text="Zona" /><Text text="{attendance>/employee/zone}" class="strongText" /></HBox>
-                    </VBox>
-                  </HBox>
-                </VBox>
-              </VBox>
             </VBox>
           </content>
         </Page>

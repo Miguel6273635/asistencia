@@ -311,6 +311,12 @@ sap.ui.define([
             this.navTo("mapUser", { zoneId: oEmployee.zoneId, employeeId: oEmployee.id });
         },
 
+        onOpenSchedule: function () {
+            var oEmployee = this.getModel("view").getProperty("/employee") || {};
+            this.getModel("attendance").setProperty("/focusedScheduleId", oEmployee.scheduleId || "");
+            this.navTo("shifts");
+        },
+
         onNavUsers: function () { this.navTo("users"); },
         onNavOverview: function () { this.navTo("overview"); }
     });

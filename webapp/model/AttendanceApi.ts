@@ -9,8 +9,10 @@ export type AttendanceEntitySet =
     | "AttendanceHistorySet"
     | "AttendanceRecordSet"
     | "CatalogScheduleSet"
-    | "CatalogStatusSet"
-    | "CatalogZoneSet"
+    | "ProcessingJustificationsSet"
+    | "CenterOfficeSet"
+    | "ZoneAttendanceSet"
+    | "BasesSet"
     | "ScheduleSummarySet"
     | "ScheduleTypeDistributionSet"
     | "EmployeeSet"
@@ -33,7 +35,10 @@ export type FilterField =
     | "Status"
     | "PersonalNumber"
     | "Email"
-    | "SearchText";
+    | "SearchText"
+    | "DateJustification"
+    | "TypeRegister"
+    | "DecisionRH";
 
 export interface ODataFilter {
     field: FilterField;
@@ -106,6 +111,24 @@ export interface EmployeeUploadPayload {
     Operation: string;
     ProcessingMode: string;
     ToEmployeesUpload: EmployeeUploadItem[];
+}
+
+export interface ProcessingJustificationPayload {
+    PersonalNumber: string;
+    FullName: string;
+    CenterOffice: string;
+    Zone: string;
+    Base: string;
+    DateJustification: string;
+    TypeRegister: string;
+    TypeRegisterDescrip: string;
+    IncidentType: string;
+    ReasonType: string;
+    JustificationStatus: string;
+    DescriptionStatus: string;
+    Email: string;
+    DecisionRH: string;
+    CommentsRH: string;
 }
 
 export interface OverviewQuery {
@@ -189,7 +212,13 @@ export default class AttendanceApi {
         entitySet: AttendanceEntitySet,
         options: QueryOptions = {}
     ): Promise<T[]> {
-        const response = await fetch(this.buildUrl(entitySet, options), {
+        const url = this.buildUrl(entitySet, options);
+        console.groupCollapsed(`[Monitor][ODATA][GET][${entitySet}]`);
+        console.info("URL", url);
+        console.info("Filtros", options.filters ?? []);
+        console.info("Opciones", options);
+        console.groupEnd();
+        const response = await fetch(url, {
             method: "GET",
             credentials: "same-origin",
             headers: { Accept: "application/json" },
@@ -201,7 +230,12 @@ export default class AttendanceApi {
         }
 
         const body = await response.json() as ODataV2Collection<T>;
-        return body.d?.results ?? [];
+        const rows = body.d?.results ?? [];
+        console.groupCollapsed(`[Monitor][ODATA][RAW-RESPONSE][${entitySet}] ${rows.length} fila(s)`);
+        console.info(body);
+        console.table(rows);
+        console.groupEnd();
+        return rows;
     }
 
     public async getOverview(query: OverviewQuery, signal?: AbortSignal): Promise<OverviewSnapshot> {
@@ -252,34 +286,39 @@ export default class AttendanceApi {
         return this.getCollection("GeneralMapUbicationsSet", { filters, signal });
     }
 
-    public async createAttendanceRecord(payload: AttendanceRecordPayload): Promise<ODataRow> {
-        const response = await fetch(`${this.serviceRoot}AttendanceRecordSet`, {
-            method: "POST",
-            credentials: "same-origin",
-            headers: {
-                Accept: "application/json",
-                "Content-Type": "application/json",
-                "X-CSRF-Token": await this.getCsrfToken()
-            },
-            body: JSON.stringify(payload)
+    public getProcessingJustifications(
+        dateFrom: string,
+        dateTo: string,
+        signal?: AbortSignal
+    ): Promise<ODataRow[]> {
+        return this.getCollection("ProcessingJustificationsSet", {
+            filters: [
+                { field: "DateFrom", value: dateFrom },
+                { field: "DateTo", value: dateTo }
+            ],
+            signal
         });
-
-        if (!response.ok) {
-            throw await this.toError(response, `AttendanceRecordSet respondió con HTTP ${response.status}`);
-        }
-
-        const body = await response.json() as { d?: ODataRow };
-        return body.d ?? {};
     }
 
-    public async uploadEmployees(
-        payload: EmployeeUploadPayload,
-        entitySet = "EmployeesUploadSet"
+    public submitJustificationDecision(payload: ProcessingJustificationPayload): Promise<ODataRow> {
+        return this.postEntity("ProcessingJustificationsSet", payload, "JUSTIFICATION-DECISION");
+    }
+
+    public async createAttendanceRecord(payload: AttendanceRecordPayload): Promise<ODataRow> {
+        return this.postEntity("AttendanceRecordSet", payload, "ATTENDANCE-RECORD");
+    }
+
+    private async postEntity(
+        entitySet: AttendanceEntitySet,
+        payload: AttendanceRecordPayload | ProcessingJustificationPayload,
+        logName: string
     ): Promise<ODataRow> {
-        if (!/^[A-Za-z0-9_]+$/.test(entitySet)) {
-            throw new Error("El EntitySet de carga contiene caracteres no permitidos.");
-        }
-        const response = await fetch(`${this.serviceRoot}${entitySet}`, {
+        const url = `${this.serviceRoot}${entitySet}`;
+        console.groupCollapsed(`[Monitor][ODATA][POST][${logName}]`);
+        console.info("URL", url);
+        console.info("Payload", payload);
+        console.groupEnd();
+        const response = await fetch(url, {
             method: "POST",
             credentials: "same-origin",
             headers: {
@@ -298,6 +337,46 @@ export default class AttendanceApi {
             return {};
         }
         const body = await response.json() as { d?: ODataRow };
+        console.groupCollapsed(`[Monitor][ODATA][RAW-RESPONSE][${logName}]`);
+        console.info(body);
+        console.groupEnd();
+        return body.d ?? {};
+    }
+
+    public async uploadEmployees(
+        payload: EmployeeUploadPayload,
+        entitySet = "EmployeesUploadSet"
+    ): Promise<ODataRow> {
+        if (!/^[A-Za-z0-9_]+$/.test(entitySet)) {
+            throw new Error("El EntitySet de carga contiene caracteres no permitidos.");
+        }
+        const url = `${this.serviceRoot}${entitySet}`;
+        console.groupCollapsed(`[Monitor][EMPLOYEE-UPLOAD][POST][${entitySet}]`);
+        console.info("URL", url);
+        console.info("Payload", payload);
+        console.groupEnd();
+        const response = await fetch(url, {
+            method: "POST",
+            credentials: "same-origin",
+            headers: {
+                Accept: "application/json",
+                "Content-Type": "application/json",
+                "X-CSRF-Token": await this.getCsrfToken()
+            },
+            body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+            throw await this.toError(response, `${entitySet} respondió con HTTP ${response.status}`);
+        }
+
+        if (response.status === 204) {
+            return {};
+        }
+        const body = await response.json() as { d?: ODataRow };
+        console.groupCollapsed(`[Monitor][EMPLOYEE-UPLOAD][RAW-RESPONSE][${entitySet}]`);
+        console.info(body);
+        console.groupEnd();
         return body.d ?? {};
     }
 
@@ -345,6 +424,14 @@ export default class AttendanceApi {
     }
 
     private async toError(response: Response, message: string): Promise<AttendanceApiError> {
-        return new AttendanceApiError(response.status, message, await response.text());
+        const responseBody = await response.text();
+        console.error("[Monitor][ODATA][ERROR]", {
+            status: response.status,
+            statusText: response.statusText,
+            url: response.url,
+            message,
+            responseBody
+        });
+        return new AttendanceApiError(response.status, message, responseBody);
     }
 }

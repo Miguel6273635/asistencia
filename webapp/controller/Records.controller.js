@@ -199,6 +199,17 @@ sap.ui.define([
             oViewModel.setProperty("/stats", oStats);
             oViewModel.setProperty("/statusCards", this._createStatusCards(aFiltered, iTotal));
             oViewModel.setProperty("/currentPage", 1);
+            console.groupCollapsed("[Monitor][FILTERS][Registros][APPLY]");
+            console.info({
+                center: sCenter,
+                scheduleId: sScheduleId,
+                status: sStatus,
+                periodStart: oPeriodStart,
+                periodEnd: oPeriodEnd,
+                sourceRows: aRecords.length,
+                resultRows: aFiltered.length
+            });
+            console.groupEnd();
             this._updatePage(true);
         },
 
@@ -315,7 +326,15 @@ sap.ui.define([
             return this._attendanceApi.getAttendanceHistory(aFilters).then(function (aRows) {
                 var aSchedules = this.getModel("attendance").getProperty("/schedules") || [];
                 var aMappedRecords = MonitorData.mapAttendanceRecords(aRows, aSchedules);
-                this._setRecords(aMappedRecords, false);
+                var aInRangeRecords = periodHelper.filterRecords(aMappedRecords, { start: oStart, end: oEnd });
+                console.info("[Monitor][FILTERS][Registros][LOCAL-RANGE]", {
+                    receivedRows: aRows.length,
+                    mappedRows: aMappedRecords.length,
+                    inRangeRows: aInRangeRecords.length,
+                    dateFrom: this._formatODataDate(oStart),
+                    dateTo: this._formatODataDate(oEnd)
+                });
+                this._setRecords(aInRangeRecords, false);
             }.bind(this)).catch(function (oError) {
                 MessageToast.show("No fue posible consultar el periodo seleccionado en SAP");
                 console.error("Error al consultar AttendanceHistorySet por rango", oError);

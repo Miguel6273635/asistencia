@@ -196,6 +196,9 @@ sap.ui.define([
 
         onZoneSelectorChange: function (oEvent) {
             var sZoneId = oEvent.getSource().getSelectedKey();
+            console.groupCollapsed("[Monitor][FILTERS][Mapa][ZONE]");
+            console.info({ zoneId: sZoneId });
+            console.groupEnd();
             if (sZoneId === "all") {
                 this.navTo("map");
                 return;

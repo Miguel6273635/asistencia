@@ -418,49 +418,26 @@ body > div,
 }
 
 .compactPage .zoneCardList .sapMListUl {
-    gap: 0.65rem;
+    gap: 0.75rem;
 }
 
 .compactPage .zoneSummaryCard.sapMLIB {
-    min-height: 10rem;
-    padding: 0.8rem 0.7rem;
+    min-height: 6.9rem;
+    padding: 0.7rem 0.85rem;
 }
 
 .compactPage .zoneMetricRow {
-    margin-top: 0.35rem;
-    gap: 0.4rem;
-    flex-wrap: wrap;
+    margin-top: 0.55rem;
 }
 
 .compactPage .zoneSummaryCard .sapMObjectNumberText {
-    font-size: 1.3rem;
+    font-size: 1.4rem;
 }
 
 .compactPage .zoneDirectionIcon {
     width: 1.9rem;
     height: 1.9rem;
     line-height: 1.9rem;
-}
-
-.zoneHeaderRow {
-    width: 100%;
-    margin-bottom: 0.35rem;
-    gap: 0.5rem;
-}
-
-.zoneTitle {
-    margin: 0;
-    line-height: 1.2rem;
-}
-
-.zoneRiskStatus {
-    flex-shrink: 0;
-}
-
-.zoneMeta {
-    font-size: 0.72rem;
-    line-height: 1.1rem;
-    margin-top: 0.1rem;
 }
 
 .compactPage .sapMListTblHeaderCell,
@@ -684,21 +661,16 @@ body > div,
 
 .zoneCardList .sapMListUl {
     display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-    gap: 0.65rem;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 1rem;
     padding: 0;
-    box-sizing: border-box;
 }
 
 .zoneSummaryCard.sapMLIB {
-    width: 100%;
-    min-width: 0;
-    min-height: 10rem;
-    padding: 0.85rem 0.7rem;
+    min-height: 8.25rem;
+    padding: 1rem 1.1rem;
     box-sizing: border-box;
-    overflow: hidden;
-    transition: transform 0.16s ease,
-                box-shadow 0.16s ease
+    transition: transform 0.16s ease, box-shadow 0.16s ease;
 }
 
 .zoneSummaryCard.sapMLIB:hover {
@@ -743,27 +715,6 @@ body > div,
 .zoneSummaryCard .sapMObjectNumberUnit {
     color: var(--monitor-muted);
     font-size: 0.75rem;
-}
-
-/* Metadatos */
-.zoneSummaryCard .zoneMeta {
-    font-size: 0.72rem;
-    line-height: 1.1rem;
-    white-space: normal;
-    overflow-wrap: anywhere;
-}
-
-/* Resumen de incidencias */
-.zoneSummaryCard .zoneIncidentSummary {
-    font-size: 0.7rem !important;
-    line-height: 1.1rem;
-    white-space: normal;
-    overflow-wrap: anywhere;
-}
-
-/* Tamaño del indicador de asistencia */
-.zoneSummaryCard .sapMObjectNumberUnit {
-    font-size: 0.7rem;
 }
 
 .dashboardPanel.sapMPanel {
@@ -1483,6 +1434,77 @@ body > div,
     width: 100%;
 }
 
+.overviewSideColumn {
+    gap: 0.75rem;
+    width: 100%;
+}
+
+.overviewSideColumn > .sapMPanel {
+    width: 100%;
+}
+
+.incidentReviewPanel .sapMPanelContent {
+    padding: 0.55rem 0.65rem 0.65rem !important;
+}
+
+.incidentReviewList {
+    gap: 0.5rem;
+}
+
+.incidentReviewCard {
+    gap: 0.55rem;
+    min-height: 3.7rem;
+    padding: 0.45rem 0.5rem;
+    border: 1px solid #d7e2ec;
+    border-left: 0.22rem solid #e9730c;
+    border-radius: 0.65rem;
+    background: linear-gradient(105deg, rgba(233, 115, 12, 0.08), #ffffff 72%);
+    box-sizing: border-box;
+}
+
+.incidentReviewEarly {
+    border-left-color: #c00000;
+    background: linear-gradient(105deg, rgba(192, 0, 0, 0.07), #ffffff 72%);
+}
+
+.incidentReviewIcon {
+    flex: 0 0 auto;
+    width: 1.5rem;
+    color: #b95d00;
+    font-size: 1.2rem;
+    text-align: center;
+}
+
+.incidentReviewEarly .incidentReviewIcon {
+    color: #b00000;
+}
+
+.incidentReviewBody {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.incidentReviewBody .sapMTitle {
+    font-size: 0.84rem;
+    font-weight: 800;
+}
+
+.incidentReviewBody .sapMText {
+    color: var(--monitor-muted);
+    font-size: 0.68rem;
+}
+
+.incidentReviewCount {
+    flex: 0 0 auto;
+    min-width: 1.6rem;
+    text-align: center;
+}
+
+.incidentReviewCount .sapMObjectNumberText {
+    font-size: 1.18rem;
+    font-weight: 800;
+}
+
 .criticalMetric {
     min-width: 0;
     min-height: 4.45rem;
@@ -1670,7 +1692,7 @@ body > div,
 
 @media (max-width: 75rem) {
     .zoneCardList .sapMListUl {
-        grid-template-columns: repeat(3, minmax(0, 1fr));
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
     .pageContainer {
@@ -1691,12 +1713,6 @@ body > div,
         display: none;
     }
 
-    @media (max-width: 65rem) and (min-width: 48.01rem) {
-    .zoneCardList .sapMListUl {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-}
-
     .zoneCardList .sapMListUl {
         grid-template-columns: 1fr;
     }
@@ -1711,108 +1727,6 @@ body > div,
 
     .filterField {
         margin-bottom: 0.5rem;
-    }
-}
-
-/* Precarga masiva de usuarios: revisión, corrección y carga parcial. */
-.bulkUserDialog .sapMDialogSection {
-    background: #f5f8fa;
-}
-
-.bulkImportToolbar.sapMTB {
-    min-height: 3.4rem;
-    border-bottom: 1px solid #ccd8e2;
-    background: linear-gradient(100deg, #ffffff 0%, #f7fbff 70%, #edf6ff 100%);
-}
-
-.bulkImportContent {
-    height: 100%;
-}
-
-.bulkSummaryRow {
-    gap: 0.65rem;
-}
-
-.bulkSummaryCard {
-    min-width: 10.5rem;
-    padding: 0.55rem 0.75rem;
-    box-sizing: border-box;
-    border: 1px solid #d7e1e8;
-    border-left: 0.22rem solid #0a6ed1;
-    border-radius: 0.6rem;
-    background: #ffffff;
-}
-
-.bulkSummaryCard > .sapMText {
-    color: var(--monitor-muted);
-    font-size: 0.72rem;
-    font-weight: 700;
-}
-
-.bulkSummaryCard .sapMObjectNumberText {
-    font-size: 1.15rem;
-}
-
-.bulkSummarySuccess {
-    border-left-color: #188918;
-    background: linear-gradient(105deg, rgba(24, 137, 24, 0.055), #ffffff 72%);
-}
-
-.bulkSummaryError {
-    border-left-color: #c00000;
-    background: linear-gradient(105deg, rgba(192, 0, 0, 0.055), #ffffff 72%);
-}
-
-.bulkImportTableScroll {
-    height: clamp(22rem, calc(100dvh - 20rem), 33rem) !important;
-    border: 1px solid #d3dde5;
-    border-radius: 0.65rem;
-    background: #ffffff;
-}
-
-.bulkImportTable {
-    min-width: 132rem;
-}
-
-.bulkImportTable .sapMListTblHeaderCell {
-    position: sticky;
-    z-index: 4;
-    top: 0;
-    background: #eef4f8;
-    box-shadow: inset 0 -1px 0 #c8d5df;
-}
-
-.bulkImportTable .sapMListTblHeaderCell .sapMText {
-    color: #354b61;
-    font-size: 0.7rem;
-    font-weight: 800;
-    text-transform: uppercase;
-}
-
-.bulkImportTable .sapMListTblCell {
-    padding: 0.3rem 0.22rem !important;
-    vertical-align: top;
-}
-
-.bulkImportTable .sapMInputBase,
-.bulkImportTable .sapMSlt {
-    min-width: 100%;
-}
-
-.bulkImportTable .sapMObjStatus {
-    margin-top: 0.35rem;
-}
-
-@media (max-width: 60rem) {
-    .bulkImportToolbar.sapMTB {
-        height: auto;
-        flex-wrap: wrap;
-        padding-top: 0.35rem;
-        padding-bottom: 0.35rem;
-    }
-
-    .bulkImportTableScroll {
-        height: calc(100dvh - 18rem) !important;
     }
 }
 
@@ -2118,6 +2032,96 @@ body > div,
     color: #526a80;
     font-size: 0.72rem;
     line-height: 1rem;
+}
+
+/* Accesos a la revisión de incidencias y tablas de justificación. */
+.reviewIncidentsPanel .sapMPanelContent {
+    padding: 0.8rem 1rem 1rem !important;
+}
+
+.reviewTileRow {
+    gap: 1rem;
+}
+
+.reviewIncidentTile.sapMGT {
+    width: 18rem !important;
+    height: 9.25rem !important;
+    border: 1px solid #d5e1eb;
+    border-left: 0.28rem solid #e9730c;
+    border-radius: 0.8rem;
+    background: linear-gradient(115deg, #fff8f1, #ffffff 72%);
+    box-shadow: 0 0.25rem 0.85rem rgba(16, 42, 67, 0.09);
+}
+
+.reviewEarlyTile.sapMGT {
+    border-left-color: #bb0000;
+    background: linear-gradient(115deg, #fff4f4, #ffffff 72%);
+}
+
+.reviewIncidentTile.sapMGT:hover {
+    transform: translateY(-0.12rem);
+    box-shadow: 0 0.45rem 1.1rem rgba(16, 42, 67, 0.14);
+}
+
+.reviewPageHeading {
+    gap: 1rem;
+    margin: 0.35rem 0 0.8rem;
+}
+
+.reviewKpiRow {
+    gap: 0.85rem;
+    margin-bottom: 0.85rem;
+}
+
+.reviewKpiCard {
+    width: 16rem;
+    min-height: 4.8rem;
+    box-sizing: border-box;
+    padding: 0.72rem 0.9rem;
+    border: 1px solid #f2c28e;
+    border-left: 0.25rem solid #e9730c;
+    border-radius: 0.75rem;
+    background: linear-gradient(110deg, #fff7ef, #ffffff);
+    box-shadow: 0 0.2rem 0.65rem rgba(16, 42, 67, 0.06);
+}
+
+.reviewKpiPending {
+    border-color: #efb7b7;
+    border-left-color: #bb0000;
+    background: linear-gradient(110deg, #fff2f2, #ffffff);
+}
+
+.reviewKpiCard > .sapMText {
+    color: var(--monitor-muted);
+    font-weight: 700;
+}
+
+.reviewKpiCard .sapMObjectNumberText {
+    font-size: 1.65rem;
+}
+
+.reviewTablePanel .sapMPanelContent {
+    padding: 0 !important;
+}
+
+.reviewTable .sapMListTblHeaderCell {
+    background: #f3f7fa;
+}
+
+.reviewTable .sapMListTblCell {
+    vertical-align: middle;
+}
+
+@media (max-width: 48rem) {
+    .reviewIncidentTile.sapMGT,
+    .reviewKpiCard {
+        width: 100% !important;
+    }
+
+    .reviewTileRow,
+    .reviewKpiRow {
+        flex-direction: column;
+    }
 }
 
 .overviewPriorityLabel {
@@ -2496,6 +2500,44 @@ body > div,
     overflow-y: auto !important;
 }
 
+.usersWideTableScroll {
+    width: 100%;
+    overflow-x: auto !important;
+}
+
+.usersWideTable {
+    min-width: 185rem;
+}
+
+.usersWideTable .sapMListTblCell {
+    white-space: nowrap;
+}
+
+.usersHorizontalNavigator {
+    min-height: 2.4rem;
+    padding: 0.2rem 0.55rem;
+    border: 1px solid rgba(10, 110, 209, 0.18);
+    border-radius: 0.55rem;
+    background: linear-gradient(90deg, #f7fbff, #ffffff, #f7fbff);
+    color: var(--monitor-muted);
+}
+
+.usersHorizontalNavigator .sapMBtn {
+    border-radius: 50%;
+}
+
+.employeeTemplateActions {
+    gap: 0.4rem;
+}
+
+.employeeUploadOptions {
+    gap: 0.5rem;
+}
+
+.employeeUploadOptions > .sapMVBox {
+    min-width: 10rem;
+}
+
 /* Vista de desempeño individual. */
 .userPerformancePage {
     min-height: calc(100dvh - 3.5rem);
@@ -2651,4 +2693,37 @@ body > div,
     .performanceKpiRow .kpiCard {
         flex-basis: 100%;
     }
+}
+/* Monitor simplification requested in the functional change document. */
+.schedulePageHeading {
+    gap: 1rem;
+}
+
+.scheduleActiveCard {
+    flex: 0 0 20rem !important;
+    min-width: 18rem;
+}
+
+.scheduleCatalogExpanded,
+.recordsTablePanelExpanded,
+.centersDetailPanel,
+.centersAttendancePanel {
+    width: 100%;
+}
+
+.scheduleCatalogScrollExpanded {
+    min-height: 28rem;
+    max-height: calc(100vh - 18rem);
+}
+
+.recordDetailDialog .sapMDialogScrollCont {
+    padding: 0;
+}
+
+.recordsGlobalFilterBar .sapMObjStatus {
+    white-space: nowrap;
+}
+
+.centersCompactKpis .kpiCard {
+    flex: 1 1 20rem;
 }

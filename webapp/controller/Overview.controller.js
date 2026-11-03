@@ -1,9 +1,11 @@
 sap.ui.define([
     "com/mitsu/monitorasistencia/controller/BaseController",
     "com/mitsu/monitorasistencia/model/periodHelper",
+    "com/mitsu/monitorasistencia/model/AttendanceApi",
+    "com/mitsu/monitorasistencia/model/MonitorData",
     "sap/ui/model/json/JSONModel",
     "sap/m/MessageToast"
-], function (BaseController, periodHelper, JSONModel, MessageToast) {
+], function (BaseController, periodHelper, AttendanceApi, MonitorData, JSONModel, MessageToast) {
     "use strict";
 
     var PRESENT_STATUSES = ["Presente", "Home office", "Viaje de trabajo"];
@@ -56,6 +58,7 @@ sap.ui.define([
 
     return BaseController.extend("com.mitsu.monitorasistencia.controller.Overview", {
         onInit: function () {
+            this._attendanceApi = new AttendanceApi();
             this.setModel(new JSONModel({
                 granularity: "week",
                 referenceDate: "2026-10-25",
@@ -83,7 +86,8 @@ sap.ui.define([
                     targetGap: "0.0 pp",
                     targetGapDescription: "Sin registros en el periodo"
                 },
-                priorityText: "No hay incidencias para el periodo seleccionado."
+                priorityText: "No hay incidencias para el periodo seleccionado.",
+                dynamicRecords: null
             }), "view");
             this.getRouter().getRoute("overview").attachPatternMatched(this._onRouteMatched, this);
         },
@@ -155,9 +159,9 @@ sap.ui.define([
                 mCentersByName[String(oCenter.name || "").toLowerCase()] = oCenter;
             });
 
-            var aFacts = (oAttendanceModel.getProperty("/records") || []).concat(
-                oAttendanceModel.getProperty("/userPerformanceHistory") || []
-            );
+            var aDynamicRecords = this.getModel("view").getProperty("/dynamicRecords");
+            var aFacts = Array.isArray(aDynamicRecords) ? aDynamicRecords :
+                (oAttendanceModel.getProperty("/records") || []).concat(oAttendanceModel.getProperty("/userPerformanceHistory") || []);
 
             return periodHelper.filterRecords(aFacts, oPeriod)
                 .map(function (oRecord) {
@@ -187,6 +191,18 @@ sap.ui.define([
             var oSapOverview = this.getModel("attendance").getProperty("/sapOverview");
             var oPeriod = this._getPeriod();
             var aRecords = this._getEnrichedRecords(oPeriod);
+            console.groupCollapsed("[Monitor][FILTERS][Resumen][APPLY]");
+            console.info({
+                granularity: this.getModel("view").getProperty("/granularity"),
+                referenceDate: this.getModel("view").getProperty("/referenceDate"),
+                referenceMonth: this.getModel("view").getProperty("/referenceMonth"),
+                referenceYear: this.getModel("view").getProperty("/referenceYear"),
+                scheduleId: this.getModel("view").getProperty("/scheduleId"),
+                status: this.getModel("view").getProperty("/status"),
+                period: oPeriod,
+                resultRows: aRecords.length
+            });
+            console.groupEnd();
             var bUsesDefaultFilters = !this.getModel("view").getProperty("/scheduleId") &&
                 this.getModel("view").getProperty("/status") === "all" &&
                 this.getModel("view").getProperty("/granularity") === "week" &&
@@ -302,23 +318,12 @@ sap.ui.define([
         },
 
         _getOperationalZones: function () {
-            var aConfigured = (this.getModel("attendance").getProperty("/zones") || []).filter(function (oZone) {
-                return oZone.id !== "all";
-            });
-            var mZones = {};
-            OPERATIONAL_ZONES.concat(aConfigured).forEach(function (oZone) {
-                var sName = String(oZone.name || "").replace(/^Zona\s+/i, "").trim().toLowerCase();
-                var sId = String(oZone.id || sName).trim().toLowerCase();
-                if (!sName) { return; }
-                mZones[sName] = mZones[sName] || { id: sId, name: /^Zona\s+/i.test(oZone.name || "") ? oZone.name : "Zona " + oZone.name };
-            });
+            // El tablero de resumen sólo reconoce las cinco zonas operativas.
+            // Las oficinas y plantas pertenecen al catálogo de centros y nunca
+            // deben convertirse en tarjetas adicionales de zona.
             return OPERATIONAL_ZONES.map(function (oZone) {
-                return mZones[String(oZone.name).replace(/^Zona\s+/i, "").toLowerCase()] || oZone;
-            }).concat(Object.keys(mZones).filter(function (sName) {
-                return !OPERATIONAL_ZONES.some(function (oZone) {
-                    return String(oZone.name).replace(/^Zona\s+/i, "").toLowerCase() === sName;
-                });
-            }).map(function (sName) { return mZones[sName]; }));
+                return { id: oZone.id, name: oZone.name };
+            });
         },
 
         _zoneInefficiencyFromSummaries: function (aSummaries) {
@@ -578,12 +583,37 @@ sap.ui.define([
             this.navTo("centers", { zoneId: sZoneId || "all" });
         },
 
+        _formatODataDate: function (oDate) {
+            return oDate.getFullYear() + String(oDate.getMonth() + 1).padStart(2, "0") + String(oDate.getDate()).padStart(2, "0");
+        },
+
+        _reloadRecordsForSelectedPeriod: function () {
+            var oPeriod = this._getPeriod();
+            var aFilters = [
+                { field: "DateFrom", value: this._formatODataDate(oPeriod.start) },
+                { field: "DateTo", value: this._formatODataDate(oPeriod.end) }
+            ];
+            this.getView().setBusy(true);
+            console.info("[Monitor][FILTERS][Resumen][REQUEST]", { filters: aFilters, period: oPeriod });
+            return this._attendanceApi.getAttendanceHistory(aFilters).then(function (aRows) {
+                var aSchedules = this.getModel("attendance").getProperty("/schedules") || [];
+                var aRecords = MonitorData.mapAttendanceRecords(aRows, aSchedules);
+                this.getModel("view").setProperty("/dynamicRecords", aRecords);
+                this._refreshDashboard();
+                MessageToast.show("Datos actualizados para " + this.getModel("view").getProperty("/periodLabel"));
+            }.bind(this)).catch(function (oError) {
+                console.error("[Monitor][FILTERS][Resumen][ERROR]", oError);
+                MessageToast.show("No fue posible consultar el periodo seleccionado en SAP");
+            }).finally(function () {
+                this.getView().setBusy(false);
+            }.bind(this));
+        },
+
         onApplyFilters: function () {
             if (this.getModel("view").getProperty("/granularity") !== "week") {
                 this._setReferenceFromSelectors();
             }
-            this._refreshDashboard();
-            MessageToast.show("Datos actualizados para " + this.getModel("view").getProperty("/periodLabel"));
+            return this._reloadRecordsForSelectedPeriod();
         },
 
         _openJustificationReview: function (sType) {
