@@ -10,10 +10,26 @@ sap.ui.define([
 
             this.setModel(new JSONModel({
                 sideExpanded: true,
-                showAppHeader: !bRunningInLaunchpad
+                showAppHeader: !bRunningInLaunchpad,
+                clockWeekday: "",
+                clockDate: "",
+                clockTime: "--:--",
+                clockSeconds: "--",
+                clockZone: "América/Mexico_City"
             }), "ui");
 
             this.getRouter().attachRouteMatched(this._onRouteMatched, this);
+            this._updateClock();
+            this._iClockTimer = setInterval(this._updateClock.bind(this), 1000);
+        },
+
+        onExit: function () {
+            if (this._iClockTimer) {
+                clearInterval(this._iClockTimer);
+                this._iClockTimer = null;
+            }
+
+            this.getRouter().detachRouteMatched(this._onRouteMatched, this);
         },
 
         onToggleSideNavigation: function () {
@@ -66,6 +82,53 @@ sap.ui.define([
             this._sSelectedKey = sSelectedKey;
             this.byId("navigationList").setSelectedKey(sSelectedKey === "settings" ? "" : sSelectedKey);
             this.byId("fixedNavigationList").setSelectedKey(sSelectedKey === "settings" ? "settings" : "");
+        },
+
+        _updateClock: function () {
+            var oUiModel = this.getModel("ui");
+            var oNow = new Date();
+            var sTimeZone = "America/Mexico_City";
+            var sWeekday;
+            var sDate;
+            var aTimeParts;
+            var mTimeParts = {};
+
+            if (!oUiModel) {
+                return;
+            }
+
+            sWeekday = new Intl.DateTimeFormat("es-MX", {
+                weekday: "long",
+                timeZone: sTimeZone
+            }).format(oNow);
+
+            sDate = new Intl.DateTimeFormat("es-MX", {
+                day: "2-digit",
+                month: "long",
+                year: "numeric",
+                timeZone: sTimeZone
+            }).format(oNow);
+
+            aTimeParts = new Intl.DateTimeFormat("es-MX", {
+                hour: "2-digit",
+                minute: "2-digit",
+                second: "2-digit",
+                hour12: false,
+                timeZone: sTimeZone
+            }).formatToParts(oNow);
+
+            aTimeParts.forEach(function (oPart) {
+                mTimeParts[oPart.type] = oPart.value;
+            });
+
+            oUiModel.setProperty("/clockWeekday", this._capitalize(sWeekday));
+            oUiModel.setProperty("/clockDate", sDate);
+            oUiModel.setProperty("/clockTime", (mTimeParts.hour || "00") + ":" + (mTimeParts.minute || "00"));
+            oUiModel.setProperty("/clockSeconds", mTimeParts.second || "00");
+        },
+
+        _capitalize: function (sValue) {
+            return sValue ? sValue.charAt(0).toUpperCase() + sValue.slice(1) : "";
         }
     });
 });

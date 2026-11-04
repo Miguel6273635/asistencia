@@ -2,32 +2,48 @@
     controllerName="com.mitsu.monitorasistencia.controller.Main"
     height="100%"
     xmlns:mvc="sap.ui.core.mvc"
+    xmlns:core="sap.ui.core"
     xmlns="sap.m"
     xmlns:tnt="sap.tnt">
     <tnt:ToolPage id="toolPage" class="monitorToolPage">
         <tnt:header>
-            <tnt:ToolHeader visible="{ui>/showAppHeader}" class="monitorHeader">
+            <tnt:ToolHeader id="mainToolHeader" visible="{ui>/showAppHeader}" class="monitorHeader">
                 <Button
+                    id="headerMenuButton"
                     icon="sap-icon://menu2"
                     type="Transparent"
                     tooltip="Expandir o contraer menú"
                     press=".onToggleSideNavigation" />
-                <ToolbarSeparator />
-                <Avatar
-                    displayShape="Circle"
-                    displaySize="XS"
-                    icon="sap-icon://history"
-                    class="brandAvatar" />
-                <Title text="Monitor de Asistencia" level="H2" class="monitorBrandTitle" />
-                <ToolbarSpacer />
+                <ToolbarSeparator id="headerBrandSeparator" />
+                <core:Icon id="headerBrandIcon" src="sap-icon://history" class="brandAvatar" />
+                <Title id="headerTitle" text="Monitor de Asistencia" level="H2" class="monitorBrandTitle" />
+                <ToolbarSpacer id="headerSpacer" />
+                <HBox
+                    id="headerClock"
+                    class="monitorHeaderClock"
+                    alignItems="Center"
+                    tooltip="Hora local de Ciudad de México">
+                    <core:Icon id="headerClockIcon" src="sap-icon://history" class="monitorClockMainIcon" />
+                    <VBox id="headerClockDateBlock" class="monitorClockDateBlock">
+                        <Text id="headerClockWeekday" text="{ui>/clockWeekday}" class="monitorClockWeekday" />
+                        <Text id="headerClockDate" text="{ui>/clockDate}" class="monitorClockDate" />
+                    </VBox>
+                    <VBox id="headerClockDivider" class="monitorClockDivider" />
+                    <HBox id="headerClockTimeRow" alignItems="End" class="monitorClockTimeRow">
+                        <Text id="headerClockTime" text="{ui>/clockTime}" class="monitorClockTime" />
+                        <Text id="headerClockSecondsSeparator" text="." class="monitorClockSecondsSeparator" />
+                        <Text id="headerClockSeconds" text="{ui>/clockSeconds}" class="monitorClockSeconds" />
+                    </HBox>
+                </HBox>
                 <ObjectStatus
+                    id="demoDataStatus"
                     text="Datos de demostración"
                     icon="sap-icon://database"
                     state="Information"
                     class="sapUiSmallMarginEnd" />
-                <Button icon="sap-icon://bell" type="Transparent" tooltip="Notificaciones" />
-                <Avatar initials="AD" displaySize="XS" class="sapUiTinyMarginBegin sapUiTinyMarginEnd" />
-                <Text text="Administrador" />
+                <Button id="notificationsButton" icon="sap-icon://bell" type="Transparent" tooltip="Notificaciones" />
+                <Avatar id="administratorAvatar" initials="AD" displaySize="XS" class="sapUiTinyMarginBegin sapUiTinyMarginEnd" />
+                <Text id="administratorText" text="Administrador" />
             </tnt:ToolHeader>
         </tnt:header>
 
@@ -60,7 +76,26 @@
         </tnt:sideContent>
 
         <tnt:mainContents>
-            <App id="app" busyIndicatorDelay="0" />
+            <App id="mainApp" busyIndicatorDelay="0" />
+            <HBox
+                id="globalClock"
+                class="monitorGlobalClock"
+                alignItems="Center"
+                justifyContent="End"
+                visible="{= !${ui>/showAppHeader} }"
+                tooltip="Hora local de Ciudad de México">
+                <core:Icon id="globalClockIcon" src="sap-icon://history" class="monitorClockMainIcon" />
+                <VBox id="globalClockDateBlock" class="monitorClockDateBlock">
+                    <Text id="globalClockWeekday" text="{ui>/clockWeekday}" class="monitorClockWeekday" />
+                    <Text id="globalClockDate" text="{ui>/clockDate}" class="monitorClockDate" />
+                </VBox>
+                <VBox id="globalClockDivider" class="monitorClockDivider" />
+                <HBox id="globalClockTimeRow" alignItems="End" class="monitorClockTimeRow">
+                    <Text id="globalClockTime" text="{ui>/clockTime}" class="monitorClockTime" />
+                    <Text id="globalClockSecondsSeparator" text="." class="monitorClockSecondsSeparator" />
+                    <Text id="globalClockSeconds" text="{ui>/clockSeconds}" class="monitorClockSeconds" />
+                </HBox>
+            </HBox>
         </tnt:mainContents>
     </tnt:ToolPage>
 </mvc:View>
