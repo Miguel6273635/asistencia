@@ -24,8 +24,8 @@
   },
   "scripts": {
     "prebuild": "node scripts/sync-version.js",
-    "start": "fiori run --open \"test/flp.html#app-preview\"",
-    "start-local": "fiori run --config ./ui5-local.yaml --open \"test/flp.html#app-preview\"",
+    "start": "ui5 serve --config ./ui5-local.yaml --open \"test/flp.html#app-preview\"",
+    "start-local": "ui5 serve --config ./ui5-local.yaml --open \"test/flp.html#app-preview\"",
     "build": "ui5 build --config=ui5.yaml --clean-dest --dest dist",
     "package:html5": "node scripts/package-html5.js",
     "typecheck": "tsc --noEmit",

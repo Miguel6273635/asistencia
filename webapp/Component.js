@@ -19,9 +19,11 @@ sap.ui.define([
             oAttendanceModel.setData(MonitorData.emptyMonitorData());
             oAttendanceModel.setProperty("/serviceState/loading", true);
 
-            this.reloadAttendanceData().finally(function () {
-                this.getRouter().initialize();
-            }.bind(this));
+            // La navegación no debe depender de que terminen las consultas SAP.
+            // Si una petición OData queda pendiente, inicializar el router dentro
+            // de finally deja el área central completamente vacía.
+            this.getRouter().initialize();
+            this.reloadAttendanceData();
         },
 
         reloadAttendanceData: function () {
