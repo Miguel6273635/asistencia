@@ -310,14 +310,18 @@ export default class AttendanceApi {
         console.info("Opciones", options);
         console.groupEnd();
 
-        const response = await fetch(url, {
-            method: "GET",
-            credentials: "same-origin",
-            headers: {
-                Accept: "application/json"
-            },
-            signal: options.signal
-        });
+        
+const response = await fetch(url, {
+    method: "GET",
+    credentials: "same-origin",
+    cache: "no-store",
+    headers: {
+        Accept: "application/json",
+        "Cache-Control": "no-cache"
+    },
+    signal: options.signal
+});
+
 
         if (!response.ok) {
             throw await this.toError(

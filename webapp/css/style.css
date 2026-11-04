@@ -2852,3 +2852,448 @@ body > div,
         width: 1.8rem;
     }
 }
+
+/* ==========================================
+   REVISIÓN DE RETARDOS Y SALIDAS ANTICIPADAS
+   DISEÑO COMPACTO
+   ========================================== */
+
+.reviewModernPage {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* ENCABEZADO */
+
+.reviewModernPage .reviewPageHeading {
+    margin-top: 0.35rem;
+    margin-bottom: 1rem;
+    gap: 1rem;
+}
+
+/* INDICADORES */
+
+.reviewModernPage .reviewModernKpis {
+    display: flex;
+    gap: 0.85rem;
+    margin-bottom: 1rem;
+}
+
+.reviewModernPage .reviewKpiCard {
+    width: 15.5rem;
+    min-height: 6rem;
+    padding: 0.9rem 1rem;
+    box-sizing: border-box;
+    border-radius: 0.75rem;
+    background: #ffffff;
+    border: 1px solid #d7e1ec;
+    border-left: 4px solid #e97312;
+    box-shadow: 0 3px 10px rgba(20, 40, 60, 0.04);
+}
+
+.reviewModernPage .reviewKpiPending {
+    border-left-color: #bb0000;
+    background: linear-gradient(
+        110deg,
+        #fff5f5,
+        #ffffff
+    );
+}
+
+.reviewModernPage .reviewKpiResolved {
+    border-left-color: #188449;
+    background: linear-gradient(
+        110deg,
+        #f2fbf5,
+        #ffffff
+    );
+}
+
+.reviewModernPage .reviewKpiDescription {
+    color: #64748b;
+    font-size: 0.75rem;
+    margin-top: 0.3rem;
+}
+
+/* PANEL */
+
+.reviewModernPage .reviewModernPanel {
+    border-radius: 0.8rem;
+    overflow: hidden;
+    background: #ffffff;
+    box-shadow: 0 3px 14px rgba(20, 40, 60, 0.05);
+}
+
+.reviewModernPage .reviewModernPanel .sapMPanelContent {
+    padding: 0 !important;
+}
+
+/* BARRA DE INFORMACIÓN */
+
+.reviewModernPage .reviewTableInfoBar {
+    padding: 0.75rem 1rem;
+    background: #f8fafc;
+    border-bottom: 1px solid #e4eaf1;
+    gap: 0.5rem;
+}
+
+/* SCROLL HORIZONTAL */
+
+.reviewModernPage .reviewCompactScroll {
+    width: 100%;
+    overflow-x: auto;
+}
+
+/* TABLA */
+
+.reviewModernPage .reviewCompactTable {
+    background: #ffffff;
+}
+
+.reviewModernPage .reviewCompactTable .sapMListTblHeaderCell {
+    background: #eef3f8 !important;
+    padding-top: 0.8rem !important;
+    padding-bottom: 0.8rem !important;
+    vertical-align: middle;
+}
+
+.reviewModernPage .reviewCompactTable .sapMListTblHeaderCell .sapMText {
+    color: #24384c;
+    font-weight: 700;
+    font-size: 0.82rem;
+}
+
+.reviewModernPage .reviewCompactTable .sapMListTblRow {
+    height: auto !important;
+    min-height: 3.5rem !important;
+}
+
+.reviewModernPage .reviewCompactTable .sapMListTblCell {
+    height: auto !important;
+    padding-top: 0.7rem !important;
+    padding-bottom: 0.7rem !important;
+    vertical-align: middle !important;
+    background: #ffffff;
+}
+
+.reviewModernPage .reviewCompactTable .sapMListTblRow:hover .sapMListTblCell {
+    background: #f5f9fd !important;
+}
+
+.reviewModernPage .reviewCompactTable .sapMText {
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+}
+
+.reviewModernPage .reviewEmployeeLink {
+    font-weight: 700;
+}
+
+/* COMENTARIO RH */
+
+.reviewModernPage .reviewCompactTable .sapMInputBaseContentWrapper {
+    border-radius: 0.4rem;
+}
+
+/* ACCIONES */
+
+.reviewModernPage .reviewCompactTable .sapMBtn {
+    margin-right: 0.15rem;
+}
+
+/* RESPONSIVO */
+
+@media (max-width: 64rem) {
+    .reviewModernPage .reviewModernKpis {
+        gap: 0.6rem;
+    }
+
+    .reviewModernPage .reviewKpiCard {
+        width: 13rem;
+    }
+}
+
+@media (max-width: 48rem) {
+    .reviewModernPage .reviewKpiCard {
+        width: 100% !important;
+    }
+
+    .reviewModernPage .reviewModernKpis {
+        flex-direction: column;
+    }
+
+    .reviewModernPage .reviewPageHeading {
+        align-items: flex-start;
+    }
+
+    .reviewModernPage .reviewTableInfoBar {
+        padding: 0.65rem;
+    }
+}
+
+/* ==========================================
+   RELOJ — REVISIÓN DE JUSTIFICACIONES
+   ========================================== */
+
+.reviewModernPage .reviewLiveClock {
+    min-width: 16rem;
+    padding: 0.65rem 0.9rem;
+    border-radius: 0.75rem;
+    border: 1px solid #d9e5f2;
+    background: linear-gradient(
+        120deg,
+        #f5faff,
+        #ffffff
+    );
+    box-sizing: border-box;
+    gap: 0.25rem;
+}
+
+.reviewModernPage .reviewClockDate {
+    font-size: 0.83rem;
+    color: #59718b;
+    font-weight: 600;
+    text-align: right;
+}
+
+.reviewModernPage .reviewClockTime {
+    font-size: 1.85rem !important;
+    line-height: 1.15;
+    font-weight: 800;
+    color: #172f4d;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.035rem;
+    text-align: right;
+}
+
+.reviewModernPage .reviewLiveClock .sapMObjStatus {
+    margin-top: 0.3rem;
+}
+
+/* Evita espacios innecesarios en el encabezado */
+.reviewModernPage .reviewPageHeading {
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+/* Mantiene los empleados en filas compactas */
+.reviewModernPage .reviewCompactTable .sapMListTblRow {
+    height: auto !important;
+}
+
+.reviewModernPage .reviewCompactTable .sapMListTblCell {
+    vertical-align: middle !important;
+    padding-top: 0.7rem !important;
+    padding-bottom: 0.7rem !important;
+}
+
+/* Pantallas pequeñas */
+@media (max-width: 48rem) {
+    .reviewModernPage .reviewLiveClock {
+        width: 100%;
+        align-items: flex-start;
+    }
+
+    .reviewModernPage .reviewClockTime {
+        font-size: 1.5rem !important;
+        text-align: left;
+    }
+
+    .reviewModernPage .reviewClockDate {
+        text-align: left;
+    }
+}
+
+/* ==============================================
+   RELOJ PREMIUM — JUSTIFICACIONES
+   ============================================== */
+
+.reviewModernPage .reviewPremiumClock {
+    min-width: 18.5rem;
+    padding: 0.95rem 1.15rem;
+    border: 1px solid #d7e5f4;
+    border-radius: 0.9rem;
+    background: linear-gradient(
+        125deg,
+        #edf6ff 0%,
+        #ffffff 75%
+    );
+    box-shadow: 0 4px 15px rgba(28, 65, 105, 0.06);
+    box-sizing: border-box;
+    gap: 0.25rem;
+}
+
+.reviewModernPage .reviewClockTop {
+    color: #2468b4;
+    gap: 0.15rem;
+}
+
+.reviewModernPage .reviewClockDay {
+    color: #2d5d8e;
+    font-weight: 700;
+    font-size: 0.88rem;
+}
+
+.reviewModernPage .reviewClockFullDate {
+    color: #5c738d;
+    font-size: 0.82rem;
+    font-weight: 500;
+}
+
+.reviewModernPage .reviewClockDigits {
+    gap: 0.1rem;
+    margin-top: 0.2rem;
+    margin-bottom: 0.1rem;
+}
+
+.reviewModernPage .reviewClockMain {
+    font-size: 2.3rem !important;
+    color: #12395f;
+    font-weight: 800 !important;
+    line-height: 1.1;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.02rem;
+}
+
+.reviewModernPage .reviewClockSeconds {
+    font-size: 1.1rem;
+    color: #3272b7;
+    font-weight: 700;
+    padding-bottom: 0.2rem;
+    font-variant-numeric: tabular-nums;
+}
+
+.reviewModernPage .reviewClockTimezone {
+    font-size: 0.7rem;
+    color: #72859c;
+}
+
+.reviewModernPage .reviewClockPeriod {
+    margin-top: 0.45rem;
+}
+
+/* ENCABEZADO */
+
+.reviewModernPage .reviewPageHeading {
+    align-items: center;
+    gap: 1.2rem;
+    margin: 0.3rem 0 1rem;
+}
+
+.reviewModernPage .reviewPageTitleSection {
+    flex: 1;
+    min-width: 17rem;
+}
+
+/* TABLA COMPACTA */
+
+.reviewModernPage .reviewCompactTable .sapMListTblRow {
+    height: auto !important;
+}
+
+.reviewModernPage .reviewCompactTable .sapMListTblCell {
+    height: auto !important;
+    padding-top: 0.75rem !important;
+    padding-bottom: 0.75rem !important;
+    vertical-align: middle !important;
+}
+
+.reviewModernPage .reviewCompactTable .sapMListTblHeaderCell {
+    padding-top: 0.75rem !important;
+    padding-bottom: 0.75rem !important;
+}
+
+/* RESPONSIVO */
+
+@media (max-width: 48rem) {
+    .reviewModernPage .reviewPremiumClock {
+        width: 100%;
+        min-width: 0;
+        align-items: flex-start;
+    }
+
+    .reviewModernPage .reviewClockMain {
+        font-size: 1.85rem !important;
+    }
+
+    .reviewModernPage .reviewPageHeading {
+        align-items: flex-start;
+    }
+}
+
+/* ==========================================
+   RELOJ COMPACTO - REVISION JUSTIFICACIONES
+   ========================================== */
+
+.reviewModernPage .reviewPremiumClock {
+    width: 195px !important;
+    min-width: 195px !important;
+    max-width: 195px !important;
+    padding: 8px 12px !important;
+    gap: 2px !important;
+
+    border-radius: 10px !important;
+    border: 1px solid #d8e5f3 !important;
+
+    background: #f7fbff !important;
+    box-shadow: 0 2px 8px rgba(20, 55, 90, 0.05) !important;
+}
+
+/* DIA */
+.reviewModernPage .reviewClockDay {
+    font-size: 11px !important;
+    font-weight: 600 !important;
+}
+
+/* FECHA */
+.reviewModernPage .reviewClockFullDate {
+    font-size: 10px !important;
+    color: #64748b !important;
+}
+
+/* HORA */
+.reviewModernPage .reviewClockMain {
+    font-size: 23px !important;
+    line-height: 1.1 !important;
+    font-weight: 700 !important;
+}
+
+/* SEGUNDOS */
+.reviewModernPage .reviewClockSeconds {
+    font-size: 12px !important;
+    padding-bottom: 2px !important;
+}
+
+/* ZONA HORARIA */
+.reviewModernPage .reviewClockTimezone {
+    font-size: 9px !important;
+}
+
+/* PERIODO */
+.reviewModernPage .reviewClockPeriod {
+    margin-top: 3px !important;
+    font-size: 10px !important;
+}
+
+/* EL TITULO YA NO BAJA */
+.reviewModernPage .reviewPageHeading {
+    align-items: center !important;
+    margin-top: 0 !important;
+    margin-bottom: 12px !important;
+    gap: 12px !important;
+}
+
+.reviewModernPage .reviewPageTitleSection {
+    flex: 1;
+    min-width: 0;
+}
+
+/* CELULARES */
+@media (max-width: 600px) {
+    .reviewModernPage .reviewPremiumClock {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+    }
+}

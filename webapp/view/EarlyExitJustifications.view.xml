@@ -1,26 +1,325 @@
-<mvc:View controllerName="com.mitsu.monitorasistencia.controller.Justifications" xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m" xmlns:core="sap.ui.core">
-    <Page showHeader="false" busy="{review>/busy}" busyIndicatorDelay="0" class="monitorPage justificationReviewPage">
+
+<mvc:View
+    controllerName="com.mitsu.monitorasistencia.controller.Justifications"
+    xmlns:mvc="sap.ui.core.mvc"
+    xmlns="sap.m"
+    xmlns:core="sap.ui.core">
+
+    <Page
+        showHeader="false"
+        busy="{review>/busy}"
+        busyIndicatorDelay="250"
+        class="monitorPage justificationReviewPage">
+
         <content>
-            <VBox class="pageContainer compactPage">
-                <Breadcrumbs currentLocationText="Salidas anticipadas"><Link text="Resumen" press=".onBack" /></Breadcrumbs>
-                <HBox justifyContent="SpaceBetween" alignItems="Center" wrap="Wrap" class="reviewPageHeading">
-                    <VBox><Title text="{review>/title}" level="H1" class="pageTitle" /><Text text="{review>/subtitle}" class="pageSubtitle" /></VBox>
-                    <ObjectStatus text="{review>/periodLabel}" state="Information" inverted="true" />
+            <VBox class="pageContainer compactPage reviewModernPage">
+
+                <Breadcrumbs
+                    currentLocationText="Salidas anticipadas"
+                    class="sapUiTinyMarginBottom">
+                    <Link text="Resumen" press=".onBack" />
+                </Breadcrumbs>
+
+                <HBox
+                    width="100%"
+                    justifyContent="SpaceBetween"
+                    alignItems="Center"
+                    wrap="Wrap"
+                    class="reviewPageHeading">
+
+                    <VBox class="reviewPageTitleSection">
+                        <Title
+                            text="{review>/title}"
+                            level="H1"
+                            class="pageTitle" />
+
+                        <Text
+                            text="{review>/subtitle}"
+                            wrapping="true"
+                            class="pageSubtitle" />
+                    </VBox>
+
+                    <!-- RELOJ MEJORADO -->
+                    <VBox
+                        class="reviewPremiumClock"
+                        alignItems="End">
+
+                        <HBox
+                            alignItems="Center"
+                            class="reviewClockTop">
+
+                            <core:Icon
+                                src="sap-icon://calendar"
+                                class="sapUiTinyMarginEnd" />
+
+                            <Text
+                                text="{review>/clockDay}"
+                                class="reviewClockDay" />
+                        </HBox>
+
+                        <Text
+                            text="{review>/clockDate}"
+                            class="reviewClockFullDate" />
+
+                        <HBox
+                            alignItems="End"
+                            class="reviewClockDigits">
+
+                            <Title
+                                text="{review>/clockTime}"
+                                level="H2"
+                                class="reviewClockMain" />
+
+                            <Text
+                                text="{= ':' + ${review>/clockSeconds} }"
+                                class="reviewClockSeconds" />
+                        </HBox>
+
+                        <HBox alignItems="Center">
+                            <core:Icon
+                                src="sap-icon://history"
+                                class="sapUiTinyMarginEnd" />
+
+                            <Text
+                                text="{review>/clockZone}"
+                                class="reviewClockTimezone" />
+                        </HBox>
+
+                        <ObjectStatus
+                            text="{review>/periodLabel}"
+                            icon="sap-icon://filter"
+                            state="Information"
+                            inverted="true"
+                            class="reviewClockPeriod" />
+                    </VBox>
                 </HBox>
-                <HBox wrap="Wrap" class="reviewKpiRow">
-                    <VBox class="reviewKpiCard"><Text text="Salidas anticipadas del periodo" /><ObjectNumber number="{review>/count}" state="Warning" /></VBox>
-                    <VBox class="reviewKpiCard reviewKpiPending"><Text text="Justificaciones pendientes" /><ObjectNumber number="{review>/pendingCount}" state="Error" /></VBox>
+
+                <HBox wrap="Wrap" class="reviewKpiRow reviewModernKpis">
+
+                    <VBox class="reviewKpiCard reviewKpiTotal">
+                        <Text text="Salidas anticipadas del periodo" />
+                        <ObjectNumber
+                            number="{review>/count}"
+                            state="Warning" />
+                        <Text
+                            text="Registros consultados"
+                            class="reviewKpiDescription" />
+                    </VBox>
+
+                    <VBox class="reviewKpiCard reviewKpiPending">
+                        <Text text="Justificaciones pendientes" />
+                        <ObjectNumber
+                            number="{review>/pendingCount}"
+                            state="Error" />
+                        <Text
+                            text="Requieren revisión"
+                            class="reviewKpiDescription" />
+                    </VBox>
+
+                    <VBox class="reviewKpiCard reviewKpiResolved">
+                        <Text text="Justificaciones resueltas" />
+                        <ObjectNumber
+                            number="{review>/resolvedCount}"
+                            state="Success" />
+                        <Text
+                            text="Aprobadas o rechazadas"
+                            class="reviewKpiDescription" />
+                    </VBox>
                 </HBox>
-                <Panel headerText="Detalle de salidas anticipadas" class="dashboardPanel reviewTablePanel">
-                    <headerToolbar><OverflowToolbar><Title text="Detalle de salidas anticipadas" /><ToolbarSpacer /><SearchField width="20rem" placeholder="Buscar empleado, centro o justificación" liveChange=".onSearch" /></OverflowToolbar></headerToolbar>
+
+                <MessageStrip
+                    visible="{review>/hasError}"
+                    text="{review>/error}"
+                    type="Error"
+                    showIcon="true"
+                    class="sapUiSmallMarginBottom" />
+
+                <Panel class="dashboardPanel reviewTablePanel reviewModernPanel">
+
+                    <headerToolbar>
+                        <OverflowToolbar>
+                            <Title
+                                text="Detalle de salidas anticipadas"
+                                level="H3" />
+
+                            <ToolbarSpacer />
+
+                            <SearchField
+                                width="20rem"
+                                placeholder="Buscar empleado, centro o justificación"
+                                value="{review>/search}"
+                                liveChange=".onSearch" />
+
+                            <Button
+                                text="Actualizar"
+                                icon="sap-icon://refresh"
+                                type="Emphasized"
+                                enabled="{= !${review>/busy} }"
+                                press=".onRefreshJustifications"
+                                tooltip="Consultar nuevamente SAP" />
+                        </OverflowToolbar>
+                    </headerToolbar>
+
                     <content>
-                        <Table items="{review>/filteredRows}" growing="true" growingScrollToLoad="true" noDataText="No hay salidas anticipadas para el periodo seleccionado" sticky="ColumnHeaders" class="reviewTable">
-                            <columns><Column width="14rem"><Text text="Empleado" /></Column><Column width="7rem"><Text text="Núm. empleado" /></Column><Column width="7rem"><Text text="Fecha" /></Column><Column width="11rem"><Text text="Centro" /></Column><Column width="12rem"><Text text="Horario" /></Column><Column width="6rem" hAlign="Center"><Text text="Salida" /></Column><Column minScreenWidth="Tablet" demandPopin="true"><Text text="Justificación" /></Column><Column width="15rem" minScreenWidth="Desktop" demandPopin="true"><Text text="Comentario RH (opcional)" /></Column><Column width="8rem"><Text text="Estado" /></Column><Column width="8rem" hAlign="Center"><Text text="Decisión" /></Column></columns>
-                            <items><ColumnListItem><cells><Link text="{review>employee}" press=".onEmployeePress" /><Text text="{review>personalNumber}" /><Text text="{review>date}" /><Text text="{review>center}" /><Text text="{review>schedule}" /><ObjectStatus text="{review>eventTime}" state="Warning" /><Text text="{review>justification}" wrapping="true" /><Input value="{review>commentsRH}" placeholder="Agregar comentario" enabled="{= ${review>decision} === 'pending' }" /><ObjectStatus text="{review>approvalText}" state="{review>approvalState}" inverted="true" /><HBox justifyContent="Center"><Button icon="sap-icon://accept" type="Accept" tooltip="Aceptar justificación" enabled="{= ${review>hasJustification} &amp;&amp; ${review>decision} === 'pending' }" press=".onApprove" /><Button icon="sap-icon://decline" type="Reject" tooltip="Rechazar justificación" enabled="{= ${review>hasJustification} &amp;&amp; ${review>decision} === 'pending' }" press=".onReject" class="sapUiTinyMarginBegin" /></HBox></cells></ColumnListItem></items>
-                        </Table>
+                        <HBox
+                            justifyContent="SpaceBetween"
+                            alignItems="Center"
+                            wrap="Wrap"
+                            class="reviewTableInfoBar">
+
+                            <HBox
+                                alignItems="Center"
+                                wrap="Wrap">
+
+                                <ObjectStatus
+                                    text="{review>/lastRefreshText}"
+                                    icon="sap-icon://synchronize"
+                                    state="Success"
+                                    class="sapUiSmallMarginEnd" />
+
+                                <ObjectStatus
+                                    text="{= ${review>/visibleCount} + ' registros visibles'}"
+                                    state="Information" />
+                            </HBox>
+
+                            <ObjectStatus
+                                text="Comentarios RH sin guardar"
+                                icon="sap-icon://alert"
+                                state="Warning"
+                                visible="{review>/hasUnsavedComments}" />
+                        </HBox>
+
+                        <ScrollContainer
+                            horizontal="true"
+                            vertical="false"
+                            width="100%"
+                            focusable="true"
+                            class="reviewCompactScroll">
+
+                            <Table
+                                width="100rem"
+                                fixedLayout="true"
+                                items="{review>/filteredRows}"
+                                growing="true"
+                                growingThreshold="30"
+                                noDataText="No hay salidas anticipadas para el periodo seleccionado"
+                                class="reviewTable reviewCompactTable">
+
+                                <columns>
+                                    <Column width="14rem">
+                                        <Text text="Empleado" />
+                                    </Column>
+
+                                    <Column width="8rem">
+                                        <Text text="Núm. empleado" />
+                                    </Column>
+
+                                    <Column width="8rem">
+                                        <Text text="Fecha" />
+                                    </Column>
+
+                                    <Column width="12rem">
+                                        <Text text="Centro" />
+                                    </Column>
+
+                                    <Column width="10rem">
+                                        <Text text="Horario" />
+                                    </Column>
+
+                                    <Column width="6rem" hAlign="Center">
+                                        <Text text="Salida" />
+                                    </Column>
+
+                                    <Column width="16rem">
+                                        <Text text="Justificación" />
+                                    </Column>
+
+                                    <Column width="13rem">
+                                        <Text text="Comentario RH" />
+                                    </Column>
+
+                                    <Column width="8rem" hAlign="Center">
+                                        <Text text="Estado" />
+                                    </Column>
+
+                                    <Column width="9rem" hAlign="Center">
+                                        <Text text="Decisión" />
+                                    </Column>
+                                </columns>
+
+                                <items>
+                                    <ColumnListItem
+                                        vAlign="Middle"
+                                        class="reviewCompactRow">
+
+                                        <cells>
+                                            <Link
+                                                text="{review>employee}"
+                                                wrapping="true"
+                                                press=".onEmployeePress"
+                                                class="reviewEmployeeLink" />
+
+                                            <Text text="{review>personalNumber}" />
+
+                                            <Text text="{review>date}" />
+
+                                            <Text
+                                                text="{review>center}"
+                                                wrapping="true"
+                                                maxLines="2" />
+
+                                            <Text
+                                                text="{review>schedule}"
+                                                wrapping="true"
+                                                maxLines="2" />
+
+                                            <ObjectStatus
+                                                text="{review>eventTime}"
+                                                state="Warning" />
+
+                                            <Text
+                                                text="{review>justification}"
+                                                wrapping="true"
+                                                maxLines="3" />
+
+                                            <Input
+                                                value="{review>commentsRH}"
+                                                width="100%"
+                                                placeholder="Agregar comentario"
+                                                liveChange=".onCommentChange"
+                                                enabled="{= ${review>decision} === 'pending' }" />
+
+                                            <ObjectStatus
+                                                text="{review>approvalText}"
+                                                state="{review>approvalState}"
+                                                inverted="true" />
+
+                                            <HBox justifyContent="Center">
+                                                <Button
+                                                    icon="sap-icon://accept"
+                                                    type="Accept"
+                                                    tooltip="Aceptar justificación"
+                                                    enabled="{= ${review>hasJustification} &amp;&amp; ${review>decision} === 'pending' }"
+                                                    press=".onApprove" />
+
+                                                <Button
+                                                    icon="sap-icon://decline"
+                                                    type="Reject"
+                                                    tooltip="Rechazar justificación"
+                                                    enabled="{= ${review>hasJustification} &amp;&amp; ${review>decision} === 'pending' }"
+                                                    press=".onReject"
+                                                    class="sapUiTinyMarginBegin" />
+                                            </HBox>
+                                        </cells>
+                                    </ColumnListItem>
+                                </items>
+                            </Table>
+                        </ScrollContainer>
                     </content>
                 </Panel>
+
             </VBox>
         </content>
     </Page>
 </mvc:View>
+
