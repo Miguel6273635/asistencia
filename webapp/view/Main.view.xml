@@ -76,26 +76,37 @@
         </tnt:sideContent>
 
         <tnt:mainContents>
-            <App id="mainApp" busyIndicatorDelay="0" />
-            <HBox
-                id="globalClock"
-                class="monitorGlobalClock"
-                alignItems="Center"
-                justifyContent="End"
-                visible="{= !${ui>/showAppHeader} }"
-                tooltip="Hora local de Ciudad de México">
-                <core:Icon id="globalClockIcon" src="sap-icon://history" class="monitorClockMainIcon" />
-                <VBox id="globalClockDateBlock" class="monitorClockDateBlock">
-                    <Text id="globalClockWeekday" text="{ui>/clockWeekday}" class="monitorClockWeekday" />
-                    <Text id="globalClockDate" text="{ui>/clockDate}" class="monitorClockDate" />
-                </VBox>
-                <VBox id="globalClockDivider" class="monitorClockDivider" />
-                <HBox id="globalClockTimeRow" alignItems="End" class="monitorClockTimeRow">
-                    <Text id="globalClockTime" text="{ui>/clockTime}" class="monitorClockTime" />
-                    <Text id="globalClockSecondsSeparator" text="." class="monitorClockSecondsSeparator" />
-                    <Text id="globalClockSeconds" text="{ui>/clockSeconds}" class="monitorClockSeconds" />
+            <VBox id="mainContentLayout" fitContainer="true" class="monitorMainContentLayout">
+                <App
+                    id="app"
+                    busyIndicatorDelay="0"
+                    width="100%"
+                    height="100%"
+                    class="monitorMainApp">
+                    <layoutData>
+                        <FlexItemData growFactor="1" shrinkFactor="1" baseSize="0%" />
+                    </layoutData>
+                </App>
+                <HBox
+                    id="globalClock"
+                    class="monitorGlobalClock"
+                    alignItems="Center"
+                    justifyContent="End"
+                    visible="{= !${ui>/showAppHeader} }"
+                    tooltip="Hora local de Ciudad de México">
+                    <core:Icon id="globalClockIcon" src="sap-icon://history" class="monitorClockMainIcon" />
+                    <VBox id="globalClockDateBlock" class="monitorClockDateBlock">
+                        <Text id="globalClockWeekday" text="{ui>/clockWeekday}" class="monitorClockWeekday" />
+                        <Text id="globalClockDate" text="{ui>/clockDate}" class="monitorClockDate" />
+                    </VBox>
+                    <VBox id="globalClockDivider" class="monitorClockDivider" />
+                    <HBox id="globalClockTimeRow" alignItems="End" class="monitorClockTimeRow">
+                        <Text id="globalClockTime" text="{ui>/clockTime}" class="monitorClockTime" />
+                        <Text id="globalClockSecondsSeparator" text="." class="monitorClockSecondsSeparator" />
+                        <Text id="globalClockSeconds" text="{ui>/clockSeconds}" class="monitorClockSeconds" />
+                    </HBox>
                 </HBox>
-            </HBox>
+            </VBox>
         </tnt:mainContents>
     </tnt:ToolPage>
 </mvc:View>
