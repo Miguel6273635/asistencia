@@ -1,6 +1,6 @@
 _schema-version: "3.3"
 ID: mitsu-monitor-asistencia
-version: 0.4.0
+version: 0.4.1
 description: Monitor de asistencia para Mitsubishi Electric
 
 modules:
@@ -20,13 +20,11 @@ modules:
               ServiceInstanceName: mitsu-monitor-html5-repo
               ServiceKeyName: mitsu-monitor-html5-repo-key
               sap.cloud.service: mitsu.monitorasistencia
-
             - Name: mitsu-monitor-xsuaa
               Authentication: OAuth2UserTokenExchange
               ServiceInstanceName: mitsu-monitor-xsuaa
               ServiceKeyName: mitsu-monitor-xsuaa-key
               sap.cloud.service: mitsu.monitorasistencia
-
           existing_destinations_policy: update
     build-parameters:
       no-source: true

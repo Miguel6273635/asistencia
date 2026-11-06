@@ -26,6 +26,7 @@
     "isLate": false,
     "isLateNow": false,
     "isEarlyExit": false,
+    "canCheckOut": false,
     "isTravel": false,
     "isMealWindowRestricted": false,
     "isWithinMealWindow": false,

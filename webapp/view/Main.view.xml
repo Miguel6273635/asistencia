@@ -18,23 +18,6 @@
                 <core:Icon id="headerBrandIcon" src="sap-icon://history" class="brandAvatar" />
                 <Title id="headerTitle" text="Monitor de Asistencia" level="H2" class="monitorBrandTitle" />
                 <ToolbarSpacer id="headerSpacer" />
-                <HBox
-                    id="headerClock"
-                    class="monitorHeaderClock"
-                    alignItems="Center"
-                    tooltip="Hora local de Ciudad de México">
-                    <core:Icon id="headerClockIcon" src="sap-icon://history" class="monitorClockMainIcon" />
-                    <VBox id="headerClockDateBlock" class="monitorClockDateBlock">
-                        <Text id="headerClockWeekday" text="{ui>/clockWeekday}" class="monitorClockWeekday" />
-                        <Text id="headerClockDate" text="{ui>/clockDate}" class="monitorClockDate" />
-                    </VBox>
-                    <VBox id="headerClockDivider" class="monitorClockDivider" />
-                    <HBox id="headerClockTimeRow" alignItems="End" class="monitorClockTimeRow">
-                        <Text id="headerClockTime" text="{ui>/clockTime}" class="monitorClockTime" />
-                        <Text id="headerClockSecondsSeparator" text="." class="monitorClockSecondsSeparator" />
-                        <Text id="headerClockSeconds" text="{ui>/clockSeconds}" class="monitorClockSeconds" />
-                    </HBox>
-                </HBox>
                 <ObjectStatus
                     id="demoDataStatus"
                     text="Datos de demostración"
@@ -92,7 +75,7 @@
                     class="monitorGlobalClock"
                     alignItems="Center"
                     justifyContent="End"
-                    visible="{= !${ui>/showAppHeader} }"
+                    visible="{= !${ui>/showAppHeader} &amp;&amp; ${ui>/showGlobalClock} }"
                     tooltip="Hora local de Ciudad de México">
                     <core:Icon id="globalClockIcon" src="sap-icon://history" class="monitorClockMainIcon" />
                     <VBox id="globalClockDateBlock" class="monitorClockDateBlock">

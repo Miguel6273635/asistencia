@@ -4,13 +4,29 @@
     "id": "com.mitsu.monitorasistencia",
     "type": "application",
     "applicationVersion": {
-      "version": "0.2.0"
+      "version": "0.4.1"
     },
     "title": "Monitor de Asistencia",
     "description": "Control y monitoreo de asistencia, turnos y horarios",
+    "crossNavigation": {
+      "inbounds": {
+        "ZMonitorAsistencia-display": {
+          "semanticObject": "ZMonitorAsistencia",
+          "action": "display",
+          "title": "Monitor de Asistencia",
+          "subTitle": "Control de asistencia y horarios",
+          "info": "Mitsubishi Electric",
+          "icon": "sap-icon://employee",
+          "signature": {
+            "parameters": {},
+            "additionalParameters": "allowed"
+          }
+        }
+      }
+    },
     "dataSources": {
       "attendanceService": {
-        "uri": "/sap/opu/odata/sap/ZHMC_ATTENDANCE_MONITORING_SRV/",
+        "uri": "sap/opu/odata/sap/ZHMC_ATTENDANCE_MONITORING_SRV/",
         "type": "OData",
         "settings": {
           "odataVersion": "2.0"

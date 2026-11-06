@@ -82,14 +82,25 @@ sap.ui.define([
   }
 
   function developmentIdentity() {
-    var value = isDevelopmentHost() ? text(new URLSearchParams(window.location.search || "").get("testIdentity")) : "";
+    var value = "";
+    var source = "local-test-parameter";
+
+    if (isDevelopmentHost()) {
+      value = text(new URLSearchParams(window.location.search || "").get("testIdentity"));
+      if (!value) {
+        value = "sapmelmex@melco.com.mx";
+        source = "local-default";
+      }
+    }
     if (!value) { return null; }
 
-    return normalizeIdentity(value.indexOf("@") >= 0 ? { email: value } : { personalNumber: value.padStart(8, "0") }, "local-test-parameter");
+    return normalizeIdentity(value.indexOf("@") >= 0 ? { email: value } : { personalNumber: value.padStart(8, "0") }, source);
   }
 
   function requestCurrentUser() {
-    var url = "/user-api/currentUser";
+    // La ruta debe ser relativa al prefijo de la aplicación HTML5. Una diagonal
+    // inicial omite el xs-app.json de Checkin cuando se ejecuta dentro de Work Zone.
+    var url = "user-api/currentUser";
     var requestId = Diagnostics.request("GET", url, {
       purpose: "Obtener identidad autenticada de SAP Build Work Zone"
     });

@@ -1673,6 +1673,13 @@ body > div,
     }
 }
 
+@media (min-width: 90rem) {
+    .zoneCardList .sapMListUl,
+    .compactPage .zoneCardList .sapMListUl {
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+    }
+}
+
 .chartHint {
     color: var(--monitor-muted);
     padding-top: 0.65rem;
@@ -2715,6 +2722,8 @@ body > div,
 /* Monitor simplification requested in the functional change document. */
 .schedulePageHeading {
     gap: 1rem;
+    box-sizing: border-box;
+    padding-right: 18rem;
 }
 
 .scheduleActiveCard {
@@ -2835,6 +2844,10 @@ body > div,
 }
 
 @media (max-width: 56rem) {
+    .schedulePageHeading {
+        padding-right: 0;
+    }
+
     .monitorGlobalClock {
         top: 0.32rem;
         right: 3.7rem;

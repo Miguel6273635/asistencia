@@ -11,6 +11,7 @@ sap.ui.define([
             this.setModel(new JSONModel({
                 sideExpanded: true,
                 showAppHeader: !bRunningInLaunchpad,
+                showGlobalClock: true,
                 clockWeekday: "",
                 clockDate: "",
                 clockTime: "--:--",
@@ -65,6 +66,8 @@ sap.ui.define([
 
         _onRouteMatched: function (oEvent) {
             var sRouteName = oEvent.getParameter("name");
+            var bIsJustificationDetail = sRouteName === "lateJustifications" ||
+                sRouteName === "earlyExitJustifications";
             var mSelectedKeys = {
                 overview: "overview",
                 shifts: "shifts",
@@ -80,6 +83,7 @@ sap.ui.define([
 
             var sSelectedKey = mSelectedKeys[sRouteName] || "overview";
             this._sSelectedKey = sSelectedKey;
+            this.getModel("ui").setProperty("/showGlobalClock", !bIsJustificationDetail);
             this.byId("navigationList").setSelectedKey(sSelectedKey === "settings" ? "" : sSelectedKey);
             this.byId("fixedNavigationList").setSelectedKey(sSelectedKey === "settings" ? "settings" : "");
         },

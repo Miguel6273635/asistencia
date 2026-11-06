@@ -1,11 +1,12 @@
 sap.ui.define([
     "com/mitsu/monitorasistencia/controller/BaseController",
     "com/mitsu/monitorasistencia/model/periodHelper",
+    "com/mitsu/monitorasistencia/model/justificationHelper",
     "com/mitsu/monitorasistencia/model/AttendanceApi",
     "com/mitsu/monitorasistencia/model/MonitorData",
     "sap/ui/model/json/JSONModel",
     "sap/m/MessageToast"
-], function (BaseController, periodHelper, AttendanceApi, MonitorData, JSONModel, MessageToast) {
+], function (BaseController, periodHelper, justificationHelper, AttendanceApi, MonitorData, JSONModel, MessageToast) {
     "use strict";
 
     var PRESENT_STATUSES = ["Presente", "Home office", "Viaje de trabajo"];
@@ -58,13 +59,17 @@ sap.ui.define([
 
     return BaseController.extend("com.mitsu.monitorasistencia.controller.Overview", {
         onInit: function () {
+            var oToday = new Date();
+            var sToday = periodHelper.toKey(oToday);
             this._attendanceApi = new AttendanceApi();
             this.setModel(new JSONModel({
-                granularity: "week",
-                referenceDate: "2026-10-25",
-                weekReferenceDate: "2026-10-25",
-                referenceMonth: "10",
-                referenceYear: "2026",
+                granularity: "day",
+                referenceDate: sToday,
+                weekReferenceDate: sToday,
+                dateFrom: sToday,
+                dateTo: sToday,
+                referenceMonth: String(oToday.getMonth() + 1).padStart(2, "0"),
+                referenceYear: String(oToday.getFullYear()),
                 monthOptions: buildMonthOptions(),
                 yearOptions: buildYearOptions(),
                 periodLabel: "",
@@ -124,7 +129,9 @@ sap.ui.define([
             }
             var oPeriod = periodHelper.getPeriod(
                 oViewModel.getProperty("/granularity"),
-                sReferenceDate
+                sReferenceDate,
+                oViewModel.getProperty("/dateFrom"),
+                oViewModel.getProperty("/dateTo")
             );
             oViewModel.setProperty("/periodLabel", oPeriod.label);
             return oPeriod;
@@ -338,11 +345,27 @@ sap.ui.define([
             });
         },
 
-        _updateReviewCounts: function (aRecords) {
-            this.getModel("view").setProperty("/lateReviewCount", aRecords.filter(function (oRecord) {
-                return oRecord.status === "Retardo" || oRecord.isLate === true;
-            }).length);
-            this.getModel("view").setProperty("/earlyExitReviewCount", aRecords.filter(isEarlyExit).length);
+        _updateReviewCounts: function () {
+            var oPeriod = this._getPeriod();
+            var iRequest = (this._reviewCountRequest || 0) + 1;
+            this._reviewCountRequest = iRequest;
+            return this._attendanceApi.getProcessingJustifications(
+                this._formatODataDate(oPeriod.start),
+                this._formatODataDate(oPeriod.end)
+            ).then(function (aRows) {
+                if (iRequest !== this._reviewCountRequest) { return; }
+                this.getModel("view").setProperty("/lateReviewCount", aRows.filter(function (oRow) {
+                    return justificationHelper.matches(oRow, "late");
+                }).length);
+                this.getModel("view").setProperty("/earlyExitReviewCount", aRows.filter(function (oRow) {
+                    return justificationHelper.matches(oRow, "early");
+                }).length);
+            }.bind(this)).catch(function (oError) {
+                if (iRequest !== this._reviewCountRequest) { return; }
+                console.error("[Monitor][JUSTIFICATIONS][COUNTS][ERROR]", oError);
+                this.getModel("view").setProperty("/lateReviewCount", 0);
+                this.getModel("view").setProperty("/earlyExitReviewCount", 0);
+            }.bind(this));
         },
 
         _countStatuses: function (aRecords, aStatuses) {
@@ -532,8 +555,17 @@ sap.ui.define([
             var sGranularity = oEvent.getSource().getSelectedKey();
             oViewModel.setProperty("/granularity", sGranularity);
             if (sGranularity === "week") {
-                oViewModel.setProperty("/referenceDate", oViewModel.getProperty("/weekReferenceDate") || this._getLatestRecordDate());
+                var oEnd = periodHelper.parseDate(oViewModel.getProperty("/dateTo")) || new Date();
+                var oStart = periodHelper.parseDate(oViewModel.getProperty("/dateFrom"));
+                if (!oStart || oStart > oEnd || periodHelper.toKey(oStart) === periodHelper.toKey(oEnd)) {
+                    oStart = new Date(oEnd.getFullYear(), oEnd.getMonth(), oEnd.getDate() - 6);
+                }
+                oViewModel.setProperty("/dateFrom", periodHelper.toKey(oStart));
+                oViewModel.setProperty("/dateTo", periodHelper.toKey(oEnd));
+                oViewModel.setProperty("/referenceDate", periodHelper.toKey(oEnd));
                 this._syncReferenceSelectors();
+            } else if (sGranularity === "day") {
+                oViewModel.setProperty("/referenceDate", periodHelper.toKey(new Date()));
             } else {
                 this._setReferenceFromSelectors();
             }
@@ -549,6 +581,16 @@ sap.ui.define([
             this.getModel("view").setProperty("/referenceDate", sValue);
             this.getModel("view").setProperty("/weekReferenceDate", sValue);
             this._syncReferenceSelectors();
+            this._refreshDashboard();
+        },
+
+        onWeekRangeChange: function () {
+            var oViewModel = this.getModel("view");
+            var oEnd = periodHelper.parseDate(oViewModel.getProperty("/dateTo"));
+            if (oEnd) {
+                oViewModel.setProperty("/referenceDate", periodHelper.toKey(oEnd));
+                oViewModel.setProperty("/weekReferenceDate", periodHelper.toKey(oEnd));
+            }
             this._refreshDashboard();
         },
 
@@ -610,7 +652,7 @@ sap.ui.define([
         },
 
         onApplyFilters: function () {
-            if (this.getModel("view").getProperty("/granularity") !== "week") {
+            if (["week", "day"].indexOf(this.getModel("view").getProperty("/granularity")) < 0) {
                 this._setReferenceFromSelectors();
             }
             return this._reloadRecordsForSelectedPeriod();
@@ -618,12 +660,18 @@ sap.ui.define([
 
         _openJustificationReview: function (sType) {
             var oPeriod = this._getPeriod();
-            this.getModel("attendance").setProperty("/justificationContext", {
+            var oContext = {
                 type: sType,
                 start: periodHelper.toKey(oPeriod.start),
                 end: periodHelper.toKey(oPeriod.end),
                 label: oPeriod.label
-            });
+            };
+            this.getModel("attendance").setProperty("/justificationContext", oContext);
+            try {
+                window.sessionStorage.setItem("monitor.justificationContext", JSON.stringify(oContext));
+            } catch (oStorageError) {
+                console.warn("[Monitor][JUSTIFICATIONS][CONTEXT][STORAGE]", oStorageError);
+            }
             this.navTo(sType === "late" ? "lateJustifications" : "earlyExitJustifications");
         },
 

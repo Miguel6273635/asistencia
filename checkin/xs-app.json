@@ -1,15 +1,11 @@
+
 {
   "welcomeFile": "/index.html",
   "authenticationMethod": "route",
   "routes": [
     {
-      "source": "^/user-api(.*)$",
-      "target": "$1",
-      "service": "sap-approuter-userapi"
-    },
-    {
-      "source": "^/sap/opu/odata/sap/(.*)$",
-      "target": "/sap/opu/odata/sap/$1",
+      "source": "^/sap/(.*)$",
+      "target": "/sap/$1",
       "destination": "onPremECC_QAS_APP",
       "authenticationType": "xsuaa",
       "csrfProtection": false
@@ -17,6 +13,12 @@
     {
       "source": "^/resources/(.*)$",
       "target": "/resources/$1",
+      "authenticationType": "none",
+      "destination": "ui5"
+    },
+    {
+      "source": "^/test-resources/(.*)$",
+      "target": "/test-resources/$1",
       "authenticationType": "none",
       "destination": "ui5"
     },

@@ -23,7 +23,7 @@
       </VBox>
     </content>
     <beginButton>
-      <Button text="Guardar justificación" type="Emphasized" press=".onSaveLateJustification" />
+      <Button text="Justificar y registrar entrada" type="Emphasized" press=".onSaveLateJustification" />
     </beginButton>
     <endButton>
       <Button text="Cancelar" press=".onCancelLateJustification" />

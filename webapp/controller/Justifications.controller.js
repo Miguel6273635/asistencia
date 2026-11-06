@@ -1,848 +1,519 @@
-
+/*
 sap.ui.define([
     "com/mitsu/monitorasistencia/controller/BaseController",
     "com/mitsu/monitorasistencia/model/periodHelper",
+    "com/mitsu/monitorasistencia/model/justificationHelper",
     "com/mitsu/monitorasistencia/model/AttendanceApi",
     "sap/ui/model/json/JSONModel",
     "sap/m/MessageBox",
     "sap/m/MessageToast"
-], function (
-    BaseController,
-    periodHelper,
-    AttendanceApi,
-    JSONModel,
-    MessageBox,
-    MessageToast
-) {
+], function (BaseController, periodHelper, justificationHelper, AttendanceApi, JSONModel, MessageBox, MessageToast) {
     "use strict";
 
-    function text(value) {
-        return value === null || value === undefined
-            ? ""
-            : String(value).trim();
+    function compactDate(oDate) {
+        return oDate.getFullYear() + String(oDate.getMonth() + 1).padStart(2, "0") + String(oDate.getDate()).padStart(2, "0");
     }
 
-    function numberKey(value) {
-        return text(value).replace(/^0+(?=\d)/, "");
+    function displayDate(sValue) {
+        var sDate = String(sValue || "").replace(/[^0-9]/g, "").slice(0, 8);
+        return /^\d{8}$/.test(sDate) ? sDate.slice(6, 8) + "/" + sDate.slice(4, 6) + "/" + sDate.slice(0, 4) : "—";
     }
 
-    function dateKey(date) {
-        return String(date.getFullYear()) +
-            String(date.getMonth() + 1).padStart(2, "0") +
-            String(date.getDate()).padStart(2, "0");
-    }
-
-    function displayDate(value) {
-        var date = text(value).replace(/[^0-9]/g, "").slice(0, 8);
-
-        return /^\d{8}$/.test(date)
-            ? date.slice(6, 8) + "/" +
-              date.slice(4, 6) + "/" +
-              date.slice(0, 4)
-            : "—";
-    }
-
-    function decisionState(value) {
-        var decision = text(value).toUpperCase();
-
-        if (/APROB|ACEPT|APPROV|^A$/.test(decision)) {
-            return "approved";
-        }
-
-        if (/RECHAZ|REJECT|^R$/.test(decision)) {
-            return "rejected";
-        }
-
+    function decisionState(sValue) {
+        var sDecision = String(sValue || "").trim().toUpperCase();
+        if (/APROB|ACEPT|APPROV|^A$/.test(sDecision)) { return "approved"; }
+        if (/RECHAZ|REJECT|^R$/.test(sDecision)) { return "rejected"; }
         return "pending";
     }
 
-    function timeValue(value) {
-        var raw = text(value);
-        var match;
-
-        if (!raw) {
-            return "—";
-        }
-
-        match = /^(\d{1,2}):(\d{2})(?::\d{2})?$/.exec(raw);
-
-        if (match) {
-            return match[1].padStart(2, "0") + ":" + match[2];
-        }
-
-        match = /^PT(\d+)H(\d+)M/.exec(raw);
-
-        if (match) {
-            return match[1].padStart(2, "0") +
-                ":" + match[2].padStart(2, "0");
-        }
-
-        return "—";
+    function safeText(vValue) {
+        return vValue === null || vValue === undefined ? "" : String(vValue).trim();
     }
 
-    return BaseController.extend(
-        "com.mitsu.monitorasistencia.controller.Justifications",
-        {
-            onInit: function () {
-                this._api = new AttendanceApi();
-                this._requestSequence = 0;
-                this._decisionInProgress = false;
-                this._clockTimer = null;
+    return BaseController.extend("com.mitsu.monitorasistencia.controller.Justifications", {
+        onInit: function () {
+            this._attendanceApi = new AttendanceApi();
+            this._requestInProgress = false;
+            this.setModel(new JSONModel({
+                type: "late", title: "Revisión de retardos",
+                subtitle: "Valida las justificaciones enviadas por los colaboradores.",
+                periodLabel: "", dateFrom: "", dateTo: "", count: 0, pendingCount: 0, resolvedCount: 0,
+                search: "", busy: false, error: "", rows: [], filteredRows: []
+            }), "review");
+            this.getRouter().getRoute("lateJustifications").attachPatternMatched(this._onRouteMatched, this);
+            this.getRouter().getRoute("earlyExitJustifications").attachPatternMatched(this._onRouteMatched, this);
+        },
 
-                this.setModel(new JSONModel({
-                    type: "late",
-                    title: "Revisión de retardos",
-                    subtitle: "",
-                    periodLabel: "",
+        _onRouteMatched: function (oEvent) {
+            var sType = oEvent.getParameter("name") === "earlyExitJustifications" ? "early" : "late";
+            this.getModel("attendance").dataLoaded().then(function () { return this._loadRows(sType); }.bind(this));
+        },
 
-                    dateFrom: "",
-                    dateTo: "",
-
-                    clockDate: "",
-                    clockTime: "",
-                    clockSeconds: "",
-                    clockDay: "",
-                    clockZone: "Hora local",
-
-                    busy: false,
-                    error: "",
-                    hasError: false,
-                    loadingText: "Preparando consulta...",
-                    lastRefreshText: "Pendiente de consulta",
-
-                    count: 0,
-                    pendingCount: 0,
-                    resolvedCount: 0,
-                    approvedCount: 0,
-                    rejectedCount: 0,
-                    visibleCount: 0,
-
-                    search: "",
-                    hasUnsavedComments: false,
-                    rows: [],
-                    filteredRows: []
-                }), "review");
-
-                this.getRouter()
-                    .getRoute("lateJustifications")
-                    .attachPatternMatched(
-                        this._onRouteMatched,
-                        this
-                    );
-
-                this.getRouter()
-                    .getRoute("earlyExitJustifications")
-                    .attachPatternMatched(
-                        this._onRouteMatched,
-                        this
-                    );
-
-                this._startClock();
-            },
-
-            onExit: function () {
-                if (this._clockTimer !== null) {
-                    clearInterval(this._clockTimer);
-                    this._clockTimer = null;
+        _resolvePeriod: function () {
+            var oContext = this.getModel("attendance").getProperty("/justificationContext") || {};
+            if (!oContext.start || !oContext.end) {
+                try {
+                    oContext = JSON.parse(window.sessionStorage.getItem("monitor.justificationContext") || "{}") || {};
+                } catch (oStorageError) {
+                    console.warn("[Monitor][JUSTIFICATIONS][CONTEXT][READ]", oStorageError);
+                    oContext = {};
                 }
-
-                this._requestSequence += 1;
-            },
-
-            // ======================================
-            // RELOJ
-            // ======================================
-
-            _startClock: function () {
-                this._updateClock();
-
-                this._clockTimer = setInterval(
-                    this._updateClock.bind(this),
-                    1000
-                );
-            },
-
-            _updateClock: function () {
-                var now = new Date();
-                var model = this.getModel("review");
-
-                if (!model) {
-                    return;
-                }
-
-                var day = now.toLocaleDateString("es-MX", {
-                    weekday: "long"
-                });
-
-                var date = now.toLocaleDateString("es-MX", {
-                    day: "2-digit",
-                    month: "long",
-                    year: "numeric"
-                });
-
-                var hours = now.toLocaleTimeString("es-MX", {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                    hour12: false
-                });
-
-                model.setProperty(
-                    "/clockDay",
-                    day.charAt(0).toUpperCase() + day.slice(1)
-                );
-
-                model.setProperty("/clockDate", date);
-                model.setProperty("/clockTime", hours);
-                model.setProperty(
-                    "/clockSeconds",
-                    String(now.getSeconds()).padStart(2, "0")
-                );
-
-                model.setProperty(
-                    "/clockZone",
-                    Intl.DateTimeFormat()
-                        .resolvedOptions().timeZone || "Hora local"
-                );
-            },
-
-            // ======================================
-            // ENTRADA A LA PANTALLA
-            // ======================================
-
-            _onRouteMatched: function (event) {
-                var type = event.getParameter("name") ===
-                    "earlyExitJustifications"
-                    ? "early"
-                    : "late";
-
-                console.info(
-                    "[JUSTIFICATIONS][ROUTE]",
-                    "Entrando a la pantalla:",
-                    type
-                );
-
-                // Consulta directa al entrar.
-                // No esperar attendance.dataLoaded().
-                this._loadRows(type, false)
-                    .catch(function (error) {
-                        console.error(
-                            "[JUSTIFICATIONS][ROUTE][ERROR]",
-                            error
-                        );
-                    });
-            },
-
-            _resolvePeriod: function () {
-                var attendance = this.getModel("attendance");
-
-                var context = attendance
-                    ? attendance.getProperty("/justificationContext") || {}
-                    : {};
-
-                var from = periodHelper.parseDate(context.start);
-                var to = periodHelper.parseDate(context.end);
-
-                if (!from || !to) {
-                    to = new Date();
-
-                    from = new Date(
-                        to.getFullYear(),
-                        to.getMonth(),
-                        1
-                    );
-                }
-
-                return {
-                    from: dateKey(from),
-                    to: dateKey(to),
-                    label: context.label ||
-                        displayDate(dateKey(from)) +
-                        " – " +
-                        displayDate(dateKey(to))
-                };
-            },
-
-            _setPage: function (type, period) {
-                var model = this.getModel("review");
-
-                model.setProperty("/type", type);
-
-                model.setProperty(
-                    "/title",
-                    type === "late"
-                        ? "Revisión de retardos"
-                        : "Revisión de salidas anticipadas"
-                );
-
-                model.setProperty(
-                    "/subtitle",
-                    type === "late"
-                        ? "Consulta y gestión de justificaciones por llegadas tardías."
-                        : "Consulta y gestión de justificaciones por salidas anticipadas."
-                );
-
-                model.setProperty("/periodLabel", period.label);
-                model.setProperty("/dateFrom", period.from);
-                model.setProperty("/dateTo", period.to);
-            },
-
-            // ======================================
-            // CONSULTA ODATA
-            // ======================================
-
-            _loadRows: function (type, keepSearch) {
-                var model = this.getModel("review");
-                var period = this._resolvePeriod();
-
-                var sequence = ++this._requestSequence;
-
-                var search = keepSearch
-                    ? text(model.getProperty("/search"))
-                    : "";
-
-                this._setPage(type, period);
-
-                model.setProperty("/busy", true);
-                model.setProperty("/error", "");
-                model.setProperty("/hasError", false);
-                model.setProperty(
-                    "/loadingText",
-                    "Consultando justificaciones desde SAP..."
-                );
-
-                console.info(
-                    "[JUSTIFICATIONS][ODATA][START]",
-                    {
-                        entitySet: "ProcessingJustificationsSet",
-                        type: type,
-                        from: period.from,
-                        to: period.to,
-                        sequence: sequence
-                    }
-                );
-
-                return this._api.getProcessingJustifications(
-                    period.from,
-                    period.to
-                ).then(function (odataRows) {
-
-                    if (sequence !== this._requestSequence) {
-                        return null;
-                    }
-
-                    if (!Array.isArray(odataRows)) {
-                        throw new Error(
-                            "SAP no devolvió una colección de registros válida."
-                        );
-                    }
-
-                    var attendance = this.getModel("attendance");
-
-                    var employees = attendance
-                        ? attendance.getProperty("/employees") || []
-                        : [];
-
-                    var centers = attendance
-                        ? attendance.getProperty("/centers") || []
-                        : [];
-
-                    var employeesByNumber = {};
-                    var centersByCode = {};
-
-                    employees.forEach(function (employee) {
-                        employeesByNumber[
-                            numberKey(
-                                employee.number ||
-                                employee.employeeNumber ||
-                                employee.PersonnelNumber
-                            )
-                        ] = employee;
-                    });
-
-                    centers.forEach(function (center) {
-                        centersByCode[
-                            text(center.code).toUpperCase()
-                        ] = center;
-                    });
-
-                    var registerType = type === "late"
-                        ? "P10"
-                        : "P20";
-
-                    var mapped = odataRows
-                        .filter(function (row) {
-                            return text(row.TypeRegister)
-                                .toUpperCase() === registerType;
-                        })
-                        .map(function (row, index) {
-                            var number = text(row.PersonalNumber);
-
-                            var employee =
-                                employeesByNumber[numberKey(number)] || {};
-
-                            var centerCode = text(row.CenterOffice);
-
-                            var center =
-                                centersByCode[
-                                    centerCode.toUpperCase()
-                                ] || {};
-
-                            var decision = decisionState(
-                                row.DecisionRH
-                            );
-
-                            var justification =
-                                text(row.DescriptionStatus) ||
-                                text(row.ReasonType) ||
-                                text(row.IncidentType) ||
-                                text(row.JustificationStatus);
-
-                            var comment = text(row.CommentsRH);
-
-                            // Mostrar hora sólo si hay un campo
-                            // confiable en la respuesta OData.
-                            var eventTime = timeValue(
-                                type === "late"
-                                    ? row.EnterHour || row.P10Time
-                                    : row.ExitHour || row.P20Time
-                            );
-
-                            return {
-                                id: number + "-" +
-                                    text(row.DateJustification) +
-                                    "-" + registerType + "-" + index,
-
-                                employeeId:
-                                    employee.id ||
-                                    (number ? "employee-" + number : ""),
-
-                                employee:
-                                    text(row.FullName) ||
-                                    text(employee.name) ||
-                                    number ||
-                                    "Sin nombre",
-
-                                personalNumber: number,
-                                date: displayDate(
-                                    row.DateJustification
-                                ),
-
-                                center:
-                                    text(center.name) ||
-                                    centerCode ||
-                                    "Sin centro",
-
-                                schedule:
-                                    text(employee.shift) ||
-                                    text(employee.schedule) ||
-                                    text(employee.scheduleName) ||
-                                    "—",
-
-                                eventTime: eventTime,
-
-                                justification:
-                                    justification ||
-                                    "Sin justificación registrada",
-
-                                hasJustification:
-                                    Boolean(justification),
-
-                                commentsRH: comment,
-                                originalCommentsRH: comment,
-
-                                decision: decision,
-
-                                approvalText:
-                                    decision === "approved"
-                                        ? "Aprobada"
-                                        : decision === "rejected"
-                                            ? "Rechazada"
-                                            : "Pendiente",
-
-                                approvalState:
-                                    decision === "approved"
-                                        ? "Success"
-                                        : decision === "rejected"
-                                            ? "Error"
-                                            : "Warning",
-
-                                raw: row
-                            };
-                        });
-
-                    model.setProperty("/rows", mapped);
-                    model.setProperty("/search", search);
-                    model.setProperty("/hasUnsavedComments", false);
-
-                    this._updateCounts();
-                    this._applySearch();
-
-                    var updatedAt = new Date().toLocaleTimeString(
-                        "es-MX",
-                        {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                            second: "2-digit"
-                        }
-                    );
-
-                    model.setProperty(
-                        "/lastRefreshText",
-                        "Última consulta: " + updatedAt
-                    );
-
-                    console.info(
-                        "[JUSTIFICATIONS][ODATA][OK]",
-                        {
-                            received: odataRows.length,
-                            matched: mapped.length,
-                            registerType: registerType,
-                            period: period
-                        }
-                    );
-
-                    return mapped;
-                }.bind(this)).catch(function (error) {
-                    if (sequence !== this._requestSequence) {
-                        return null;
-                    }
-
-                    var message =
-                        error && error.message
-                            ? error.message
-                            : String(error);
-
-                    model.setProperty("/error", message);
-                    model.setProperty("/hasError", true);
-
-                    console.error(
-                        "[JUSTIFICATIONS][ODATA][ERROR]",
-                        error
-                    );
-
-                    // Conserva los datos de la última
-                    // consulta exitosa, si los hay.
-                    MessageBox.error(
-                        "No fue posible obtener las justificaciones de SAP.",
-                        {
-                            details: [
-                                message,
-                                error && error.responseBody
-                            ].filter(Boolean).join("\n\n")
-                        }
-                    );
-
-                    throw error;
-                }.bind(this)).finally(function () {
-                    if (sequence === this._requestSequence) {
-                        model.setProperty("/busy", false);
-                    }
-                }.bind(this));
-            },
-
-            // ======================================
-            // INDICADORES
-            // ======================================
-
-            _updateCounts: function () {
-                var model = this.getModel("review");
-                var rows = model.getProperty("/rows") || [];
-
-                var pending = 0;
-                var approved = 0;
-                var rejected = 0;
-
-                rows.forEach(function (row) {
-                    if (row.decision === "approved") {
-                        approved += 1;
-                    } else if (row.decision === "rejected") {
-                        rejected += 1;
-                    } else {
-                        pending += 1;
-                    }
-                });
-
-                model.setProperty("/count", rows.length);
-                model.setProperty("/pendingCount", pending);
-                model.setProperty("/approvedCount", approved);
-                model.setProperty("/rejectedCount", rejected);
-                model.setProperty(
-                    "/resolvedCount",
-                    approved + rejected
-                );
-            },
-
-            // ======================================
-            // BUSCADOR
-            // ======================================
-
-            _applySearch: function () {
-                var model = this.getModel("review");
-
-                var search = text(
-                    model.getProperty("/search")
-                ).toLowerCase();
-
-                var rows = model.getProperty("/rows") || [];
-
-                var filtered = rows.filter(function (row) {
-                    if (!search) {
-                        return true;
-                    }
-
-                    return [
-                        row.employee,
-                        row.personalNumber,
-                        row.center,
-                        row.schedule,
-                        row.justification,
-                        row.commentsRH,
-                        row.approvalText,
-                        row.date
-                    ].some(function (value) {
-                        return text(value)
-                            .toLowerCase()
-                            .indexOf(search) >= 0;
-                    });
-                });
-
-                model.setProperty("/filteredRows", filtered);
-                model.setProperty("/visibleCount", filtered.length);
-            },
-
-            onSearch: function (event) {
-                var search =
-                    event.getParameter("newValue") ||
-                    event.getParameter("query") ||
-                    "";
-
-                this.getModel("review")
-                    .setProperty("/search", search);
-
-                this._applySearch();
-            },
-
-            onCommentChange: function () {
-                var model = this.getModel("review");
-                var rows = model.getProperty("/rows") || [];
-
-                model.setProperty(
-                    "/hasUnsavedComments",
-                    rows.some(function (row) {
-                        return text(row.commentsRH) !==
-                            text(row.originalCommentsRH);
-                    })
-                );
-            },
-
-            // ======================================
-            // BOTÓN ACTUALIZAR
-            // ======================================
-
-            onRefreshJustifications: function () {
-                var model = this.getModel("review");
-
-                if (
-                    model.getProperty("/busy") ||
-                    this._decisionInProgress
-                ) {
-                    MessageToast.show(
-                        "Hay una consulta en proceso."
-                    );
-                    return;
-                }
-
-                if (model.getProperty("/hasUnsavedComments")) {
-                    MessageBox.confirm(
-                        "Hay comentarios RH sin enviar. " +
-                        "Al actualizar se perderán los cambios. " +
-                        "¿Deseas continuar?",
-                        {
-                            title: "Actualizar desde SAP",
-                            emphasizedAction:
-                                MessageBox.Action.OK,
-
-                            onClose: function (action) {
-                                if (action === MessageBox.Action.OK) {
-                                    this._refreshDirectly();
-                                }
-                            }.bind(this)
-                        }
-                    );
-
-                    return;
-                }
-
-                return this._refreshDirectly();
-            },
-
-            _refreshDirectly: function () {
-                var model = this.getModel("review");
-                var type = model.getProperty("/type") || "late";
-
-                // Misma consulta que al navegar a la vista.
-                return this._loadRows(type, true)
-                    .then(function (rows) {
-                        if (rows) {
-                            MessageToast.show(
-                                "Información actualizada desde SAP."
-                            );
-                        }
-                    })
-                    .catch(function (error) {
-                        console.error(
-                            "[JUSTIFICATIONS][REFRESH]",
-                            error
-                        );
-                    });
-            },
-
-            // ======================================
-            // APROBACIONES Y RECHAZOS
-            // ======================================
-
-            onApprove: function (event) {
-                this._confirmDecision(
-                    event.getSource()
-                        .getBindingContext("review")
-                        .getObject(),
-                    "APROBADA"
-                );
-            },
-
-            onReject: function (event) {
-                this._confirmDecision(
-                    event.getSource()
-                        .getBindingContext("review")
-                        .getObject(),
-                    "RECHAZADA"
-                );
-            },
-
-            _confirmDecision: function (row, decision) {
-                var approving = decision === "APROBADA";
-
-                if (
-                    this._decisionInProgress ||
-                    this.getModel("review").getProperty("/busy")
-                ) {
-                    MessageToast.show(
-                        "Espera a que termine la operación."
-                    );
-                    return;
-                }
-
-                if (row.decision !== "pending") {
-                    MessageToast.show(
-                        "Esta justificación ya fue revisada."
-                    );
-                    return;
-                }
-
-                if (!row.hasJustification) {
-                    MessageBox.warning(
-                        "El empleado no tiene una justificación registrada."
-                    );
-                    return;
-                }
-
-                MessageBox.confirm(
-                    "¿Deseas " +
-                    (approving ? "aceptar" : "rechazar") +
-                    " la justificación de " + row.employee + "?",
-                    {
-                        title: approving
-                            ? "Aceptar justificación"
-                            : "Rechazar justificación",
-
-                        emphasizedAction:
-                            MessageBox.Action.OK,
-
-                        onClose: function (action) {
-                            if (action === MessageBox.Action.OK) {
-                                this._submitDecision(row, decision);
-                            }
-                        }.bind(this)
-                    }
-                );
-            },
-
-            _submitDecision: function (row, decision) {
-                var raw = row.raw || {};
-                var model = this.getModel("review");
-
-                var payload = {
-                    PersonalNumber: text(raw.PersonalNumber),
-                    FullName: text(raw.FullName),
-                    CenterOffice: text(raw.CenterOffice),
-                    Zone: text(raw.Zone),
-                    Base: text(raw.Base),
-                    DateJustification:
-                        text(raw.DateJustification),
-                    TypeRegister: text(raw.TypeRegister),
-                    TypeRegisterDescrip:
-                        text(raw.TypeRegisterDescrip),
-                    IncidentType: text(raw.IncidentType),
-                    ReasonType: text(raw.ReasonType),
-                    JustificationStatus:
-                        text(raw.JustificationStatus),
-                    DescriptionStatus:
-                        text(raw.DescriptionStatus),
-                    Email: text(raw.Email),
-                    DecisionRH: decision,
-                    CommentsRH:
-                        text(row.commentsRH) ||
-                        text(raw.CommentsRH)
-                };
-
-                this._decisionInProgress = true;
-                model.setProperty("/busy", true);
-
-                return this._api
-                    .submitJustificationDecision(payload)
-                    .then(function () {
-                        MessageToast.show(
-                            decision === "APROBADA"
-                                ? "Justificación aprobada"
-                                : "Justificación rechazada"
-                        );
-
-                        return this._loadRows(
-                            model.getProperty("/type"),
-                            true
-                        );
-                    }.bind(this))
-                    .catch(function (error) {
-                        MessageBox.error(
-                            "SAP no pudo guardar la decisión. " +
-                            (error.message || String(error))
-                        );
-                    })
-                    .finally(function () {
-                        this._decisionInProgress = false;
-                        model.setProperty("/busy", false);
-                    }.bind(this));
-            },
-
-            // ======================================
-            // NAVEGACIÓN
-            // ======================================
-
-            onEmployeePress: function (event) {
-                var row = event.getSource()
-                    .getBindingContext("review")
-                    .getObject();
-
-                if (row.employeeId) {
-                    this.navTo("userPerformance", {
-                        employeeId: row.employeeId
-                    });
-                }
-            },
-
-            onBack: function () {
-                this.navTo("overview");
             }
-        }
-    );
+            var oStart = periodHelper.parseDate(oContext.start);
+            var oEnd = periodHelper.parseDate(oContext.end);
+            if (!oStart || !oEnd) {
+                oEnd = new Date();
+                oStart = new Date(oEnd.getFullYear(), oEnd.getMonth(), oEnd.getDate());
+            }
+            return {
+                from: compactDate(oStart), to: compactDate(oEnd),
+                label: oContext.label || (displayDate(compactDate(oStart)) + " – " + displayDate(compactDate(oEnd)))
+            };
+        },
+
+        _loadRows: function (sType) {
+            var oPeriod = this._resolvePeriod();
+            var oReviewModel = this.getModel("review");
+            oReviewModel.setProperty("/busy", true);
+            oReviewModel.setProperty("/error", "");
+            oReviewModel.setProperty("/type", sType);
+            oReviewModel.setProperty("/title", sType === "late" ? "Revisión de retardos" : "Revisión de salidas anticipadas");
+            oReviewModel.setProperty("/subtitle", sType === "late" ?
+                "Consulta cada llegada tardía y acepta o rechaza la justificación del colaborador." :
+                "Consulta cada salida antes del horario y acepta o rechaza la justificación del colaborador.");
+            oReviewModel.setProperty("/periodLabel", oPeriod.label);
+            oReviewModel.setProperty("/dateFrom", oPeriod.from);
+            oReviewModel.setProperty("/dateTo", oPeriod.to);
+            // eslint-disable-next-line no-console
+            console.info("[Monitor][JUSTIFICATIONS][LOAD]", { type: sType, period: oPeriod });
+
+            return Promise.all([
+                this._attendanceApi.getProcessingJustifications(oPeriod.from, oPeriod.to),
+                this._attendanceApi.getEmployees().catch(function (oError) {
+                    console.warn("[Monitor][JUSTIFICATIONS][EMPLOYEES][FALLBACK]", oError);
+                    return [];
+                })
+            ]).then(function (aResults) {
+                var aRows = aResults[0] || [];
+                var aSapEmployees = aResults[1] || [];
+                var aEmployees = (this.getModel("attendance").getProperty("/employees") || []).concat(aSapEmployees);
+                var aCenters = this.getModel("attendance").getProperty("/centers") || [];
+                var mEmployees = {};
+                var mCenters = {};
+                aEmployees.forEach(function (oEmployee) {
+                    var sNumber = String(oEmployee.PersonalNumber || oEmployee.PersonnelNumber ||
+                        oEmployee.number || oEmployee.employeeNumber || oEmployee.id || "").trim();
+                    if (sNumber) { mEmployees[sNumber] = oEmployee; }
+                });
+                aCenters.forEach(function (oCenter) { mCenters[String(oCenter.code || "").trim()] = oCenter; });
+                var aMapped = aRows.filter(function (oRow) {
+                    return justificationHelper.matches(oRow, sType);
+                }).map(function (oRow, iIndex) {
+                    var sNumber = safeText(oRow.PersonalNumber);
+                    var oEmployee = mEmployees[sNumber] || {};
+                    var sCenterCode = safeText(oRow.CenterOffice);
+                    var oCenter = mCenters[sCenterCode] || {};
+                    var sDecision = decisionState(oRow.DecisionRH);
+                    var sCommentsLog = safeText(oRow.CommentsLog);
+                    var sJustification = safeText(oRow.ReasonType) || safeText(oRow.IncidentType) ||
+                        safeText(oRow.DescriptionStatus) || safeText(oRow.JustificationStatus);
+                    var sEventTime = safeText(oRow.EnterHour) || safeText(oRow.EventTime) ||
+                        safeText(oRow.RegisterHour) || safeText(oRow.Hour) || safeText(oRow.TimeRegister) || "—";
+                    return {
+                        id: sNumber + "-" + safeText(oRow.DateJustification) + "-" + justificationHelper.registerCode(oRow) + "-" + iIndex,
+                        employeeId: oEmployee.id || (sNumber ? "employee-" + sNumber : ""),
+                          employee: safeText(oRow.FullName) || safeText(oEmployee.FullName) ||
+                              safeText(oEmployee.name) || sNumber || "Sin nombre",
+                        personalNumber: sNumber, date: displayDate(oRow.DateJustification),
+                        center: safeText(oCenter.name) || sCenterCode || "Sin centro",
+                          schedule: safeText(oEmployee.Shift) || safeText(oEmployee.Hourly) ||
+                              safeText(oEmployee.shift) || safeText(oEmployee.scheduledetail) || "—", eventTime: sEventTime,
+                        justification: sJustification || "Sin clasificación registrada",
+                        commentsLog: sCommentsLog,
+                        hasJustification: Boolean(sCommentsLog),
+                        commentsRH: safeText(oRow.CommentsRH),
+                        decision: sDecision,
+                        approvalText: sDecision === "approved" ? "Aprobada" : (sDecision === "rejected" ? "Rechazada" : "Pendiente"),
+                        approvalState: sDecision === "approved" ? "Success" : (sDecision === "rejected" ? "Error" : "Warning"),
+                        raw: oRow
+                    };
+                });
+                oReviewModel.setProperty("/rows", aMapped);
+                oReviewModel.setProperty("/filteredRows", aMapped);
+                oReviewModel.setProperty("/search", "");
+                this._updateCounts();
+            }.bind(this)).catch(function (oError) {
+                var sMessage = oError && oError.message ? oError.message : String(oError);
+                oReviewModel.setProperty("/error", sMessage);
+                oReviewModel.setProperty("/rows", []);
+                oReviewModel.setProperty("/filteredRows", []);
+                this._updateCounts();
+                MessageBox.error("No fue posible consultar las justificaciones en SAP. " + sMessage);
+            }.bind(this)).finally(function () { oReviewModel.setProperty("/busy", false); });
+        },
+
+        _updateCounts: function () {
+            var aRows = this.getModel("review").getProperty("/rows") || [];
+            this.getModel("review").setProperty("/count", aRows.length);
+            this.getModel("review").setProperty("/pendingCount", aRows.filter(function (oRow) { return oRow.decision === "pending"; }).length);
+            this.getModel("review").setProperty("/resolvedCount", aRows.filter(function (oRow) { return oRow.decision !== "pending"; }).length);
+        },
+
+        onSearch: function (oEvent) {
+            var sQuery = String(oEvent.getParameter("newValue") || oEvent.getParameter("query") || "").trim().toLowerCase();
+            var aRows = this.getModel("review").getProperty("/rows") || [];
+            this.getModel("review").setProperty("/filteredRows", !sQuery ? aRows : aRows.filter(function (oRow) {
+                return [oRow.employee, oRow.personalNumber, oRow.center, oRow.justification, oRow.commentsLog, oRow.commentsRH].some(function (sValue) {
+                    return String(sValue || "").toLowerCase().indexOf(sQuery) >= 0;
+                });
+            }));
+        },
+
+        onRefresh: function () {
+            this._loadRows(this.getModel("review").getProperty("/type") || "late");
+        },
+
+        onApprove: function (oEvent) { this._confirmDecision(oEvent.getSource().getBindingContext("review").getObject(), "A"); },
+        onReject: function (oEvent) { this._confirmDecision(oEvent.getSource().getBindingContext("review").getObject(), "R"); },
+
+        onShowJustification: function (oEvent) {
+            var oRow = oEvent.getSource().getBindingContext("review").getObject();
+            MessageBox.information(oRow.commentsLog || "El colaborador no capturó comentarios de justificación.", {
+                title: "Justificación de " + oRow.employee,
+                details: "Incidencia: " + oRow.justification + "\nFecha: " + oRow.date + "\nCentro: " + oRow.center
+            });
+        },
+
+        _confirmDecision: function (oRow, sDecisionRH) {
+            var bApprove = sDecisionRH === "A";
+            if (this._requestInProgress) { MessageToast.show("Espera a que termine la solicitud actual"); return; }
+            if (oRow.decision !== "pending") { MessageToast.show("La justificación ya tiene una decisión registrada"); return; }
+            MessageBox.confirm("¿Deseas " + (bApprove ? "aceptar" : "rechazar") + " la justificación de " + oRow.employee + "?", {
+                title: bApprove ? "Aceptar justificación" : "Rechazar justificación",
+                emphasizedAction: MessageBox.Action.OK,
+                onClose: function (sAction) {
+                    if (sAction === MessageBox.Action.OK) { this._submitDecision(oRow, sDecisionRH); }
+                }.bind(this)
+            });
+        },
+
+        _submitDecision: function (oRow, sDecisionRH) {
+            var oRaw = oRow.raw || {};
+            var oPayload = {
+                PersonalNumber: safeText(oRaw.PersonalNumber), FullName: safeText(oRaw.FullName),
+                CenterOffice: safeText(oRaw.CenterOffice), Zone: safeText(oRaw.Zone), Base: safeText(oRaw.Base),
+                DateJustification: safeText(oRaw.DateJustification), TypeRegister: safeText(oRaw.TypeRegister),
+                TypeRegisterDescrip: safeText(oRaw.TypeRegisterDescrip), IncidentType: safeText(oRaw.IncidentType),
+                ReasonType: safeText(oRaw.ReasonType), JustificationStatus: safeText(oRaw.JustificationStatus),
+                DescriptionStatus: safeText(oRaw.DescriptionStatus), Email: safeText(oRaw.Email),
+                CommentsLog: safeText(oRaw.CommentsLog),
+                DecisionRH: sDecisionRH, CommentsRH: safeText(oRow.commentsRH) || safeText(oRaw.CommentsRH),
+                StatusRequest: safeText(oRaw.StatusRequest), MessageRequest: safeText(oRaw.MessageRequest)
+            };
+            this._requestInProgress = true;
+            this.getModel("review").setProperty("/busy", true);
+            return this._attendanceApi.submitJustificationDecision(oPayload).then(function () {
+                MessageToast.show(sDecisionRH === "A" ? "Justificación aceptada" : "Justificación rechazada");
+                return this._loadRows(this.getModel("review").getProperty("/type"));
+            }.bind(this)).catch(function (oError) {
+                MessageBox.error("SAP no pudo procesar la decisión. " + (oError.message || String(oError)));
+            }).finally(function () {
+                this._requestInProgress = false;
+                this.getModel("review").setProperty("/busy", false);
+            }.bind(this));
+        },
+
+        onEmployeePress: function (oEvent) {
+            var oRow = oEvent.getSource().getBindingContext("review").getObject();
+            if (oRow.employeeId) { this.navTo("userPerformance", { employeeId: oRow.employeeId }); }
+        },
+        onBack: function () { this.navTo("overview"); }
+    });
 });
+*/
+sap.ui.define([
+    "com/mitsu/monitorasistencia/controller/BaseController",
+    "com/mitsu/monitorasistencia/model/periodHelper",
+    "com/mitsu/monitorasistencia/model/justificationHelper",
+    "com/mitsu/monitorasistencia/model/AttendanceApi",
+    "sap/ui/model/json/JSONModel",
+    "sap/m/MessageBox",
+    "sap/m/MessageToast"
+], function (BaseController, periodHelper, justificationHelper, AttendanceApi, JSONModel, MessageBox, MessageToast) {
+    "use strict";
+
+    function compactDate(oDate) {
+        return oDate.getFullYear() + String(oDate.getMonth() + 1).padStart(2, "0") + String(oDate.getDate()).padStart(2, "0");
+    }
+
+    function displayDate(sValue) {
+        var sDate = String(sValue || "").replace(/[^0-9]/g, "").slice(0, 8);
+        return /^\d{8}$/.test(sDate) ? sDate.slice(6, 8) + "/" + sDate.slice(4, 6) + "/" + sDate.slice(0, 4) : "—";
+    }
+
+    function displayTime(sValue) {
+        var sOriginal = String(sValue || "").trim();
+        var sTime = sOriginal.replace(/[^0-9]/g, "");
+
+        if (!sOriginal) { return "—"; }
+        if (sTime.length === 5) { sTime = "0" + sTime; }
+        if (!/^\d{6}$/.test(sTime)) { return sOriginal; }
+
+        var iHour = Number(sTime.slice(0, 2));
+        var iMinute = Number(sTime.slice(2, 4));
+        var iSecond = Number(sTime.slice(4, 6));
+        if (iHour > 23 || iMinute > 59 || iSecond > 59) { return sOriginal; }
+
+        var sPeriod = iHour < 12 ? "AM" : "PM";
+        var iDisplayHour = iHour % 12 || 12;
+        return String(iDisplayHour).padStart(2, "0") + ":" +
+            String(iMinute).padStart(2, "0") + ":" +
+            String(iSecond).padStart(2, "0") + " " + sPeriod;
+    }
+
+    function decisionState(sValue) {
+        var sDecision = String(sValue || "").trim().toUpperCase();
+        if (/APROB|ACEPT|APPROV|^A$/.test(sDecision)) { return "approved"; }
+        if (/RECHAZ|REJECT|^R$/.test(sDecision)) { return "rejected"; }
+        return "pending";
+    }
+
+    function safeText(vValue) {
+        return vValue === null || vValue === undefined ? "" : String(vValue).trim();
+    }
+
+    return BaseController.extend("com.mitsu.monitorasistencia.controller.Justifications", {
+        onInit: function () {
+            this._attendanceApi = new AttendanceApi();
+            this._requestInProgress = false;
+            this.setModel(new JSONModel({
+                type: "late", title: "Revisión de retardos",
+                subtitle: "Valida las justificaciones enviadas por los colaboradores.",
+                periodLabel: "", dateFrom: "", dateTo: "", count: 0, pendingCount: 0, resolvedCount: 0,
+                search: "", busy: false, error: "", rows: [], filteredRows: []
+            }), "review");
+            this.getRouter().getRoute("lateJustifications").attachPatternMatched(this._onRouteMatched, this);
+            this.getRouter().getRoute("earlyExitJustifications").attachPatternMatched(this._onRouteMatched, this);
+        },
+
+        _onRouteMatched: function (oEvent) {
+            var sType = oEvent.getParameter("name") === "earlyExitJustifications" ? "early" : "late";
+            this.getModel("attendance").dataLoaded().then(function () { return this._loadRows(sType); }.bind(this));
+        },
+
+        _resolvePeriod: function () {
+            var oContext = this.getModel("attendance").getProperty("/justificationContext") || {};
+            if (!oContext.start || !oContext.end) {
+                try {
+                    oContext = JSON.parse(window.sessionStorage.getItem("monitor.justificationContext") || "{}") || {};
+                } catch (oStorageError) {
+                    console.warn("[Monitor][JUSTIFICATIONS][CONTEXT][READ]", oStorageError);
+                    oContext = {};
+                }
+            }
+            var oStart = periodHelper.parseDate(oContext.start);
+            var oEnd = periodHelper.parseDate(oContext.end);
+            if (!oStart || !oEnd) {
+                oEnd = new Date();
+                oStart = new Date(oEnd.getFullYear(), oEnd.getMonth(), oEnd.getDate());
+            }
+            return {
+                from: compactDate(oStart), to: compactDate(oEnd),
+                label: oContext.label || (displayDate(compactDate(oStart)) + " – " + displayDate(compactDate(oEnd)))
+            };
+        },
+
+        _loadRows: function (sType) {
+            var oPeriod = this._resolvePeriod();
+            var oReviewModel = this.getModel("review");
+            oReviewModel.setProperty("/busy", true);
+            oReviewModel.setProperty("/error", "");
+            oReviewModel.setProperty("/type", sType);
+            oReviewModel.setProperty("/title", sType === "late" ? "Revisión de retardos" : "Revisión de salidas anticipadas");
+            oReviewModel.setProperty("/subtitle", sType === "late" ?
+                "Consulta cada llegada tardía y acepta o rechaza la justificación del colaborador." :
+                "Consulta cada salida antes del horario y acepta o rechaza la justificación del colaborador.");
+            oReviewModel.setProperty("/periodLabel", oPeriod.label);
+            oReviewModel.setProperty("/dateFrom", oPeriod.from);
+            oReviewModel.setProperty("/dateTo", oPeriod.to);
+            // eslint-disable-next-line no-console
+            console.info("[Monitor][JUSTIFICATIONS][LOAD]", { type: sType, period: oPeriod });
+
+            return Promise.all([
+                this._attendanceApi.getProcessingJustifications(oPeriod.from, oPeriod.to),
+                this._attendanceApi.getEmployees().catch(function (oError) {
+                    console.warn("[Monitor][JUSTIFICATIONS][EMPLOYEES][FALLBACK]", oError);
+                    return [];
+                })
+            ]).then(function (aResults) {
+                var aRows = aResults[0] || [];
+                var aSapEmployees = aResults[1] || [];
+                var aEmployees = (this.getModel("attendance").getProperty("/employees") || []).concat(aSapEmployees);
+                var aCenters = this.getModel("attendance").getProperty("/centers") || [];
+                var mEmployees = {};
+                var mCenters = {};
+                aEmployees.forEach(function (oEmployee) {
+                    var sNumber = String(oEmployee.PersonalNumber || oEmployee.PersonnelNumber ||
+                        oEmployee.number || oEmployee.employeeNumber || oEmployee.id || "").trim();
+                    if (sNumber) { mEmployees[sNumber] = oEmployee; }
+                });
+                aCenters.forEach(function (oCenter) { mCenters[String(oCenter.code || "").trim()] = oCenter; });
+                var aMapped = aRows.filter(function (oRow) {
+                    return justificationHelper.matches(oRow, sType);
+                }).map(function (oRow, iIndex) {
+                    var sNumber = safeText(oRow.PersonalNumber);
+                    var oEmployee = mEmployees[sNumber] || {};
+                    var sCenterCode = safeText(oRow.CenterOffice);
+                    var oCenter = mCenters[sCenterCode] || {};
+                    // ProcessingJustificationsSet devuelve la resolución efectiva en
+                    // DescriptionStatus/JustificationStatus. DecisionRH es el campo de
+                    // entrada del POST y puede regresar vacío aun después de resolverla.
+                    var sDecision = decisionState(
+                        safeText(oRow.DescriptionStatus) ||
+                        safeText(oRow.JustificationStatus) ||
+                        safeText(oRow.DecisionRH)
+                    );
+                    var sCommentsLog = safeText(oRow.CommentsLog);
+                    var sJustification = safeText(oRow.ReasonType) || safeText(oRow.IncidentType) ||
+                        safeText(oRow.DescriptionStatus) || safeText(oRow.JustificationStatus);
+                    var sEntryTime = safeText(oRow.EnterHour) || safeText(oRow.EventTime) ||
+                        safeText(oRow.RegisterHour) || safeText(oRow.Hour) || safeText(oRow.TimeRegister) || "—";
+                    var sExitTime = safeText(oRow.ExitHour) || safeText(oRow.ExitTime) ||
+                        safeText(oRow.DepartureTime) || safeText(oRow.P20Time) || "—";
+                    return {
+                        id: sNumber + "-" + safeText(oRow.DateJustification) + "-" + justificationHelper.registerCode(oRow) + "-" + iIndex,
+                        employeeId: oEmployee.id || (sNumber ? "employee-" + sNumber : ""),
+                          employee: safeText(oRow.FullName) || safeText(oEmployee.FullName) ||
+                              safeText(oEmployee.name) || sNumber || "Sin nombre",
+                        personalNumber: sNumber, date: displayDate(oRow.DateJustification),
+                        center: safeText(oCenter.name) || sCenterCode || "Sin centro",
+                          schedule: safeText(oRow.ScheduleDetail) || safeText(oEmployee.ScheduleDetail) ||
+                              safeText(oEmployee.scheduleDetail) || safeText(oEmployee.Shift) ||
+                              safeText(oEmployee.Hourly) || safeText(oEmployee.shift) ||
+                              safeText(oEmployee.schedule) || "—",
+                        entryTime: displayTime(sEntryTime),
+                        exitTime: displayTime(sExitTime),
+                        justification: sJustification || "Sin clasificación registrada",
+                        commentsLog: sCommentsLog,
+                        hasJustification: Boolean(sCommentsLog),
+                        commentsRH: safeText(oRow.CommentsRH),
+                        commentsRHState: "None",
+                        decision: sDecision,
+                        approvalText: sDecision === "approved" ? "Aprobado" : (sDecision === "rejected" ? "Rechazado" : "Pendiente"),
+                        approvalState: sDecision === "approved" ? "Success" : (sDecision === "rejected" ? "Error" : "Warning"),
+                        raw: oRow
+                    };
+                });
+                oReviewModel.setProperty("/rows", aMapped);
+                oReviewModel.setProperty("/filteredRows", aMapped);
+                oReviewModel.setProperty("/search", "");
+                this._updateCounts();
+            }.bind(this)).catch(function (oError) {
+                var sMessage = oError && oError.message ? oError.message : String(oError);
+                oReviewModel.setProperty("/error", sMessage);
+                oReviewModel.setProperty("/rows", []);
+                oReviewModel.setProperty("/filteredRows", []);
+                this._updateCounts();
+                MessageBox.error("No fue posible consultar las justificaciones en SAP. " + sMessage);
+            }.bind(this)).finally(function () { oReviewModel.setProperty("/busy", false); });
+        },
+
+        _updateCounts: function () {
+            var aRows = this.getModel("review").getProperty("/rows") || [];
+            this.getModel("review").setProperty("/count", aRows.length);
+            this.getModel("review").setProperty("/pendingCount", aRows.filter(function (oRow) { return oRow.decision === "pending"; }).length);
+            this.getModel("review").setProperty("/resolvedCount", aRows.filter(function (oRow) { return oRow.decision !== "pending"; }).length);
+        },
+
+        onSearch: function (oEvent) {
+            var sQuery = String(oEvent.getParameter("newValue") || oEvent.getParameter("query") || "").trim().toLowerCase();
+            var aRows = this.getModel("review").getProperty("/rows") || [];
+            this.getModel("review").setProperty("/filteredRows", !sQuery ? aRows : aRows.filter(function (oRow) {
+                return [oRow.employee, oRow.personalNumber, oRow.center, oRow.justification, oRow.commentsLog, oRow.commentsRH].some(function (sValue) {
+                    return String(sValue || "").toLowerCase().indexOf(sQuery) >= 0;
+                });
+            }));
+        },
+
+        onRefresh: function () {
+            this._loadRows(this.getModel("review").getProperty("/type") || "late");
+        },
+
+        onApprove: function (oEvent) { this._confirmDecision(oEvent.getSource().getBindingContext("review").getObject(), "A"); },
+        onReject: function (oEvent) { this._confirmDecision(oEvent.getSource().getBindingContext("review").getObject(), "R"); },
+
+        onCommentsRHChange: function (oEvent) {
+            var oContext = oEvent.getSource().getBindingContext("review");
+            if (oContext) {
+                var sValue = oEvent.getParameter("value");
+                oContext.getModel().setProperty(oContext.getPath() + "/commentsRH", sValue);
+                oContext.getModel().setProperty(
+                    oContext.getPath() + "/commentsRHState",
+                    safeText(sValue) ? "None" : "Error"
+                );
+            }
+        },
+
+        onShowJustification: function (oEvent) {
+            var oRow = oEvent.getSource().getBindingContext("review").getObject();
+            MessageBox.information(oRow.commentsLog || "El colaborador no capturó comentarios de justificación.", {
+                title: "Justificación de " + oRow.employee,
+                details: "Incidencia: " + oRow.justification + "\nFecha: " + oRow.date + "\nCentro: " + oRow.center
+            });
+        },
+
+        _confirmDecision: function (oRow, sDecisionRH) {
+            var bApprove = sDecisionRH === "A";
+            if (this._requestInProgress) { MessageToast.show("Espera a que termine la solicitud actual"); return; }
+            if (oRow.decision !== "pending") { MessageToast.show("La justificación ya tiene una decisión registrada"); return; }
+            if (!safeText(oRow.commentsRH)) {
+                oRow.commentsRHState = "Error";
+                this.getModel("review").refresh(true);
+                MessageBox.warning("El comentario de RH es obligatorio para aprobar o rechazar la justificación.");
+                return;
+            }
+            oRow.commentsRHState = "None";
+            MessageBox.confirm("¿Deseas " + (bApprove ? "aceptar" : "rechazar") + " la justificación de " + oRow.employee + "?", {
+                title: bApprove ? "Aceptar justificación" : "Rechazar justificación",
+                emphasizedAction: MessageBox.Action.OK,
+                onClose: function (sAction) {
+                    if (sAction === MessageBox.Action.OK) { this._submitDecision(oRow, sDecisionRH); }
+                }.bind(this)
+            });
+        },
+
+        _submitDecision: function (oRow, sDecisionRH) {
+            var oRaw = oRow.raw || {};
+            var oPayload = {
+                PersonalNumber: safeText(oRaw.PersonalNumber), FullName: safeText(oRaw.FullName),
+                CenterOffice: safeText(oRaw.CenterOffice), Zone: safeText(oRaw.Zone), Base: safeText(oRaw.Base),
+                DateJustification: safeText(oRaw.DateJustification), TypeRegister: safeText(oRaw.TypeRegister),
+                TypeRegisterDescrip: safeText(oRaw.TypeRegisterDescrip), IncidentType: safeText(oRaw.IncidentType),
+                ReasonType: safeText(oRaw.ReasonType), JustificationStatus: safeText(oRaw.JustificationStatus),
+                DescriptionStatus: safeText(oRaw.DescriptionStatus), Email: safeText(oRaw.Email),
+                CommentsLog: safeText(oRaw.CommentsLog),
+                DecisionRH: sDecisionRH, CommentsRH: safeText(oRow.commentsRH) || safeText(oRaw.CommentsRH),
+                StatusRequest: safeText(oRaw.StatusRequest), MessageRequest: safeText(oRaw.MessageRequest)
+            };
+            this._requestInProgress = true;
+            this.getModel("review").setProperty("/busy", true);
+            return this._attendanceApi.submitJustificationDecision(oPayload).then(function () {
+                MessageToast.show(sDecisionRH === "A" ? "Justificación aceptada" : "Justificación rechazada");
+                return this._loadRows(this.getModel("review").getProperty("/type"));
+            }.bind(this)).catch(function (oError) {
+                MessageBox.error("SAP no pudo procesar la decisión. " + (oError.message || String(oError)));
+            }).finally(function () {
+                this._requestInProgress = false;
+                this.getModel("review").setProperty("/busy", false);
+            }.bind(this));
+        },
+
+        onEmployeePress: function (oEvent) {
+            var oRow = oEvent.getSource().getBindingContext("review").getObject();
+            if (oRow.employeeId) { this.navTo("userPerformance", { employeeId: oRow.employeeId }); }
+        },
+        onBack: function () { this.navTo("overview"); }
+    });
+});
+
+

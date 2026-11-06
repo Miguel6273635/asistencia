@@ -32,22 +32,12 @@ sap.ui.define([
     CHECK_OUT: "P20"
   };
 
-  // Fecha inicial solicitada para la consulta temporal de marcajes. DateTo se
-  // calcula siempre con la fecha actual y el correo ingresado cambia en cada acceso.
-  var HISTORY_START_DATE = "2026-10-28";
-
   function localIsoDate(date) {
     return date.getFullYear() + "-" + String(date.getMonth() + 1).padStart(2, "0") + "-" + String(date.getDate()).padStart(2, "0");
   }
 
-  function employeeInitials(name) {
-    return String(name || "")
-      .trim()
-      .split(/\s+/)
-      .filter(Boolean)
-      .slice(0, 2)
-      .map(function (part) { return part.charAt(0).toUpperCase(); })
-      .join("") || "US";
+  function localClock(date) {
+    return String(date.getHours()).padStart(2, "0") + ":" + String(date.getMinutes()).padStart(2, "0");
   }
 
   function normalizeClock(value) {
@@ -142,14 +132,15 @@ sap.ui.define([
         hasActiveIdentity: IdentityService.hasActiveIdentity()
       });
       this._selectedSection = "attendance";
+      this._markRequestInProgress = false;
       this.getView().setModel(new JSONModel({ sideExpanded: false }), "ui");
       this._updateActionUI();
       this._startClock();
+      this.getView().getModel("app").setProperty("/requiresIdentity", false);
       if (IdentityService.hasActiveIdentity()) {
-        this.getView().getModel("app").setProperty("/requiresIdentity", false);
         this._loadEmployeeAfterInitialData(false);
       } else {
-        this.getView().getModel("app").setProperty("/requiresIdentity", true);
+        this._initializeAuthenticatedIdentity();
       }
     },
 
@@ -260,115 +251,6 @@ sap.ui.define([
       });
     },
 
-    onIdentitySubmit: function () {
-      var appModel = this.getView().getModel("app");
-      var email = String(appModel.getProperty("/identityInput") || "").trim().toLowerCase();
-
-      appModel.setProperty("/identityLookupError", "");
-
-      if (!email) {
-        appModel.setProperty("/identityLookupError", "Escribe el correo del empleado.");
-        return;
-      }
-
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-        appModel.setProperty("/identityLookupError", "El correo no tiene un formato válido.");
-        return;
-      }
-
-      appModel.setProperty("/identityInput", email);
-      IdentityService.setAuthenticatedIdentity({
-        personalNumber: "",
-        email: email,
-        userName: email,
-        displayName: "",
-        device: "",
-        source: "manual-email"
-      });
-      this._activeIdentity = IdentityService.getActiveIdentity();
-      this._loadProfileFromHistory(email);
-    },
-
-    onIdentityInputLiveChange: function () {
-      this.getView().getModel("app").setProperty("/identityLookupError", "");
-    },
-
-    _loadProfileFromHistory: function (email) {
-      var appModel = this.getView().getModel("app");
-      var attendanceModel = this.getView().getModel("attendance");
-      var dataSource = this.getOwnerComponent().getManifestEntry("/sap.app/dataSources/attendanceOData");
-      var dateTo = localIsoDate(new Date());
-
-      appModel.setProperty("/employeeLoading", true);
-      appModel.setProperty("/historyLoading", true);
-      appModel.setProperty("/employeeError", "");
-      appModel.setProperty("/historyError", "");
-      appModel.setProperty("/identityLookupError", "");
-
-      Diagnostics.info("FLOW", "Consultando el historial con el correo ingresado", {
-        entitySet: "AttendanceHistorySet",
-        identifier: email,
-        filterField: "Email",
-        dateFrom: HISTORY_START_DATE.replace(/-/g, ""),
-        dateTo: dateTo.replace(/-/g, "")
-      });
-
-      return AttendanceService.readHistory(dataSource.uri, email, HISTORY_START_DATE, "", {
-        dateTo: dateTo,
-        filterField: "Email"
-      }).then(function (history) {
-        if (!history.length) {
-          throw new Error("No se encontraron marcajes para " + email + " en el periodo solicitado.");
-        }
-
-        var profile = history[0].employee || {};
-        var employee = {
-          id: profile.id || email,
-          name: profile.name || email,
-          initials: employeeInitials(profile.name || email),
-          role: "Colaborador Mitsubishi",
-          position: profile.position || "Colaborador",
-          center: profile.center || "Centro no asignado",
-          centerCode: profile.centerCode || "",
-          address: "",
-          schedule: profile.schedule || profile.scheduleCode || "",
-          scheduleCode: profile.scheduleCode || "",
-          scheduleDetail: profile.scheduleDetail || "",
-          workStart: "",
-          workEnd: "",
-          mealStart: "",
-          mealEnd: "",
-          email: profile.email || email,
-          zone: profile.zone || ""
-        };
-
-        attendanceModel.setProperty("/employee", employee);
-        attendanceModel.setProperty("/history", history);
-        appModel.setProperty("/employeeSource", "AttendanceHistorySet");
-        appModel.setProperty("/requiresIdentity", false);
-        this._applyTodayFromHistory(history);
-
-        Diagnostics.info("FLOW", "Perfil creado desde AttendanceHistorySet", {
-          employee: employee,
-          historyCount: history.length
-        });
-
-        return this._loadSchedule(employee).then(function () {
-          return history;
-        });
-      }.bind(this)).catch(function (error) {
-        Diagnostics.error("FLOW", "No fue posible identificar al colaborador desde AttendanceHistorySet", error);
-        appModel.setProperty("/identityLookupError", error.message);
-        appModel.setProperty("/requiresIdentity", true);
-        IdentityService.clearIdentity();
-        this._activeIdentity = null;
-        return [];
-      }.bind(this)).finally(function () {
-        appModel.setProperty("/employeeLoading", false);
-        appModel.setProperty("/historyLoading", false);
-      });
-    },
-
     _loadSchedule: function (employee) {
       var attendanceModel = this.getView().getModel("attendance");
       var dataSource = this.getOwnerComponent().getManifestEntry("/sap.app/dataSources/attendanceOData");
@@ -400,23 +282,57 @@ sap.ui.define([
       this._initializeAuthenticatedIdentity();
     },
 
+    onLogout: function () {
+      MessageBox.confirm("¿Deseas cerrar la sesión de Work Zone?", {
+        title: "Cerrar sesión",
+        emphasizedAction: MessageBox.Action.OK,
+        onClose: function (result) {
+          if (result === MessageBox.Action.OK) {
+            this._performLogout();
+          }
+        }.bind(this)
+      });
+    },
+
+    _performLogout: function () {
+      var container = window.sap && window.sap.ushell && window.sap.ushell.Container;
+
+      IdentityService.clearIdentity();
+      this._activeIdentity = null;
+      this._markRequestInProgress = false;
+      this.getView().getModel("app").setProperty("/busy", true);
+
+      try {
+        if (container && typeof container.logout === "function") {
+          var logoutResult = container.logout();
+          if (logoutResult && typeof logoutResult.catch === "function") {
+            logoutResult.catch(function () {
+              window.location.replace("/do/logout");
+            });
+          }
+          return;
+        }
+      } catch (error) {
+        Diagnostics.warn("IDENTITY", "El shell no pudo cerrar la sesión; se usará la ruta estándar", {
+          message: error.message
+        });
+      }
+
+      window.location.replace("/do/logout");
+    },
+
     onRefreshData: function () {
       var appModel = this.getView().getModel("app");
 
       if (!IdentityService.hasActiveIdentity()) {
-        appModel.setProperty("/requiresIdentity", true);
+        this._initializeAuthenticatedIdentity();
         return;
       }
 
       appModel.setProperty("/employeeError", "");
       appModel.setProperty("/historyError", "");
       MessageToast.show("Actualizando datos desde SAP");
-      var identity = IdentityService.getActiveIdentity();
-      if (identity.source === "manual-email" && identity.email) {
-        this._loadProfileFromHistory(identity.email);
-      } else {
-        this._loadEmployee(false);
-      }
+      this._loadEmployee(false);
     },
 
     _loadHistory: function (employee, rejectOnError) {
@@ -452,14 +368,39 @@ sap.ui.define([
       });
     },
 
+    _markStorageKey: function (action, employee) {
+      var employeeId = String(employee && (employee.id || employee.email) || "").trim().toLowerCase();
+      return "mitsu.checkin.sent." + localIsoDate(new Date()) + "." + employeeId + "." + action;
+    },
+
+    _rememberMark: function (action, employee, value) {
+      try {
+        window.sessionStorage.setItem(this._markStorageKey(action, employee), String(value || ""));
+      } catch (error) {
+        Diagnostics.warn("FLOW", "No fue posible guardar la protección local contra doble marcaje", {
+          action: action,
+          message: error.message
+        });
+      }
+    },
+
+    _rememberedMark: function (action, employee) {
+      try {
+        return window.sessionStorage.getItem(this._markStorageKey(action, employee)) || "";
+      } catch (error) {
+        return "";
+      }
+    },
+
     _applyTodayFromHistory: function (history) {
       var model = this.getView().getModel("attendance");
       var todayIso = localIsoDate(new Date());
       var today = history.filter(function (item) { return item.isoDate === todayIso; })[0] || {};
-      var entry = today.entry || "—";
-      var mealStart = today.mealStart || "—";
-      var mealEnd = today.mealEnd || "—";
-      var exit = today.exit || "—";
+      var employee = model.getProperty("/employee") || {};
+      var entry = today.entry || this._rememberedMark("CHECK_IN", employee) || "—";
+      var mealStart = today.mealStart || this._rememberedMark("MEAL_START", employee) || "—";
+      var mealEnd = today.mealEnd || this._rememberedMark("MEAL_END", employee) || "—";
+      var exit = today.exit || this._rememberedMark("CHECK_OUT", employee) || "—";
       var nextAction = "CHECK_IN";
 
       if (entry !== "—") { nextAction = "MEAL_START"; }
@@ -547,7 +488,8 @@ sap.ui.define([
       var employeeTravel = [employee.status, employee.statusDescription, employee.registerType]
         .some(isTravelStatus);
       var isLateNow = !hasEntry && startMinutes !== null && currentMinutes > startMinutes;
-      var isEarlyExit = nextAction === "CHECK_OUT" && endMinutes !== null && currentMinutes < endMinutes;
+      var canCheckOut = hasEntry && !hasExit;
+      var isEarlyExit = canCheckOut && endMinutes !== null && currentMinutes < endMinutes;
       var mealStartAllowed = !isMealWindowRestricted || isWithinMealWindow;
       var mealEndAllowed = !isMealWindowRestricted || isWithinMealWindow;
       var scheduleLabel = schedule.start && schedule.end ? schedule.start + "–" + schedule.end : "";
@@ -580,6 +522,7 @@ sap.ui.define([
       model.setProperty("/today/nextAction", nextAction);
       model.setProperty("/today/isLateNow", isLateNow);
       model.setProperty("/today/isEarlyExit", isEarlyExit);
+      model.setProperty("/today/canCheckOut", canCheckOut);
       model.setProperty("/today/isTravel", historyTravel || employeeTravel);
       model.setProperty("/today/isMealWindowRestricted", isMealWindowRestricted);
       model.setProperty("/today/isWithinMealWindow", isWithinMealWindow);
@@ -600,6 +543,9 @@ sap.ui.define([
 
       if (explicitFalse(employee.authorisedRegister)) {
         return false;
+      }
+      if (action === "CHECK_OUT" && model.getProperty("/today/canCheckOut")) {
+        return true;
       }
       if (action === "MEAL_START" && model.getProperty("/today/mealStartAllowed") === false) {
         return false;
@@ -690,7 +636,8 @@ sap.ui.define([
       this._getLateJustificationDialog().then(function (dialog) {
         dialog.close();
       });
-      MessageToast.show("Justificación guardada");
+      MessageToast.show("Enviando justificación y entrada a SAP");
+      this._register("CHECK_IN");
     },
 
     onCancelLateJustification: function () {
@@ -749,7 +696,8 @@ sap.ui.define([
       this._getEarlyExitJustificationDialog().then(function (dialog) {
         dialog.close();
       });
-      MessageToast.show("Justificación de salida guardada");
+      MessageToast.show("Enviando justificación y salida a SAP");
+      this._register("CHECK_OUT");
     },
 
     onCancelEarlyExitJustification: function () {
@@ -786,10 +734,14 @@ sap.ui.define([
 
       var model = this.getView().getModel("attendance");
       var action = model.getProperty("/today/nextAction");
-      if (action !== requestedAction) {
+      var hasEntry = model.getProperty("/today/entry") && model.getProperty("/today/entry") !== "—";
+      var hasExit = model.getProperty("/today/exit") && model.getProperty("/today/exit") !== "—";
+      var checkoutWithoutMeal = requestedAction === "CHECK_OUT" && hasEntry && !hasExit;
+      if (action !== requestedAction && !checkoutWithoutMeal) {
         MessageToast.show("Completa primero el marcaje anterior");
         return;
       }
+      action = requestedAction;
       var config = ACTION_CONFIG[action];
       if (!config) {
         MessageToast.show("La jornada ya está finalizada");
@@ -825,7 +777,6 @@ sap.ui.define([
         emphasizedAction: MessageBox.Action.OK,
         onClose: function (result) {
           if (result === MessageBox.Action.OK) {
-            this.getView().getModel("app").setProperty("/busy", true);
             this._register(action);
           }
         }.bind(this)
@@ -843,6 +794,7 @@ sap.ui.define([
 
       var employee = attendanceModel.getProperty("/employee");
       var config = ACTION_CONFIG[action];
+      var registeredValue = config && attendanceModel.getProperty("/today/" + config.field);
 
       // Evitar múltiples POST simultáneos.
       if (this._markRequestInProgress) {
@@ -850,6 +802,29 @@ sap.ui.define([
           "Ya existe un marcaje en proceso."
         );
         return;
+      }
+
+      if (!config || !employee || !employee.id) {
+        MessageBox.error("No se puede registrar el evento porque el colaborador todavía no está identificado.");
+        return Promise.resolve();
+      }
+
+      if (registeredValue && registeredValue !== "—") {
+        MessageToast.show("Este marcaje ya está registrado. Se actualizarán los datos desde SAP.");
+        this.onRefreshData();
+        return Promise.resolve();
+      }
+
+      if ((action === "CHECK_OUT" && !attendanceModel.getProperty("/today/canCheckOut")) ||
+          (action !== "CHECK_OUT" && attendanceModel.getProperty("/today/nextAction") !== action)) {
+        MessageToast.show("El marcaje ya no corresponde al estado actual de la jornada");
+        this.onRefreshData();
+        return Promise.resolve();
+      }
+
+      if (!this._isActionAuthorized(action)) {
+        MessageToast.show("Este marcaje no está autorizado por SAP");
+        return Promise.resolve();
       }
 
       this._markRequestInProgress = true;
@@ -956,6 +931,11 @@ sap.ui.define([
             );
           }
 
+          var optimisticValue = localClock(result.registeredAt || new Date());
+          attendanceModel.setProperty("/today/" + config.field, optimisticValue);
+          this._rememberMark(action, employee, optimisticValue);
+          this._evaluateAttendanceContext();
+
           Diagnostics.info(
             "MARK",
             "Marcaje confirmado por SAP",
@@ -973,19 +953,13 @@ sap.ui.define([
             ? "Salida temprana registrada"
             : (
               wasLateEntry
-                ? "Entrada tarde registrada"
+                ? "Entrada tarde registrada con su justificación"
                 : config.title + " correctamente"
             );
 
           MessageToast.show(successMessage, {
             duration: 4000
           });
-
-          // Evitar otro POST mientras no se sincronice la UI.
-          attendanceModel.setProperty(
-            "/today/nextAction",
-            null
-          );
 
           // Actualización del historial independiente.
           this._confirmMarkInHistory(
@@ -1253,10 +1227,11 @@ sap.ui.define([
       if (!model) { return; }
       var update = function () {
         var action = model.getProperty("/today/nextAction");
-        this.byId("checkInAction").setEnabled(action === "CHECK_IN" && this._isActionAuthorized("CHECK_IN"));
-        this.byId("mealStartAction").setEnabled(action === "MEAL_START" && this._isActionAuthorized("MEAL_START"));
-        this.byId("mealEndAction").setEnabled(action === "MEAL_END" && this._isActionAuthorized("MEAL_END"));
-        this.byId("checkOutAction").setEnabled(action === "CHECK_OUT" && this._isActionAuthorized("CHECK_OUT"));
+        var idle = !this._markRequestInProgress;
+        this.byId("checkInAction").setEnabled(idle && action === "CHECK_IN" && this._isActionAuthorized("CHECK_IN"));
+        this.byId("mealStartAction").setEnabled(idle && action === "MEAL_START" && this._isActionAuthorized("MEAL_START"));
+        this.byId("mealEndAction").setEnabled(idle && action === "MEAL_END" && this._isActionAuthorized("MEAL_END"));
+        this.byId("checkOutAction").setEnabled(idle && Boolean(model.getProperty("/today/canCheckOut")) && this._isActionAuthorized("CHECK_OUT"));
 
         STEP_CONFIG.forEach(function (step) {
           var control = this.byId(step.id);

@@ -4,7 +4,7 @@
     "id": "com.mitsu.checkin",
     "type": "application",
     "applicationVersion": {
-      "version": "0.1.30"
+      "version": "0.1.32"
     },
     "title": "Mi asistencia",
     "description": "Marcajes de entrada, comida y salida para el personal de Mitsubishi",

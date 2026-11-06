@@ -13,7 +13,7 @@ sap.ui.define([
         onInit: function () {
             this.setModel(new JSONModel({
                 granularity: "week",
-                referenceDate: "2026-10-25",
+                referenceDate: periodHelper.toKey(new Date()),
                 periodLabel: "",
                 allSchedules: [],
                 schedules: [],
@@ -139,7 +139,11 @@ sap.ui.define([
             this.getModel("view").setProperty("/riskSchedules", aRiskSchedules);
             this.getModel("view").setProperty("/typeStats", aTypeStats);
             console.groupCollapsed("[Monitor][FILTERS][Horarios][PERIOD]");
-            console.info({ period: oPeriod, employees: aEmployees.length, schedules: aSchedules.length, records: aPeriodRecords.length });
+            console.info("[Monitor][Horarios] Catálogos preparados", {
+                schedules: aSchedules.length,
+                activeSchedules: aActive.length,
+                scheduleTypes: aTypes.length
+            });
             console.groupEnd();
         },
 
