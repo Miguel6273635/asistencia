@@ -23,7 +23,10 @@
                             <Text text="{= ${view>/employee/number} + ' · ' + ${view>/employee/center} + ' · ' + ${view>/employee/scheduleName}}" class="pageSubtitle" />
                         </VBox>
                     </HBox>
-                    <Button text="Ver ubicación" icon="sap-icon://map-2" type="Transparent" press=".onOpenMap" />
+                    <HBox>
+                        <Button text="Turno y horario" icon="sap-icon://appointment-2" type="Transparent" press=".onOpenSchedule" />
+                        <Button text="Ver ubicación" icon="sap-icon://map-2" type="Transparent" press=".onOpenMap" />
+                    </HBox>
                 </HBox>
 
                 <OverflowToolbar class="filterBar performanceFilterBar sapUiSmallMarginTop sapUiSmallMarginBottom">

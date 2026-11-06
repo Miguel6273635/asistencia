@@ -1,0 +1,16 @@
+.monitorToolPage .sapTntNLI {
+  background: transparent !important;
+}
+
+.monitorToolPage .sapTntNavLIItem:hover,
+.monitorToolPage .sapTntNavLIGroupItem:hover,
+.monitorToolPage .sapTntNLI > a:hover {
+  background: rgba(255, 255, 255, 0.075) !important;
+}
+
+.monitorToolPage .sapTntNavLIItemSelected,
+.monitorToolPage .sapTntNavLIItemSelected:hover,
+.monitorToolPage .sapTntNLISelected,
+.monitorToolPage .sapTntNLISelected:hover {
+  background: transparent !important;
+}

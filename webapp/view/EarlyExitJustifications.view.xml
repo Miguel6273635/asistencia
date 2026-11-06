@@ -1,0 +1,157 @@
+<!-- <mvc:View controllerName="com.mitsu.monitorasistencia.controller.Justifications" xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m">
+  <Page showHeader="false" busy="{review>/busy}" busyIndicatorDelay="0" class="monitorPage justificationReviewPage"><content><VBox class="pageContainer compactPage">
+    <Breadcrumbs currentLocationText="Salidas anticipadas"><Link text="Resumen" press=".onBack" /></Breadcrumbs>
+    <HBox justifyContent="SpaceBetween" alignItems="Center" wrap="Wrap" class="reviewPageHeading"><VBox><Title text="{review>/title}" level="H1" class="pageTitle" /><Text text="{review>/subtitle}" class="pageSubtitle" /></VBox><ObjectStatus text="{review>/periodLabel}" state="Information" inverted="true" /></HBox>
+    <HBox wrap="Wrap" class="reviewKpiRow"><VBox class="reviewKpiCard"><Text text="Salidas anticipadas" /><ObjectNumber number="{review>/count}" state="Warning" /><Text text="Registros consultados" /></VBox><VBox class="reviewKpiCard reviewKpiPending"><Text text="Justificaciones pendientes" /><ObjectNumber number="{review>/pendingCount}" state="Error" /><Text text="Requieren revisión" /></VBox><VBox class="reviewKpiCard reviewKpiResolved"><Text text="Justificaciones resueltas" /><ObjectNumber number="{review>/resolvedCount}" state="Success" /><Text text="Aprobadas o rechazadas" /></VBox></HBox>
+    <Panel class="dashboardPanel reviewTablePanel"><headerToolbar><OverflowToolbar><Title text="Detalle de salidas anticipadas" /><ToolbarSpacer /><SearchField width="20rem" placeholder="Buscar empleado, centro o justificación" liveChange=".onSearch" /><Button text="Actualizar" icon="sap-icon://refresh" type="Emphasized" press=".onRefresh" /></OverflowToolbar></headerToolbar><content>
+      <Table items="{review>/filteredRows}" growing="true" growingScrollToLoad="true" noDataText="No hay salidas anticipadas para el periodo seleccionado" sticky="ColumnHeaders" class="reviewTable">
+        <columns><Column width="14rem"><Text text="Empleado" /></Column><Column width="7rem"><Text text="Núm. empleado" /></Column><Column width="7rem"><Text text="Fecha" /></Column><Column width="11rem"><Text text="Centro" /></Column><Column width="12rem"><Text text="Horario" /></Column><Column width="6rem" hAlign="Center"><Text text="Salida" /></Column><Column width="10rem"><Text text="Justificación" /></Column><Column width="15rem" minScreenWidth="Desktop" demandPopin="true"><Text text="Comentario RH" /></Column><Column width="8rem"><Text text="Estado" /></Column><Column width="8rem" hAlign="Center"><Text text="Decisión" /></Column></columns>
+        <items><ColumnListItem><cells><Link text="{review>employee}" press=".onEmployeePress" /><Text text="{review>personalNumber}" /><Text text="{review>date}" /><Text text="{review>center}" /><Text text="{review>schedule}" /><ObjectStatus text="{review>eventTime}" state="Warning" /><Button text="Ver justificación" icon="sap-icon://document-text" type="Transparent" visible="{review>hasJustification}" press=".onShowJustification" /><Input value="{review>commentsRH}" placeholder="Agregar comentario" enabled="{= ${review>decision} === 'pending' }" /><ObjectStatus text="{review>approvalText}" state="{review>approvalState}" inverted="true" /><HBox justifyContent="Center"><Button icon="sap-icon://accept" type="Accept" tooltip="Aceptar justificación" enabled="{= ${review>decision} === 'pending' }" press=".onApprove" /><Button icon="sap-icon://decline" type="Reject" tooltip="Rechazar justificación" enabled="{= ${review>decision} === 'pending' }" press=".onReject" class="sapUiTinyMarginBegin" /></HBox></cells></ColumnListItem></items>
+      </Table>
+    </content></Panel>
+  </VBox></content></Page>
+</mvc:View>
+ -->
+<mvc:View
+  controllerName="com.mitsu.monitorasistencia.controller.Justifications"
+  xmlns:mvc="sap.ui.core.mvc"
+  xmlns="sap.m">
+  <Page
+    showHeader="false"
+    busy="{review>/busy}"
+    busyIndicatorDelay="0"
+    class="monitorPage justificationReviewPage">
+    <content>
+      <VBox class="pageContainer compactPage">
+        <Breadcrumbs currentLocationText="Salidas anticipadas">
+          <Link text="Resumen" press=".onBack" />
+        </Breadcrumbs>
+
+        <HBox
+          justifyContent="SpaceBetween"
+          alignItems="Center"
+          wrap="Wrap"
+          class="reviewPageHeading">
+          <VBox>
+            <Title text="{review>/title}" level="H1" class="pageTitle" />
+            <Text text="{review>/subtitle}" class="pageSubtitle" />
+          </VBox>
+          <ObjectStatus
+            text="{review>/periodLabel}"
+            state="Information"
+            inverted="true" />
+        </HBox>
+
+        <HBox wrap="Wrap" class="reviewKpiRow">
+          <VBox class="reviewKpiCard">
+            <Text text="Salidas anticipadas" />
+            <ObjectNumber number="{review>/count}" state="Warning" />
+            <Text text="Registros consultados" />
+          </VBox>
+          <VBox class="reviewKpiCard reviewKpiPending">
+            <Text text="Justificaciones pendientes" />
+            <ObjectNumber number="{review>/pendingCount}" state="Error" />
+            <Text text="Requieren revisión" />
+          </VBox>
+          <VBox class="reviewKpiCard reviewKpiResolved">
+            <Text text="Justificaciones resueltas" />
+            <ObjectNumber number="{review>/resolvedCount}" state="Success" />
+            <Text text="Aprobadas o rechazadas" />
+          </VBox>
+        </HBox>
+
+        <Panel class="dashboardPanel reviewTablePanel">
+          <headerToolbar>
+            <OverflowToolbar>
+              <Title text="Detalle de salidas anticipadas" />
+              <ToolbarSpacer />
+              <SearchField
+                width="20rem"
+                placeholder="Buscar empleado, centro o justificación"
+                liveChange=".onSearch" />
+              <Button
+                text="Actualizar"
+                icon="sap-icon://refresh"
+                type="Emphasized"
+                press=".onRefresh" />
+            </OverflowToolbar>
+          </headerToolbar>
+          <content>
+            <Table
+              items="{review>/filteredRows}"
+              growing="true"
+              growingScrollToLoad="true"
+              noDataText="No hay salidas anticipadas para el periodo seleccionado"
+              sticky="ColumnHeaders"
+              class="reviewTable">
+              <columns>
+                <Column width="14rem"><Text text="Empleado" /></Column>
+                <Column width="7rem"><Text text="Núm. empleado" /></Column>
+                <Column width="7rem"><Text text="Fecha" /></Column>
+                <Column width="11rem"><Text text="Centro" /></Column>
+                <Column width="12rem"><Text text="Horario" /></Column>
+                <Column width="9rem" hAlign="Center"><Text text="Entrada" /></Column>
+                <Column width="9rem" hAlign="Center"><Text text="Salida" /></Column>
+                <Column width="10rem"><Text text="Justificación" /></Column>
+                <Column width="15rem" minScreenWidth="Desktop" demandPopin="true">
+                  <Text text="Comentario RH" />
+                </Column>
+                <Column width="8rem"><Text text="Estado" /></Column>
+                <Column width="8rem" hAlign="Center"><Text text="Decisión" /></Column>
+              </columns>
+              <items>
+                <ColumnListItem>
+                  <cells>
+                    <Link text="{review>employee}" press=".onEmployeePress" />
+                    <Text text="{review>personalNumber}" />
+                    <Text text="{review>date}" />
+                    <Text text="{review>center}" />
+                    <Text
+                      text="{= ${review>raw/ScheduleDetail} || ${review>schedule} || '—' }"
+                      wrapping="true" />
+                    <ObjectStatus text="{review>entryTime}" />
+                    <ObjectStatus text="{review>exitTime}" state="Warning" />
+                    <Button
+                      text="Ver justificación"
+                      icon="sap-icon://document-text"
+                      type="Transparent"
+                      visible="{review>hasJustification}"
+                      press=".onShowJustification" />
+                    <Input
+                      value="{review>commentsRH}"
+                      placeholder="Comentario obligatorio"
+                      required="{= ${review>decision} === 'pending' }"
+                      enabled="{= ${review>decision} === 'pending' }"
+                      valueState="{review>commentsRHState}"
+                      valueStateText="Captura un comentario antes de aprobar o rechazar"
+                      liveChange=".onCommentsRHChange" />
+                    <ObjectStatus
+                      text="{review>approvalText}"
+                      state="{review>approvalState}"
+                      inverted="true" />
+                    <HBox justifyContent="Center">
+                      <Button
+                        icon="sap-icon://accept"
+                        type="Accept"
+                        tooltip="Aceptar justificación"
+                        enabled="{= ${review>decision} === 'pending' &amp;&amp; !!${review>commentsRH} }"
+                        press=".onApprove" />
+                      <Button
+                        icon="sap-icon://decline"
+                        type="Reject"
+                        tooltip="Rechazar justificación"
+                        enabled="{= ${review>decision} === 'pending' &amp;&amp; !!${review>commentsRH} }"
+                        press=".onReject"
+                        class="sapUiTinyMarginBegin" />
+                    </HBox>
+                  </cells>
+                </ColumnListItem>
+              </items>
+            </Table>
+          </content>
+        </Panel>
+      </VBox>
+    </content>
+  </Page>
+</mvc:View>
+

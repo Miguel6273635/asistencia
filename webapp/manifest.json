@@ -4,10 +4,39 @@
     "id": "com.mitsu.monitorasistencia",
     "type": "application",
     "applicationVersion": {
-      "version": "0.2.0"
+      "version": "0.4.1"
     },
     "title": "Monitor de Asistencia",
-    "description": "Control y monitoreo de asistencia, turnos y horarios"
+    "description": "Control y monitoreo de asistencia, turnos y horarios",
+    "crossNavigation": {
+      "inbounds": {
+        "ZMonitorAsistencia-display": {
+          "semanticObject": "ZMonitorAsistencia",
+          "action": "display",
+          "title": "Monitor de Asistencia",
+          "subTitle": "Control de asistencia y horarios",
+          "info": "Mitsubishi Electric",
+          "icon": "sap-icon://employee",
+          "signature": {
+            "parameters": {},
+            "additionalParameters": "allowed"
+          }
+        }
+      }
+    },
+    "dataSources": {
+      "attendanceService": {
+        "uri": "sap/opu/odata/sap/ZHMC_ATTENDANCE_MONITORING_SRV/",
+        "type": "OData",
+        "settings": {
+          "odataVersion": "2.0"
+        }
+      }
+    }
+  },
+  "sap.cloud": {
+    "public": true,
+    "service": "mitsu.monitorasistencia"
   },
   "sap.ui": {
     "technology": "UI5",
@@ -27,6 +56,8 @@
         "sap.f": {},
         "sap.tnt": {},
         "sap.ui.layout": {},
+        "sap.ui.unified": {},
+        "sap.ui.export": {},
         "sap.viz": {},
         "sap.ui.vbm": {}
       }
@@ -38,7 +69,6 @@
     "models": {
       "attendance": {
         "type": "sap.ui.model.json.JSONModel",
-        "uri": "model/data.json",
         "settings": {
           "sizeLimit": 1000
         }
@@ -79,11 +109,6 @@
           "target": "centers"
         },
         {
-          "pattern": "center/{centerId}",
-          "name": "center",
-          "target": "center"
-        },
-        {
           "pattern": "records/{employeeId}",
           "name": "records",
           "target": "records"
@@ -102,6 +127,16 @@
           "pattern": "user-performance/{employeeId}",
           "name": "userPerformance",
           "target": "userPerformance"
+        },
+        {
+          "pattern": "justifications/late",
+          "name": "lateJustifications",
+          "target": "lateJustifications"
+        },
+        {
+          "pattern": "justifications/early-exit",
+          "name": "earlyExitJustifications",
+          "target": "earlyExitJustifications"
         },
         {
           "pattern": "map",
@@ -133,10 +168,6 @@
           "viewId": "centers",
           "viewName": "Centers"
         },
-        "center": {
-          "viewId": "center",
-          "viewName": "Center"
-        },
         "records": {
           "viewId": "records",
           "viewName": "Records"
@@ -152,6 +183,14 @@
         "userPerformance": {
           "viewId": "userPerformance",
           "viewName": "UserPerformance"
+        },
+        "lateJustifications": {
+          "viewId": "lateJustifications",
+          "viewName": "LateJustifications"
+        },
+        "earlyExitJustifications": {
+          "viewId": "earlyExitJustifications",
+          "viewName": "EarlyExitJustifications"
         },
         "map": {
           "viewId": "map",

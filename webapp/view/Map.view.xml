@@ -1,3 +1,4 @@
+
 <mvc:View
     controllerName="com.mitsu.monitorasistencia.controller.Map"
     xmlns:mvc="sap.ui.core.mvc"
@@ -5,47 +6,171 @@
     xmlns:core="sap.ui.core"
     xmlns:l="sap.ui.layout"
     xmlns:vbm="sap.ui.vbm">
-    <Page showHeader="false" class="monitorPage">
+
+    <Page
+        showHeader="false"
+        class="monitorPage">
+
         <content>
             <VBox class="pageContainer compactPage mapPage">
-                <Breadcrumbs currentLocationText="{map>/currentLocationText}" class="sapUiTinyMarginBottom">
-                    <Link text="Inicio" press=".onNavOverview" />
-                    <Link text="Mapa general" press=".onNavMap" visible="{= ${map>/mode} === 'zone'}" />
+
+                <Breadcrumbs
+                    currentLocationText="{map>/currentLocationText}"
+                    class="sapUiTinyMarginBottom">
+
+                    <Link
+                        text="Inicio"
+                        press=".onNavOverview" />
+
+                    <Link
+                        text="Mapa general"
+                        press=".onNavMap"
+                        visible="{= ${map>/mode} === 'zone'}" />
+
                 </Breadcrumbs>
 
-                <HBox justifyContent="SpaceBetween" alignItems="Center" class="mapTitleRow">
+                <HBox
+                    justifyContent="SpaceBetween"
+                    alignItems="Center"
+                    class="mapTitleRow">
+
                     <VBox>
-                        <Title text="{map>/title}" level="H1" class="pageTitle" />
-                        <Text text="{map>/subtitle}" class="pageSubtitle" />
+                        <Title
+                            text="{map>/title}"
+                            level="H1"
+                            class="pageTitle" />
+
+                        <Text
+                            text="{map>/subtitle}"
+                            class="pageSubtitle" />
                     </VBox>
+
                     <ObjectStatus
-                        text="Datos de prueba"
+                        text="Datos SAP"
                         icon="sap-icon://database"
-                        state="Information"
+                        state="Success"
                         class="mapDemoBadge" />
+
                 </HBox>
 
-                <OverflowToolbar class="filterBar mapToolbar sapUiSmallMarginTop sapUiSmallMarginBottom">
+                <!-- FILTROS DEL MAPA -->
+                <OverflowToolbar
+                    class="filterBar mapToolbar sapUiSmallMarginTop sapUiSmallMarginBottom">
+
                     <VBox class="filterField mapZoneSelector">
                         <Label text="Vista geográfica" />
+
                         <Select
-                            width="15rem"
+                            width="14rem"
                             selectedKey="{map>/currentZoneId}"
                             items="{map>/zoneOptions}"
                             change=".onZoneSelectorChange"
                             class="modernSelect">
-                            <core:Item key="{map>id}" text="{map>name}" />
+
+                            <core:Item
+                                key="{map>id}"
+                                text="{map>name}" />
+
                         </Select>
                     </VBox>
+
                     <ToolbarSeparator />
-                    <ObjectStatus text="{map>/summaryText}" icon="sap-icon://map-2" state="Information" />
+
+                    <VBox class="filterField">
+                        <Label text="Fecha desde" />
+
+                        <DatePicker
+                            id="mapDateFrom"
+                            width="10rem"
+                            value="{map>/dateFrom}"
+                            valueFormat="yyyy-MM-dd"
+                            displayFormat="dd/MM/yyyy"
+                            placeholder="Desde" />
+                    </VBox>
+
+                    <VBox class="filterField">
+                        <Label text="Fecha hasta" />
+
+                        <DatePicker
+                            id="mapDateTo"
+                            width="10rem"
+                            value="{map>/dateTo}"
+                            valueFormat="yyyy-MM-dd"
+                            displayFormat="dd/MM/yyyy"
+                            placeholder="Hasta" />
+                    </VBox>
+
+                    <Button
+                        text="Aplicar fechas"
+                        icon="sap-icon://filter"
+                        type="Emphasized"
+                        press=".onApplyDateFilter" />
+
+                    <ToolbarSeparator />
+
+                    <ObjectStatus
+                        text="{map>/summaryText}"
+                        icon="sap-icon://map-2"
+                        state="Information" />
+
                     <ToolbarSpacer />
-                    <ObjectStatus text="{map>/lastRefreshText}" icon="sap-icon://synchronize" state="Success" class="sapUiSmallMarginEnd" />
-                    <Button text="Actualizar" icon="sap-icon://refresh" type="Emphasized" press=".onRefreshLocations" />
+
+                    <Button
+                        text="Actualizar"
+                        icon="sap-icon://refresh"
+                        type="Emphasized"
+                        press=".onRefreshLocations" />
+
                 </OverflowToolbar>
 
-                <l:Grid defaultSpan="XL9 L8 M12 S12" hSpacing="1" vSpacing="1" class="mapWorkspace">
-                    <Panel headerText="{map>/mapPanelTitle}" class="dashboardPanel mapCanvasPanel">
+                <!-- ESTADO DE LA CONSULTA -->
+                <MessageStrip
+                    text="{map>/errorText}"
+                    type="Warning"
+                    showIcon="true"
+                    visible="{map>/hasError}"
+                    class="sapUiSmallMarginBottom" />
+
+                <HBox
+                    alignItems="Center"
+                    wrap="Wrap"
+                    class="sapUiSmallMarginBottom">
+
+                    <ObjectStatus
+                        text="{map>/dateRangeText}"
+                        icon="sap-icon://calendar"
+                        state="Information"
+                        class="sapUiSmallMarginEnd" />
+
+                    <ObjectStatus
+                        text="{map>/lastRefreshText}"
+                        icon="sap-icon://synchronize"
+                        state="Success"
+                        class="sapUiSmallMarginEnd" />
+
+                    <ObjectStatus
+                        text="{= ${map>/withCoordinates} + ' con coordenadas'}"
+                        state="Success"
+                        class="sapUiSmallMarginEnd" />
+
+                    <ObjectStatus
+                        text="{= ${map>/withoutCoordinates} + ' sin coordenadas'}"
+                        state="Warning" />
+
+                </HBox>
+
+                <l:Grid
+                    defaultSpan="XL9 L8 M12 S12"
+                    hSpacing="1"
+                    vSpacing="1"
+                    class="mapWorkspace">
+
+                    <!-- MAPA -->
+                    <Panel
+                        headerText="{map>/mapPanelTitle}"
+                        busy="{map>/loading}"
+                        class="dashboardPanel mapCanvasPanel">
+
                         <content>
                             <vbm:GeoMap
                                 id="geoMap"
@@ -59,8 +184,14 @@
                                 scaleVisible="true"
                                 legendVisible="false"
                                 class="mapGeoControl">
+
                                 <vbm:vos>
-                                    <vbm:Spots items="{map>/zoneSpots}" visible="{= ${map>/mode} === 'general'}">
+
+                                    <!-- ZONAS -->
+                                    <vbm:Spots
+                                        items="{map>/zoneSpots}"
+                                        visible="{= ${map>/mode} === 'general'}">
+
                                         <vbm:items>
                                             <vbm:Spot
                                                 key="{map>id}"
@@ -70,8 +201,14 @@
                                                 text="{map>text}"
                                                 click=".onZoneSpotPress" />
                                         </vbm:items>
+
                                     </vbm:Spots>
-                                    <vbm:Spots items="{map>/currentCenters}" visible="{= ${map>/mode} === 'zone'}">
+
+                                    <!-- CENTROS -->
+                                    <vbm:Spots
+                                        items="{map>/currentCenters}"
+                                        visible="{= ${map>/mode} === 'zone'}">
+
                                         <vbm:items>
                                             <vbm:Spot
                                                 key="{map>id}"
@@ -81,8 +218,14 @@
                                                 icon="{map>icon}"
                                                 click=".onCenterSpotPress" />
                                         </vbm:items>
+
                                     </vbm:Spots>
-                                    <vbm:Spots items="{map>/currentPersonnel}" visible="{= ${map>/mode} === 'zone'}">
+
+                                    <!-- PERSONAL CON COORDENADAS -->
+                                    <vbm:Spots
+                                        items="{map>/currentPersonnelSpots}"
+                                        visible="{= ${map>/mode} === 'zone'}">
+
                                         <vbm:items>
                                             <vbm:Spot
                                                 key="{map>employeeId}"
@@ -92,86 +235,275 @@
                                                 text="{map>initials}"
                                                 click=".onPersonnelSpotPress" />
                                         </vbm:items>
+
                                     </vbm:Spots>
+
                                 </vbm:vos>
                             </vbm:GeoMap>
                         </content>
+
                     </Panel>
 
-                    <Panel headerText="{map>/sidePanelTitle}" class="dashboardPanel mapSidePanel">
-                        <layoutData><l:GridData span="XL3 L4 M12 S12" /></layoutData>
+                    <!-- PANEL DE PERSONAL -->
+                    <Panel
+                        headerText="{map>/sidePanelTitle}"
+                        busy="{map>/loading}"
+                        class="dashboardPanel mapSidePanel">
+
+                        <layoutData>
+                            <l:GridData span="XL3 L4 M12 S12" />
+                        </layoutData>
+
                         <content>
                             <VBox class="mapSideContent">
-                                <HBox wrap="Wrap" class="mapLegend">
-                                    <ObjectStatus text="En servicio" state="Success" />
-                                    <ObjectStatus text="En traslado" state="Warning" />
-                                    <ObjectStatus text="Sin señal" state="None" />
-                                    <ObjectStatus text="Alerta" state="Error" />
+
+                                <!-- CONTEOS -->
+                                <HBox
+                                    wrap="Wrap"
+                                    class="mapLegend">
+
+                                    <ObjectStatus
+                                        text="{= 'Dentro de zona: ' + ${map>/withinZone}}"
+                                        state="Success"
+                                        class="sapUiTinyMarginEnd" />
+
+                                    <ObjectStatus
+                                        text="{= 'Fuera de zona: ' + ${map>/outsideZone}}"
+                                        state="Error"
+                                        class="sapUiTinyMarginEnd" />
+
+                                    <ObjectStatus
+                                        text="{= 'Sin información: ' + ${map>/withoutZoneInfo}}"
+                                        state="None" />
+
                                 </HBox>
 
+                                <!-- LISTADO GENERAL DE ZONAS -->
                                 <List
                                     items="{map>/zoneSpots}"
                                     showSeparators="Inner"
                                     visible="{= ${map>/mode} === 'general'}"
                                     class="mapZoneList">
-                                    <CustomListItem type="Active" press=".onZoneListPress" class="mapZoneListItem">
-                                        <HBox width="100%" justifyContent="SpaceBetween" alignItems="Center">
+
+                                    <CustomListItem
+                                        type="Active"
+                                        press=".onZoneListPress"
+                                        class="mapZoneListItem">
+
+                                        <HBox
+                                            width="100%"
+                                            justifyContent="SpaceBetween"
+                                            alignItems="Center">
+
                                             <HBox alignItems="Center">
-                                                <Avatar initials="{map>text}" displayShape="Circle" displaySize="S" class="mapZoneAvatar" />
+                                                <Avatar
+                                                    initials="{map>text}"
+                                                    displayShape="Circle"
+                                                    displaySize="S"
+                                                    class="mapZoneAvatar" />
+
                                                 <VBox class="sapUiTinyMarginBegin">
-                                                    <Title text="{map>name}" level="H4" />
-                                                    <Text text="{map>centers} centros · {map>users} usuarios" class="zoneMeta" />
+                                                    <Title
+                                                        text="{map>name}"
+                                                        level="H4" />
+
+                                                    <Text
+                                                        text="{= ${map>users} + ' personas'}"
+                                                        class="zoneMeta" />
                                                 </VBox>
                                             </HBox>
+
                                             <VBox alignItems="End">
-                                                <ObjectNumber number="{map>online}" unit="visibles" state="Success" />
-                                                <core:Icon src="sap-icon://navigation-right-arrow" class="mapNavigateIcon" />
+                                                <ObjectNumber
+                                                    number="{map>online}"
+                                                    unit="con ubicación"
+                                                    state="Success" />
+
+                                                <core:Icon
+                                                    src="sap-icon://navigation-right-arrow"
+                                                    class="mapNavigateIcon" />
                                             </VBox>
+
                                         </HBox>
                                     </CustomListItem>
+
                                 </List>
 
+                                <!-- LISTADO DE PERSONAL -->
                                 <List
                                     items="{map>/currentPersonnel}"
                                     showSeparators="Inner"
                                     visible="{= ${map>/mode} === 'zone'}"
+                                    noDataText="No se recibió personal en este rango"
                                     class="mapPersonnelList">
-                                    <CustomListItem type="Active" press=".onPersonnelListPress" class="mapPersonListItem">
-                                        <HBox width="100%" alignItems="Center" class="mapPersonIdentity">
-                                            <Avatar initials="{map>initials}" displayShape="Circle" displaySize="S" class="mapPersonAvatar" />
-                                            <VBox width="100%" class="sapUiTinyMarginBegin">
-                                                <Text text="{map>name}" class="mapPersonName" />
-                                                <Text text="{map>number} · {map>center}" class="zoneMeta" />
-                                                <HBox width="100%" justifyContent="SpaceBetween" alignItems="Center" class="mapPersonFooter">
-                                                    <Text text="{map>lastLocation}" class="mapUpdateText" />
-                                                    <ObjectStatus text="{map>locationStatus}" state="{map>state}" class="mapPersonStatus" />
-                                                </HBox>
-                                            </VBox>
-                                        </HBox>
+
+                                    <CustomListItem
+                                        type="Active"
+                                        press=".onPersonnelListPress"
+                                        class="mapPersonListItem">
+
+                                        <VBox
+                                            width="100%"
+                                            class="sapUiTinyMarginTopBottom">
+
+                                            <HBox
+                                                width="100%"
+                                                alignItems="Start"
+                                                class="mapPersonIdentity">
+
+                                                <Avatar
+                                                    initials="{map>initials}"
+                                                    displayShape="Circle"
+                                                    displaySize="S"
+                                                    class="mapPersonAvatar" />
+
+                                                <VBox
+                                                    width="100%"
+                                                    class="sapUiTinyMarginBegin">
+
+                                                    <Text
+                                                        text="{map>name}"
+                                                        wrapping="true"
+                                                        class="mapPersonName" />
+
+                                                    <Text
+                                                        text="{= ${map>number} + ' · ' + ${map>center}}"
+                                                        wrapping="true"
+                                                        class="zoneMeta" />
+
+                                                    <Label
+                                                        text="Último check"
+                                                        class="sapUiTinyMarginTop" />
+
+                                                    <Text
+                                                        text="{map>lastCheck}"
+                                                        wrapping="true"
+                                                        class="mapUpdateText" />
+
+                                                    <Text
+                                                        text="{map>lastCheckType}"
+                                                        class="zoneMeta" />
+
+                                                </VBox>
+                                            </HBox>
+
+                                            <HBox
+                                                width="100%"
+                                                alignItems="Center"
+                                                justifyContent="SpaceBetween"
+                                                class="sapUiTinyMarginTop">
+
+                                                <ObjectStatus
+                                                    text="{map>locationStatus}"
+                                                    state="{map>state}"
+                                                    class="mapPersonStatus" />
+
+                                                <ObjectStatus
+                                                    text="{= ${map>hasCoordinates} ? 'Con ubicación' : 'Sin ubicación'}"
+                                                    state="{= ${map>hasCoordinates} ? 'Success' : 'Warning'}" />
+
+                                            </HBox>
+
+                                            <HBox
+                                                alignItems="Center"
+                                                class="sapUiTinyMarginTop">
+
+                                                <core:Icon
+                                                    src="sap-icon://map-2"
+                                                    class="sapUiTinyMarginEnd" />
+
+                                                <Text
+                                                    text="{map>coordinatesText}"
+                                                    wrapping="true"
+                                                    class="zoneMeta" />
+                                            </HBox>
+
+                                        </VBox>
                                     </CustomListItem>
+
                                 </List>
 
-                                <VBox visible="{map>/hasSelectedPerson}" class="mapSelectedPerson">
-                                    <HBox alignItems="Center" justifyContent="SpaceBetween">
+                                <!-- DETALLE DEL PERSONAL SELECCIONADO -->
+                                <VBox
+                                    visible="{map>/hasSelectedPerson}"
+                                    class="mapSelectedPerson">
+
+                                    <Title
+                                        text="Detalle del personal"
+                                        level="H4"
+                                        class="sapUiTinyMarginBottom" />
+
+                                    <HBox
+                                        alignItems="Center"
+                                        justifyContent="SpaceBetween">
+
                                         <HBox alignItems="Center">
-                                            <Avatar initials="{map>/selectedPerson/initials}" displaySize="S" class="mapSelectedAvatar" />
+                                            <Avatar
+                                                initials="{map>/selectedPerson/initials}"
+                                                displaySize="S"
+                                                class="mapSelectedAvatar" />
+
                                             <VBox class="sapUiTinyMarginBegin">
-                                                <Title text="{map>/selectedPerson/name}" level="H4" />
-                                                <Text text="{map>/selectedPerson/number}" />
+                                                <Title
+                                                    text="{map>/selectedPerson/name}"
+                                                    level="H4" />
+
+                                                <Text
+                                                    text="{map>/selectedPerson/number}" />
                                             </VBox>
                                         </HBox>
-                                        <ObjectStatus text="{map>/selectedPerson/locationStatus}" state="{map>/selectedPerson/state}" />
+
+                                        <ObjectStatus
+                                            text="{map>/selectedPerson/locationStatus}"
+                                            state="{map>/selectedPerson/state}" />
+
                                     </HBox>
-                                    <HBox justifyContent="SpaceBetween" class="mapPersonDetailRow">
-                                        <VBox><Label text="Centro" /><Text text="{map>/selectedPerson/center}" /></VBox>
-                                        <VBox><Label text="Última señal" /><Text text="{map>/selectedPerson/lastLocation}" /></VBox>
-                                        <VBox><Label text="Precisión" /><Text text="{map>/selectedPerson/accuracy}" /></VBox>
-                                    </HBox>
+
+                                    <VBox class="sapUiSmallMarginTop">
+
+                                        <Label text="Centro de trabajo" />
+                                        <Text
+                                            text="{map>/selectedPerson/center}"
+                                            wrapping="true" />
+
+                                        <Label
+                                            text="Último check"
+                                            class="sapUiSmallMarginTop" />
+
+                                        <ObjectStatus
+                                            text="{map>/selectedPerson/lastCheck}"
+                                            icon="sap-icon://history"
+                                            state="Information" />
+
+                                        <Text
+                                            text="{map>/selectedPerson/lastCheckType}" />
+
+                                        <Label
+                                            text="Ubicación registrada"
+                                            class="sapUiSmallMarginTop" />
+
+                                        <Text
+                                            text="{map>/selectedPerson/coordinatesText}"
+                                            wrapping="true" />
+
+                                        <Label
+                                            text="Última señal de ubicación"
+                                            class="sapUiSmallMarginTop" />
+
+                                        <Text
+                                            text="{map>/selectedPerson/lastSignal}"
+                                            wrapping="true" />
+
+                                    </VBox>
+
                                 </VBox>
+
                             </VBox>
                         </content>
                     </Panel>
+
                 </l:Grid>
+
             </VBox>
         </content>
     </Page>
