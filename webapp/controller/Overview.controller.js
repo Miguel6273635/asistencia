@@ -124,6 +124,8 @@ sap.ui.define([
                 criticalCenters: [],
                 lateReviewCount: 0,
                 earlyExitReviewCount: 0,
+                fourthLateReviewCount: 0,
+                fourthLateIntegrationPending: true,
                 overviewSummary: {
                     attendance: "0.0",
                     attendanceDescription: "0 presentes de 0 registros evaluados",
@@ -402,22 +404,28 @@ sap.ui.define([
             var oPeriod = this._getPeriod();
             var iRequest = (this._reviewCountRequest || 0) + 1;
             this._reviewCountRequest = iRequest;
-            return this._attendanceApi.getProcessingJustifications(
-                this._formatODataDate(oPeriod.start),
-                this._formatODataDate(oPeriod.end)
-            ).then(function (aRows) {
+            var sDateFrom = this._formatODataDate(oPeriod.start);
+            var sDateTo = this._formatODataDate(oPeriod.end);
+            return Promise.all([
+                this._attendanceApi.getProcessingJustifications(sDateFrom, sDateTo),
+                this._attendanceApi.getFourthLateReviews(sDateFrom, sDateTo)
+            ]).then(function (aResults) {
                 if (iRequest !== this._reviewCountRequest) { return; }
+                var aRows = aResults[0] || [];
+                var aFourthLateRows = aResults[1] || [];
                 this.getModel("view").setProperty("/lateReviewCount", aRows.filter(function (oRow) {
                     return justificationHelper.matches(oRow, "late");
                 }).length);
                 this.getModel("view").setProperty("/earlyExitReviewCount", aRows.filter(function (oRow) {
                     return justificationHelper.matches(oRow, "early");
                 }).length);
+                this.getModel("view").setProperty("/fourthLateReviewCount", aFourthLateRows.length);
             }.bind(this)).catch(function (oError) {
                 if (iRequest !== this._reviewCountRequest) { return; }
                 console.error("[Monitor][JUSTIFICATIONS][COUNTS][ERROR]", oError);
                 this.getModel("view").setProperty("/lateReviewCount", 0);
                 this.getModel("view").setProperty("/earlyExitReviewCount", 0);
+                this.getModel("view").setProperty("/fourthLateReviewCount", 0);
             }.bind(this));
         },
 
@@ -863,7 +871,12 @@ sap.ui.define([
             } catch (oStorageError) {
                 console.warn("[Monitor][JUSTIFICATIONS][CONTEXT][STORAGE]", oStorageError);
             }
-            this.navTo(sType === "late" ? "lateJustifications" : "earlyExitJustifications");
+            var mRoutes = {
+                late: "lateJustifications",
+                early: "earlyExitJustifications",
+                fourthLate: "fourthLateJustifications"
+            };
+            this.navTo(mRoutes[sType] || "overview");
         },
 
         onLateReviewPress: function () {
@@ -872,6 +885,10 @@ sap.ui.define([
 
         onEarlyExitReviewPress: function () {
             this._openJustificationReview("early");
+        },
+
+        onFourthLateReviewPress: function () {
+            this._openJustificationReview("fourthLate");
         }
     });
 });

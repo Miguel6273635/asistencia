@@ -424,8 +424,11 @@ sap.ui.define([
   return {
     readEmployee: function (serviceRoot, identity) {
       var root = resolveServiceRoot(serviceRoot);
-      var lookupField = identity.personalNumber ? "PersonalNumber" : "Email";
-      var lookupValue = identity.personalNumber || identity.email;
+      // Work Zone proporciona el correo del usuario autenticado. Se consulta
+      // EmployeeSet con ese correo para recuperar, entre otros datos, la nómina
+      // que después se utiliza en AttendanceHistorySet.
+      var lookupField = identity.email ? "Email" : "PersonalNumber";
+      var lookupValue = identity.email || identity.personalNumber;
       var safeLookupValue = String(lookupValue || "").replace(/'/g, "''");
       var filter = lookupField + " eq '" + safeLookupValue + "'";
       var url = root.replace(/\/?$/, "/") + "EmployeeSet?$filter=" + encodeURIComponent(filter) + "&$format=json";
@@ -530,3 +533,4 @@ sap.ui.define([
     }
   };
 });
+

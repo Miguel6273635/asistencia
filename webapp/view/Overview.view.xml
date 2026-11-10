@@ -137,6 +137,15 @@
                                         <ObjectNumber number="{view>/earlyExitReviewCount}" state="Error" class="incidentReviewCount" />
                                         <Button text="Revisar" icon="sap-icon://navigation-right-arrow" type="Transparent" press=".onEarlyExitReviewPress" />
                                     </HBox>
+                                    <HBox alignItems="Center" class="incidentReviewCard incidentReviewFourthLate">
+                                        <core:Icon src="sap-icon://number-sign" class="incidentReviewIcon" />
+                                        <VBox class="incidentReviewBody">
+                                            <Title text="4.º retardo" level="H5" />
+                                            <Text text="Casos pendientes de revisión por RH" />
+                                        </VBox>
+                                        <ObjectNumber number="{view>/fourthLateReviewCount}" state="Information" class="incidentReviewCount" />
+                                        <Button text="Revisar" icon="sap-icon://navigation-right-arrow" type="Transparent" press=".onFourthLateReviewPress" />
+                                    </HBox>
                                 </VBox>
                             </content>
                         </Panel>

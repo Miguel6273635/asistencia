@@ -1485,6 +1485,11 @@ body > div,
     background: linear-gradient(105deg, rgba(192, 0, 0, 0.07), #ffffff 72%);
 }
 
+.incidentReviewFourthLate {
+    border-left-color: #6c4ccf;
+    background: linear-gradient(105deg, rgba(108, 76, 207, 0.08), #ffffff 72%);
+}
+
 .incidentReviewIcon {
     flex: 0 0 auto;
     width: 1.5rem;
@@ -1495,6 +1500,10 @@ body > div,
 
 .incidentReviewEarly .incidentReviewIcon {
     color: #b00000;
+}
+
+.incidentReviewFourthLate .incidentReviewIcon {
+    color: #5b3fc0;
 }
 
 .incidentReviewBody {

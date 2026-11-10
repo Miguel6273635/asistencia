@@ -3,12 +3,15 @@ sap.ui.define([
 ], function (Diagnostics) {
   "use strict";
 
+  var CURRENT_USER_TIMEOUT_MS = 10000;
+  var DEVELOPMENT_IDENTITY_STORAGE_KEY = "mitsu.checkin.developmentIdentity";
+
   var activeIdentity = {
     personalNumber: "",
     email: "",
     userName: "",
     displayName: "",
-    device: "",
+    device: "BTP-Web",
     source: ""
   };
 
@@ -50,7 +53,7 @@ sap.ui.define([
       email: email.toLowerCase(),
       userName: userName,
       displayName: displayName,
-      device: "",
+      device: "BTP-Web",
       source: origin
     };
   }
@@ -82,34 +85,45 @@ sap.ui.define([
   }
 
   function developmentIdentity() {
-    var value = "";
-    var source = "local-test-parameter";
-
-    if (isDevelopmentHost()) {
-      value = text(new URLSearchParams(window.location.search || "").get("testIdentity"));
-      if (!value) {
-        value = "sapmelmex@melco.com.mx";
-        source = "local-default";
-      }
-    }
+    var value = isDevelopmentHost() ? text(new URLSearchParams(window.location.search || "").get("testIdentity")) : "";
     if (!value) { return null; }
 
-    return normalizeIdentity(value.indexOf("@") >= 0 ? { email: value } : { personalNumber: value.padStart(8, "0") }, source);
+    return normalizeIdentity(value.indexOf("@") >= 0 ? { email: value } : { personalNumber: value.padStart(8, "0") }, "local-test-parameter");
+  }
+
+  function storedDevelopmentIdentity() {
+    if (!isDevelopmentHost()) { return null; }
+    try {
+      var stored = JSON.parse(window.sessionStorage.getItem(DEVELOPMENT_IDENTITY_STORAGE_KEY) || "null");
+      return stored ? normalizeIdentity(stored, "local-session-storage") : null;
+    } catch (error) {
+      Diagnostics.warn("IDENTITY", "No fue posible recuperar la identidad local guardada", {
+        message: error.message
+      });
+      return null;
+    }
   }
 
   function requestCurrentUser() {
-    // La ruta debe ser relativa al prefijo de la aplicación HTML5. Una diagonal
-    // inicial omite el xs-app.json de Checkin cuando se ejecuta dentro de Work Zone.
+    // Debe ser relativa al prefijo de la aplicación HTML5. Una diagonal inicial
+    // enviaría la petición a la raíz del Launchpad y omitiría el xs-app.json de Checkin.
     var url = "user-api/currentUser";
     var requestId = Diagnostics.request("GET", url, {
       purpose: "Obtener identidad autenticada de SAP Build Work Zone"
     });
+    var abortController = typeof AbortController === "function" ? new AbortController() : null;
+    var timeoutId = window.setTimeout(function () {
+      if (abortController) {
+        abortController.abort();
+      }
+    }, CURRENT_USER_TIMEOUT_MS);
 
     return fetch(url, {
       method: "GET",
       credentials: "same-origin",
       cache: "no-store",
-      headers: { Accept: "application/json" }
+      headers: { Accept: "application/json" },
+      signal: abortController ? abortController.signal : undefined
     }).then(function (response) {
       return response.text().then(function (body) {
         Diagnostics.response(requestId, response.status, response.statusText, body, {
@@ -132,8 +146,13 @@ sap.ui.define([
         return normalizeIdentity(payload, "sap-approuter-userapi");
       });
     }).catch(function (error) {
+      if (error && error.name === "AbortError") {
+        error = new Error("La consulta del usuario de Work Zone agotó el tiempo de espera. En BAS agrega ?testIdentity=correo@empresa.com o ?testIdentity=numeroNomina a la URL.");
+      }
       Diagnostics.error("IDENTITY", "Falló la lectura del usuario autenticado", error, requestId);
       throw error;
+    }).finally(function () {
+      window.clearTimeout(timeoutId);
     });
   }
 
@@ -143,7 +162,7 @@ sap.ui.define([
       email: "",
       userName: "",
       displayName: "",
-      device: "",
+      device: "BTP-Web",
       source: ""
     }, identity || {});
     Diagnostics.info("IDENTITY", "Identidad activa establecida", {
@@ -152,6 +171,15 @@ sap.ui.define([
       userName: activeIdentity.userName,
       source: activeIdentity.source
     });
+    if (isDevelopmentHost()) {
+      try {
+        window.sessionStorage.setItem(DEVELOPMENT_IDENTITY_STORAGE_KEY, JSON.stringify(activeIdentity));
+      } catch (storageError) {
+        Diagnostics.warn("IDENTITY", "No fue posible conservar la identidad local", {
+          message: storageError.message
+        });
+      }
+    }
     return Object.assign({}, activeIdentity);
   }
 
@@ -159,12 +187,16 @@ sap.ui.define([
     loadAuthenticatedIdentity: function () {
       var localIdentity = developmentIdentity();
       var workZoneIdentity = shellIdentity();
+      var savedDevelopmentIdentity = storedDevelopmentIdentity();
 
       if (localIdentity) {
         return Promise.resolve(setIdentity(localIdentity));
       }
       if (workZoneIdentity) {
         return Promise.resolve(setIdentity(workZoneIdentity));
+      }
+      if (savedDevelopmentIdentity) {
+        return Promise.resolve(setIdentity(savedDevelopmentIdentity));
       }
       return requestCurrentUser().then(setIdentity);
     },
@@ -181,9 +213,16 @@ sap.ui.define([
         email: "",
         userName: "",
         displayName: "",
-        device: "",
+        device: "BTP-Web",
         source: ""
       };
+      if (isDevelopmentHost()) {
+        try {
+          window.sessionStorage.removeItem(DEVELOPMENT_IDENTITY_STORAGE_KEY);
+        } catch (ignoreStorageError) {
+          // La limpieza de la sesión local es opcional.
+        }
+      }
     },
 
     hasActiveIdentity: function () {
