@@ -126,6 +126,137 @@ sap.ui.define([
     return /VIAJE|TRAVEL|COMISION/.test(normalizeWords(value));
   }
 
+  function isHomeOfficeStatus(value) {
+    return /HOME\s*OFFIC|HOME\s*OFFICE|REMOT[OA]|TELETRABAJO/.test(normalizeWords(value));
+  }
+
+  function normalizeIsoDateValue(value) {
+    var text = String(value || "").trim();
+    var ticks = text.match(/^\/Date\((\d+)/);
+
+    if (ticks) {
+      return localIsoDate(new Date(Number(ticks[1])));
+    }
+    if (/^\d{8}$/.test(text)) {
+      return text.slice(0, 4) + "-" + text.slice(4, 6) + "-" + text.slice(6, 8);
+    }
+    return /^\d{4}-\d{2}-\d{2}/.test(text) ? text.slice(0, 10) : "";
+  }
+
+  function workSessionCode(values) {
+    var directCode = "";
+    var normalizedValues = (values || []).filter(function (value) {
+      return value !== undefined && value !== null && String(value).trim() !== "";
+    });
+
+    normalizedValues.some(function (value) {
+      var normalized = normalizeWords(value).trim();
+      if (normalized === "HO" || normalized === "VN") {
+        directCode = normalized;
+        return true;
+      }
+      return false;
+    });
+
+    if (directCode) { return directCode; }
+    if (normalizedValues.some(isTravelStatus)) { return "VN"; }
+    if (normalizedValues.some(isHomeOfficeStatus)) { return "HO"; }
+    return "";
+  }
+
+  function browserUrlCandidates() {
+    var candidates = [window.location.href, document.referrer];
+
+    try {
+      candidates.push(window.parent.location.href);
+    } catch (ignoreParent) {
+      // El Launchpad puede estar en un origen distinto.
+    }
+
+    try {
+      candidates.push(window.top.location.href);
+    } catch (ignoreTop) {
+      // El Launchpad puede estar en un origen distinto.
+    }
+
+    return candidates.filter(Boolean);
+  }
+
+  function enabledFlagValue(value) {
+    var firstValue = Array.isArray(value) ? value[0] : value;
+    return /^(1|true|yes)$/i.test(String(firstValue || ""));
+  }
+
+  function urlFlagEnabled(name) {
+    var expression = new RegExp("(?:[?&#])" + name + "=([^&#]*)", "i");
+
+    return browserUrlCandidates().some(function (candidate) {
+      var match = String(candidate).match(expression);
+      return match && enabledFlagValue(decodeURIComponent(match[1]));
+    });
+  }
+
+  function isTestEnvironment() {
+    return browserUrlCandidates().some(function (candidate) {
+      try {
+        var hostname = new URL(candidate, window.location.href).hostname.toLowerCase();
+        return hostname === "localhost" ||
+          hostname === "127.0.0.1" ||
+          hostname.indexOf("qas") >= 0;
+      } catch (ignoreInvalidUrl) {
+        return false;
+      }
+    });
+  }
+
+  function isLateTestEnabled(controller) {
+    var componentData = controller.getOwnerComponent().getComponentData() || {};
+    var startupParameters = componentData.startupParameters || {};
+    var requested = urlFlagEnabled("testLate") ||
+      enabledFlagValue(startupParameters.testLate);
+
+    return requested && isTestEnvironment();
+  }
+
+  function resolveServiceRoot(serviceRoot) {
+    var configuredRoot = String(serviceRoot || "").trim();
+    var cleanRoot;
+    var componentRoot;
+    var pathname;
+    var directory;
+
+    if (!configuredRoot) {
+      return "";
+    }
+
+    if (/^(?:https?:)?\/\//i.test(configuredRoot) || configuredRoot.charAt(0) === "/") {
+      return configuredRoot.replace(/\/?$/, "/");
+    }
+
+    cleanRoot = configuredRoot.replace(/^\.\//, "").replace(/^\/+/, "");
+
+    try {
+      componentRoot = sap.ui.require.toUrl("com/mitsu/checkin/");
+      if (componentRoot) {
+        return new URL(
+          cleanRoot,
+          new URL(componentRoot.replace(/\/?$/, "/"), window.location.href)
+        ).toString().replace(/\/?$/, "/");
+      }
+    } catch (ignoreComponentRoot) {
+      // Se conserva el respaldo basado en pathname para la ejecución local.
+    }
+
+    pathname = window.location.pathname || "/";
+    directory = pathname.slice(0, pathname.lastIndexOf("/") + 1) || "/";
+
+    if (directory === "/" || directory === "/test/" || directory.endsWith("/test/")) {
+      return ("/" + cleanRoot).replace(/\/?$/, "/");
+    }
+
+    return (directory + cleanRoot).replace(/\/?$/, "/");
+  }
+
   return Controller.extend("com.mitsu.checkin.controller.Main", {
     onInit: function () {
       Diagnostics.info("UI", "Main.controller inicializado", {
@@ -142,6 +273,19 @@ sap.ui.define([
       } else {
         this._initializeAuthenticatedIdentity();
       }
+    },
+
+    onAfterRendering: function () {
+      if (this._initialLayoutSynchronized) {
+        return;
+      }
+
+      this._initialLayoutSynchronized = true;
+      this._layoutSyncTimers = [0, 150, 500].map(function (delay) {
+        return window.setTimeout(function () {
+          window.dispatchEvent(new Event("resize"));
+        }, delay);
+      });
     },
 
     _initializeAuthenticatedIdentity: function () {
@@ -175,6 +319,10 @@ sap.ui.define([
       if (this._clockInterval) {
         clearInterval(this._clockInterval);
       }
+      (this._layoutSyncTimers || []).forEach(function (timer) {
+        window.clearTimeout(timer);
+      });
+      this._layoutSyncTimers = [];
       if (this._lateJustificationDialogPromise) {
         this._lateJustificationDialogPromise.then(function (dialog) {
           dialog.destroy();
@@ -186,6 +334,12 @@ sap.ui.define([
           dialog.destroy();
         });
         this._earlyExitJustificationDialogPromise = null;
+      }
+      if (this._workModalityDialogPromise) {
+        this._workModalityDialogPromise.then(function (dialog) {
+          dialog.destroy();
+        });
+        this._workModalityDialogPromise = null;
       }
     },
 
@@ -207,9 +361,11 @@ sap.ui.define([
       var appModel = this.getView().getModel("app");
       var attendanceModel = this.getView().getModel("attendance");
       var dataSource = this.getOwnerComponent().getManifestEntry("/sap.app/dataSources/attendanceOData");
+      var serviceRoot = resolveServiceRoot(dataSource.uri);
       var identity = IdentityService.getActiveIdentity();
       Diagnostics.info("FLOW", "Iniciando consulta del empleado", {
-        serviceRoot: dataSource.uri,
+        configuredServiceRoot: dataSource.uri,
+        serviceRoot: serviceRoot,
         identity: identity,
         temporaryAccess: Boolean(fromTemporaryAccess)
       });
@@ -220,7 +376,7 @@ sap.ui.define([
       appModel.setProperty("/employeeError", "");
       appModel.setProperty("/identityLookupError", "");
 
-      return EmployeeService.readEmployee(dataSource.uri, identity).then(function (employee) {
+      return EmployeeService.readEmployee(serviceRoot, identity).then(function (employee) {
         Diagnostics.info("FLOW", "Empleado recibido; se solicitará su historial", employee);
         var currentEmployee = attendanceModel.getProperty("/employee") || {};
         Object.keys(employee).forEach(function (property) {
@@ -254,8 +410,9 @@ sap.ui.define([
     _loadSchedule: function (employee) {
       var attendanceModel = this.getView().getModel("attendance");
       var dataSource = this.getOwnerComponent().getManifestEntry("/sap.app/dataSources/attendanceOData");
+      var serviceRoot = resolveServiceRoot(dataSource.uri);
 
-      return EmployeeService.readSchedule(dataSource.uri, employee).then(function (schedule) {
+      return EmployeeService.readSchedule(serviceRoot, employee).then(function (schedule) {
         var currentDate = new Date();
         var detailRange = rangeForToday(schedule && schedule.detail, currentDate);
         var resolved = {
@@ -339,19 +496,27 @@ sap.ui.define([
       var appModel = this.getView().getModel("app");
       var attendanceModel = this.getView().getModel("attendance");
       var dataSource = this.getOwnerComponent().getManifestEntry("/sap.app/dataSources/attendanceOData");
+      var serviceRoot = resolveServiceRoot(dataSource.uri);
       var now = new Date();
       var enterDate = now.getFullYear() + "-" + String(now.getMonth() + 1).padStart(2, "0") + "-" + String(now.getDate()).padStart(2, "0");
       var identity = this._activeIdentity || IdentityService.getActiveIdentity() || {};
       var historyIdentifier = identity.personalNumber || identity.email || employee.id;
       Diagnostics.info("FLOW", "Iniciando consulta del historial", {
-        serviceRoot: dataSource.uri,
+        configuredServiceRoot: dataSource.uri,
+        serviceRoot: serviceRoot,
         identifier: historyIdentifier,
         dateFrom: enterDate.replace(/-/g, "")
       });
 
       appModel.setProperty("/historyLoading", true);
       appModel.setProperty("/historyError", "");
-      return AttendanceService.readHistory(dataSource.uri, historyIdentifier, enterDate, employee.id).then(function (history) {
+      return AttendanceService.readHistory(
+        serviceRoot,
+        historyIdentifier,
+        enterDate,
+        employee.id,
+        { dateTo: enterDate }
+      ).then(function (history) {
         Diagnostics.info("FLOW", "Historial listo para la interfaz", history);
         attendanceModel.setProperty("/history", history);
         this._applyTodayFromHistory(history);
@@ -415,6 +580,11 @@ sap.ui.define([
       model.setProperty("/today/status", today.status || "");
       model.setProperty("/today/isLate", Boolean(today.isLate));
       model.setProperty("/today/isTravel", Boolean(today.isTravel));
+      model.setProperty("/today/isHomeOffice", Boolean(today.isHomeOffice));
+      model.setProperty("/today/typeSession", today.typeSession || "");
+      model.setProperty("/today/sessionDateFrom", today.sessionDateFrom || "");
+      model.setProperty("/today/sessionDateTo", today.sessionDateTo || "");
+      model.setProperty("/today/workModalityConfirmed", entry !== "—");
       model.setProperty("/today/nextAction", nextAction);
       this._evaluateAttendanceContext();
       this._updateActionUI();
@@ -487,7 +657,52 @@ sap.ui.define([
       var historyTravel = Boolean(model.getProperty("/today/isTravel"));
       var employeeTravel = [employee.status, employee.statusDescription, employee.registerType]
         .some(isTravelStatus);
-      var isLateNow = !hasEntry && startMinutes !== null && currentMinutes > startMinutes;
+      var historyHomeOffice = Boolean(model.getProperty("/today/isHomeOffice"));
+      var employeeHomeOffice = [employee.typeSession, employee.dayStatus, employee.status, employee.statusDescription]
+        .some(isHomeOfficeStatus);
+      var modalityConfirmed = Boolean(model.getProperty("/today/workModalityConfirmed"));
+      var confirmedTypeSession = String(model.getProperty("/today/typeSession") || "").trim().toUpperCase();
+      var typeSession = modalityConfirmed && ["", "HO", "VN"].indexOf(confirmedTypeSession) >= 0
+        ? confirmedTypeSession
+        : workSessionCode([
+          model.getProperty("/today/typeSession"),
+          employee.typeSession,
+          employee.dayStatus,
+          employee.status,
+          employee.statusDescription
+        ]);
+      var isTravel = modalityConfirmed
+        ? typeSession === "VN"
+        : (typeSession === "VN" || historyTravel || employeeTravel);
+      var isHomeOffice = modalityConfirmed
+        ? typeSession === "HO"
+        : (typeSession === "HO" || historyHomeOffice || employeeHomeOffice);
+      var todayDate = localIsoDate(current);
+      var sessionDateFrom;
+      var sessionDateTo;
+
+      if (isTravel) {
+        typeSession = "VN";
+      } else if (isHomeOffice) {
+        typeSession = "HO";
+      } else {
+        typeSession = "";
+      }
+
+      if (typeSession === "VN") {
+        sessionDateFrom = modalityConfirmed
+          ? (normalizeIsoDateValue(model.getProperty("/today/sessionDateFrom")) || normalizeIsoDateValue(employee.dateFrom) || todayDate)
+          : (normalizeIsoDateValue(employee.dateFrom) || normalizeIsoDateValue(model.getProperty("/today/sessionDateFrom")) || todayDate);
+        sessionDateTo = modalityConfirmed
+          ? (normalizeIsoDateValue(model.getProperty("/today/sessionDateTo")) || normalizeIsoDateValue(employee.dateTo) || todayDate)
+          : (normalizeIsoDateValue(employee.dateTo) || normalizeIsoDateValue(model.getProperty("/today/sessionDateTo")) || todayDate);
+      } else {
+        sessionDateFrom = todayDate;
+        sessionDateTo = todayDate;
+      }
+      var forceLateTest = isLateTestEnabled(this);
+      var isLateNow = !hasEntry && (forceLateTest ||
+        (startMinutes !== null && currentMinutes > startMinutes));
       var canCheckOut = hasEntry && !hasExit;
       var isEarlyExit = canCheckOut && endMinutes !== null && currentMinutes < endMinutes;
       var mealStartAllowed = !isMealWindowRestricted || isWithinMealWindow;
@@ -496,8 +711,14 @@ sap.ui.define([
       var messageType = "Information";
       var message = scheduleLabel ? "Horario de hoy: " + scheduleLabel + "." : "SAP no expuso las horas del turno; se validará la secuencia de marcajes.";
 
-      if (historyTravel || employeeTravel) {
-        message = "Viaje de trabajo identificado. La ubicación se solicitará al confirmar el marcaje.";
+      if (forceLateTest && isLateNow && nextAction === "CHECK_IN") {
+        message = "MODO DE PRUEBA: la entrada tardía está forzada temporalmente.";
+        messageType = "Warning";
+      } else if (typeSession === "VN") {
+        message = "Viaje de negocios identificado. Se enviará TypeSession VN y el periodo autorizado a SAP.";
+        messageType = "Information";
+      } else if (typeSession === "HO") {
+        message = "Home Office identificado. Se enviará TypeSession HO y la fecha del día a SAP.";
         messageType = "Information";
       } else if (isLateNow && nextAction === "CHECK_IN") {
         message = "Entrada tarde";
@@ -523,7 +744,12 @@ sap.ui.define([
       model.setProperty("/today/isLateNow", isLateNow);
       model.setProperty("/today/isEarlyExit", isEarlyExit);
       model.setProperty("/today/canCheckOut", canCheckOut);
-      model.setProperty("/today/isTravel", historyTravel || employeeTravel);
+      model.setProperty("/today/isTravel", typeSession === "VN");
+      model.setProperty("/today/isHomeOffice", typeSession === "HO");
+      model.setProperty("/today/typeSession", typeSession);
+      model.setProperty("/today/workModalityText", typeSession === "VN" ? "Viaje de negocios" : (typeSession === "HO" ? "Home Office" : "Presencial"));
+      model.setProperty("/today/sessionDateFrom", sessionDateFrom);
+      model.setProperty("/today/sessionDateTo", sessionDateTo);
       model.setProperty("/today/isMealWindowRestricted", isMealWindowRestricted);
       model.setProperty("/today/isWithinMealWindow", isWithinMealWindow);
       model.setProperty("/today/mealStartAllowed", mealStartAllowed);
@@ -590,6 +816,110 @@ sap.ui.define([
       this._confirmAction("CHECK_IN");
     },
 
+    _openWorkModalityDialog: function (pendingAction) {
+      var model = this.getView().getModel("attendance");
+      var typeSession = String(model.getProperty("/today/typeSession") || "").trim().toUpperCase();
+      var isBusinessTrip = typeSession === "VN";
+
+      model.setProperty("/today/workModalityDraft", {
+        typeSession: ["HO", "VN"].indexOf(typeSession) >= 0 ? typeSession : "",
+        dateFrom: isBusinessTrip ? normalizeIsoDateValue(model.getProperty("/today/sessionDateFrom")) : "",
+        dateTo: isBusinessTrip ? normalizeIsoDateValue(model.getProperty("/today/sessionDateTo")) : "",
+        error: ""
+      });
+      this._pendingActionAfterModality = pendingAction || "CHECK_IN";
+
+      this._getWorkModalityDialog().then(function (dialog) {
+        dialog.open();
+      });
+    },
+
+    _getWorkModalityDialog: function () {
+      if (!this._workModalityDialogPromise) {
+        this._workModalityDialogPromise = Fragment.load({
+          id: this.getView().getId(),
+          name: "com.mitsu.checkin.view.fragments.WorkModalityDialog",
+          controller: this
+        }).then(function (dialog) {
+          this.getView().addDependent(dialog);
+          return dialog;
+        }.bind(this));
+      }
+      return this._workModalityDialogPromise;
+    },
+
+    onWorkModalityChange: function (event) {
+      var model = this.getView().getModel("attendance");
+      var source = event && event.getSource && event.getSource();
+
+      if (source && source.getSelectedKey) {
+        model.setProperty("/today/workModalityDraft/typeSession", source.getSelectedKey());
+      }
+      model.setProperty("/today/workModalityDraft/error", "");
+    },
+
+    onSaveWorkModality: function () {
+      var model = this.getView().getModel("attendance");
+      var draft = model.getProperty("/today/workModalityDraft") || {};
+      var typeSession = String(draft.typeSession || "").trim().toUpperCase();
+      var todayDate = localIsoDate(new Date());
+      var dateFrom = normalizeIsoDateValue(draft.dateFrom);
+      var dateTo = normalizeIsoDateValue(draft.dateTo);
+      var error = "";
+
+      if (["", "HO", "VN"].indexOf(typeSession) < 0) {
+        error = "Selecciona una modalidad válida.";
+      } else if (typeSession === "VN" && (!dateFrom || !dateTo)) {
+        error = "Captura las fechas de inicio y fin del viaje de negocios.";
+      } else if (typeSession === "VN" && dateFrom > dateTo) {
+        error = "La fecha de inicio del viaje no puede ser posterior a la fecha final.";
+      } else if (typeSession === "VN" && (todayDate < dateFrom || todayDate > dateTo)) {
+        error = "La fecha actual debe encontrarse dentro del periodo del viaje de negocios.";
+      }
+
+      if (error) {
+        model.setProperty("/today/workModalityDraft/error", error);
+        return;
+      }
+
+      if (typeSession !== "VN") {
+        dateFrom = todayDate;
+        dateTo = todayDate;
+      }
+
+      model.setProperty("/today/typeSession", typeSession);
+      model.setProperty("/today/isHomeOffice", typeSession === "HO");
+      model.setProperty("/today/isTravel", typeSession === "VN");
+      model.setProperty("/today/workModalityText", typeSession === "VN" ? "Viaje de negocios" : (typeSession === "HO" ? "Home Office" : "Presencial"));
+      model.setProperty("/today/sessionDateFrom", dateFrom);
+      model.setProperty("/today/sessionDateTo", dateTo);
+      model.setProperty("/today/workModalityConfirmed", true);
+      model.setProperty("/today/workModalityDraft/error", "");
+
+      Diagnostics.info("MODALITY", "Modalidad confirmada antes del marcaje", {
+        typeSession: typeSession,
+        dateFrom: dateFrom,
+        dateTo: dateTo
+      });
+
+      var pendingAction = this._pendingActionAfterModality || "CHECK_IN";
+      this._pendingActionAfterModality = null;
+      this._getWorkModalityDialog().then(function (dialog) {
+        dialog.close();
+        window.setTimeout(function () {
+          this._confirmAction(pendingAction);
+        }.bind(this), 0);
+      }.bind(this));
+    },
+
+    onCancelWorkModality: function () {
+      this._pendingActionAfterModality = null;
+      this.getView().getModel("attendance").setProperty("/today/workModalityDraft/error", "");
+      this._getWorkModalityDialog().then(function (dialog) {
+        dialog.close();
+      });
+    },
+
     onOpenLateJustification: function () {
       var model = this.getView().getModel("attendance");
       var justification = model.getProperty("/today/lateJustification") || {};
@@ -636,7 +966,7 @@ sap.ui.define([
       this._getLateJustificationDialog().then(function (dialog) {
         dialog.close();
       });
-      MessageToast.show("Enviando justificación y entrada a SAP");
+      MessageToast.show("Enviando entrada y justificación a SAP");
       this._register("CHECK_IN");
     },
 
@@ -733,6 +1063,10 @@ sap.ui.define([
       }
 
       var model = this.getView().getModel("attendance");
+      if (requestedAction === "CHECK_IN" && !model.getProperty("/today/workModalityConfirmed")) {
+        this._openWorkModalityDialog(requestedAction);
+        return;
+      }
       var action = model.getProperty("/today/nextAction");
       var hasEntry = model.getProperty("/today/entry") && model.getProperty("/today/entry") !== "—";
       var hasExit = model.getProperty("/today/exit") && model.getProperty("/today/exit") !== "—";
@@ -791,6 +1125,7 @@ sap.ui.define([
 
       var dataSource = this.getOwnerComponent()
         .getManifestEntry("/sap.app/dataSources/attendanceOData");
+      var serviceRoot = resolveServiceRoot(dataSource.uri);
 
       var employee = attendanceModel.getProperty("/employee");
       var config = ACTION_CONFIG[action];
@@ -827,6 +1162,37 @@ sap.ui.define([
         return Promise.resolve();
       }
 
+      if (action === "CHECK_IN" && !attendanceModel.getProperty("/today/workModalityConfirmed")) {
+        this._openWorkModalityDialog(action);
+        return Promise.resolve();
+      }
+
+      var typeSession = String(attendanceModel.getProperty("/today/typeSession") || "").trim().toUpperCase();
+      var sessionDateFrom = normalizeIsoDateValue(attendanceModel.getProperty("/today/sessionDateFrom"));
+      var sessionDateTo = normalizeIsoDateValue(attendanceModel.getProperty("/today/sessionDateTo"));
+      var todayDate = localIsoDate(new Date());
+
+      if (["", "HO", "VN"].indexOf(typeSession) < 0) {
+        MessageBox.error("La modalidad de trabajo recibida de SAP no es válida. Solo se acepta presencial, HO o VN.");
+        return Promise.resolve();
+      }
+
+      if (typeSession !== "VN") {
+        sessionDateFrom = todayDate;
+        sessionDateTo = todayDate;
+      } else {
+        sessionDateFrom = sessionDateFrom || todayDate;
+        sessionDateTo = sessionDateTo || todayDate;
+        if (sessionDateFrom > sessionDateTo) {
+          MessageBox.error("El inicio del viaje de negocios no puede ser posterior a su fecha de finalización.");
+          return Promise.resolve();
+        }
+        if (todayDate < sessionDateFrom || todayDate > sessionDateTo) {
+          MessageBox.error("La fecha actual no se encuentra dentro del periodo autorizado para el viaje de negocios.");
+          return Promise.resolve();
+        }
+      }
+
       this._markRequestInProgress = true;
       appModel.setProperty("/busy", true);
 
@@ -853,7 +1219,10 @@ sap.ui.define([
           action: action,
           employeeId: employee && employee.id,
           isLate: wasLateEntry,
-          isEarlyExit: wasEarlyExit
+          isEarlyExit: wasEarlyExit,
+          typeSession: typeSession,
+          dateFrom: sessionDateFrom,
+          dateTo: sessionDateTo
         }
       );
 
@@ -898,7 +1267,7 @@ sap.ui.define([
           );
 
           return AttendanceService.mark(
-            dataSource.uri,
+            serviceRoot,
             action,
             employee,
             this._activeIdentity &&
@@ -912,6 +1281,9 @@ sap.ui.define([
               earlyExitJustification: wasEarlyExit
                 ? earlyExitJustification
                 : null,
+              typeSession: typeSession,
+              dateFrom: sessionDateFrom,
+              dateTo: sessionDateTo,
               location: location
             }
           );
@@ -940,11 +1312,14 @@ sap.ui.define([
             "MARK",
             "Marcaje confirmado por SAP",
             {
+              flowId: result.flowId,
               action: action,
+              postsCompleted: result.justification ? 2 : 1,
               sapStatus: sapStatus,
               sapMessage: result.sapMessage,
               sapGeoStatus: result.sapGeoStatus,
-              sapEntity: result.sapEntity
+              sapEntity: result.sapEntity,
+              justification: result.justification
             }
           );
 
@@ -1022,6 +1397,36 @@ sap.ui.define([
 
         .catch(function (error) {
 
+          if (error.attendanceRecorded && error.attendanceResult) {
+            var partialResult = error.attendanceResult;
+            var partialValue = localClock(partialResult.registeredAt || new Date());
+
+            attendanceModel.setProperty("/today/" + config.field, partialValue);
+            this._rememberMark(action, employee, partialValue);
+            this._evaluateAttendanceContext();
+
+            Diagnostics.error(
+              "FLOW",
+              "AttendanceRecordSet fue aceptado, pero falló JustificationLogSet",
+              {
+                flowId: error.flowId || partialResult.flowId,
+                action: action,
+                attendanceResult: partialResult,
+                message: error.message
+              }
+            );
+
+            MessageBox.error(
+              "La entrada sí quedó registrada, pero SAP no aceptó la justificación. " +
+              "No vuelvas a registrar la entrada. Detalle: " +
+              (error.message || "Error no especificado")
+            );
+
+            this._markRequestInProgress = false;
+            this._updateActionUI();
+            return;
+          }
+
           Diagnostics.error(
             "FLOW",
             "No fue posible confirmar el marcaje",
@@ -1080,6 +1485,7 @@ sap.ui.define([
         .getManifestEntry(
           "/sap.app/dataSources/attendanceOData"
         );
+      var serviceRoot = resolveServiceRoot(dataSource.uri);
 
       var now = new Date();
       var todayIso = localIsoDate(now);
@@ -1127,10 +1533,11 @@ sap.ui.define([
             );
 
             return AttendanceService.readHistory(
-              dataSource.uri,
+              serviceRoot,
               historyIdentifier,
               todayIso,
-              employee.id
+              employee.id,
+              { dateTo: todayIso }
             );
 
           })

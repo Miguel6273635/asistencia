@@ -28,7 +28,7 @@ Solicitud:
   "Email": "",
   "EnterDate": "2026-10-20",
   "EnterHour": "10:33:00",
-  "Chanel": "BTP",
+  "Chanel": "",
   "Device": "",
   "Latitude": "19.54021450",
   "Longitude": "-99.21548730",

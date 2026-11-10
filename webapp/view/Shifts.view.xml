@@ -1,4 +1,4 @@
-<mvc:View
+<!-- <mvc:View
     controllerName="com.mitsu.monitorasistencia.controller.Shifts"
     xmlns:mvc="sap.ui.core.mvc"
     xmlns="sap.m"
@@ -40,6 +40,69 @@
                                     <Column width="10rem"><Text text="Horario" /></Column>
                                     <Column width="10rem"><Text text="Tipo" /></Column>
                                     <Column><Text text="Jornada semanal" /></Column>
+                                    <Column width="7rem"><Text text="Estatus" /></Column>
+                                </columns>
+                                <items>
+                                    <ColumnListItem selected="{= ${view>id} === ${view>/focusedScheduleId} }">
+                                        <cells>
+                                            <ObjectIdentifier title="{view>name}" text="{view>code}" />
+                                            <ObjectStatus text="{view>type}" state="Information" />
+                                            <Text text="{view>description}" wrapping="true" maxLines="3" />
+                                            <ObjectStatus text="{path:'view>active', formatter:'.formatter.activeText'}" state="{path:'view>active', formatter:'.formatter.activeState'}" />
+                                        </cells>
+                                    </ColumnListItem>
+                                </items>
+                            </Table>
+                        </ScrollContainer>
+                    </content>
+                </Panel>
+            </VBox>
+        </content>
+    </Page>
+</mvc:View> -->
+
+<mvc:View
+    controllerName="com.mitsu.monitorasistencia.controller.Shifts"
+    xmlns:mvc="sap.ui.core.mvc"
+    xmlns="sap.m"
+    xmlns:core="sap.ui.core">
+    <Page showHeader="false" class="monitorPage">
+        <content>
+            <VBox class="pageContainer compactPage shiftsPage scheduleCatalogPage">
+                <Breadcrumbs currentLocationText="Turnos y horarios" class="sapUiTinyMarginBottom">
+                    <Link text="Inicio" press=".onNavOverview" />
+                </Breadcrumbs>
+                <HBox justifyContent="SpaceBetween" alignItems="Center" wrap="Wrap" class="schedulePageHeading">
+                    <VBox>
+                        <Title text="Turnos y horarios" level="H1" class="pageTitle" />
+                        <Text text="Catálogo vigente de horarios y jornadas semanales" class="pageSubtitle" />
+                    </VBox>
+                    <VBox class="kpiCard kpiBlue scheduleActiveCard">
+                        <HBox alignItems="Center">
+                            <core:Icon src="sap-icon://appointment-2" class="kpiIcon blue" />
+                            <VBox>
+                                <Text text="Horarios activos" />
+                                <ObjectNumber number="{view>/stats/active}" />
+                                <Text text="Horarios vigentes del catálogo" class="scheduleKpiDetail" />
+                            </VBox>
+                        </HBox>
+                    </VBox>
+                </HBox>
+                <Panel class="dashboardPanel compactTablePanel sapUiSmallMarginTop scheduleCatalogPanel scheduleCatalogExpanded">
+                    <headerToolbar>
+                        <OverflowToolbar>
+                            <Title text="Catálogo de horarios" level="H3" />
+                            <ToolbarSpacer />
+                            <ObjectStatus text="{= ${view>/stats/active} + ' horarios activos'}" state="Information" inverted="true" />
+                        </OverflowToolbar>
+                    </headerToolbar>
+                    <content>
+                        <ScrollContainer vertical="true" horizontal="true" focusable="true" class="tableScrollContainer scheduleCatalogScroll scheduleCatalogScrollExpanded">
+                            <Table items="{view>/schedules}" mode="SingleSelectMaster" includeItemInSelection="true" rememberSelections="false" class="shiftConfigTable scheduleCatalogTable" noDataText="No hay horarios disponibles en el catálogo">
+                                <columns>
+                                    <Column width="10rem"><Text text="Horario" /></Column>
+                                    <Column width="10rem" minScreenWidth="Tablet" demandPopin="true"><Text text="Tipo" /></Column>
+                                    <Column minScreenWidth="Tablet" demandPopin="true"><Text text="Jornada semanal" /></Column>
                                     <Column width="7rem"><Text text="Estatus" /></Column>
                                 </columns>
                                 <items>

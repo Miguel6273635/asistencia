@@ -3,10 +3,11 @@ sap.ui.define([
     "com/mitsu/monitorasistencia/model/formatter",
     "com/mitsu/monitorasistencia/model/AttendanceApi",
     "com/mitsu/monitorasistencia/model/MonitorData",
+    "com/mitsu/monitorasistencia/model/periodHelper",
     "sap/ui/model/json/JSONModel",
     "sap/m/MessageToast",
     "sap/ui/export/Spreadsheet"
-], function (BaseController, formatter, AttendanceApi, MonitorData, JSONModel, MessageToast, Spreadsheet) {
+], function (BaseController, formatter, AttendanceApi, MonitorData, periodHelper, JSONModel, MessageToast, Spreadsheet) {
     "use strict";
 
     return BaseController.extend("com.mitsu.monitorasistencia.controller.Records", {
@@ -62,7 +63,9 @@ sap.ui.define([
                     late: 0,
                     latePercentage: "0%",
                     absent: 0,
-                    absentPercentage: "0%"
+                    absentPercentage: "0%",
+                    incomplete: 0,
+                    incompletePercentage: "0%"
                 },
                 statusCards: []
             }), "view");
@@ -104,10 +107,11 @@ sap.ui.define([
                 var sGeoStatus = String(oRecord.geoStatus || "").toUpperCase();
                 var bBackendOutside = oRecord.isOutOfZone || /OUT|FUERA/.test(sGeoStatus);
                 var bBackendInside = /(^|\s)IN($|\s)|DENTRO/.test(sGeoStatus);
-                var bOutsideZone = !bLocationOptional && (bBackendOutside || (bHasDistance && oRecord.distanceMeters > 2));
+                var bOutsideZone = !bLocationOptional &&
+                    (bBackendOutside || (!bBackendInside && bHasDistance && oRecord.distanceMeters > 2));
                 var sEffectiveStatus = bOutsideZone ? "Fuera de zona" : oRecord.status;
                 var sGeofenceStatus = bLocationOptional ? "No aplica" :
-                    (bOutsideZone ? "Fuera de zona" :
+                    (bOutsideZone ? (oRecord.geoStatusDescription || "Fuera de zona") :
                         (bBackendInside ? (oRecord.geoStatusDescription || "Dentro de zona") :
                             (bHasDistance ? "Dentro de zona" : "Sin ubicación")));
                 var sGeofenceState = bOutsideZone ? "Error" :
@@ -122,6 +126,7 @@ sap.ui.define([
                     role: oRecordEmployee.role || "Colaborador",
                     employee: oRecord.employee || oRecordEmployee.name || "Colaborador",
                     center: oRecord.center || oRecordEmployee.center || "Sin centro",
+                    centerCode: oRecord.centerCode || oRecordEmployee.centerCode || "",
                     shift: oRecord.shift || oRecordEmployee.shift || "Sin turno",
                     scheduled: oRecord.scheduled || oSchedule.shortDescription || "Sin horario",
                     scheduleId: oRecord.scheduleId || oRecordEmployee.scheduleId || "",
@@ -140,16 +145,30 @@ sap.ui.define([
                 return oRecord.employeeId === this._employeeId;
             }.bind(this));
             var oViewModel = this.getModel("view");
-            var aCenterOptions = Array.from(new Set(aEnrichedRecords.map(function (oRecord) {
-                return String(oRecord.center || "").trim();
-            }).filter(Boolean))).sort().map(function (sCenter) {
-                return { key: sCenter, text: sCenter };
+            var mCenterOptions = {};
+            aEnrichedRecords.forEach(function (oRecord) {
+                var sCenterCode = String(oRecord.centerCode || "").trim();
+                var sCenterName = String(oRecord.center || "").trim();
+                var sKey = sCenterCode || sCenterName;
+                if (sKey && !mCenterOptions[sKey]) {
+                    mCenterOptions[sKey] = {
+                        key: sKey,
+                        text: sCenterCode && sCenterName ? sCenterName + " (" + sCenterCode + ")" : sCenterName || sCenterCode
+                    };
+                }
+            });
+            var aCenterOptions = Object.keys(mCenterOptions).map(function (sKey) {
+                return mCenterOptions[sKey];
+            }).sort(function (oLeft, oRight) {
+                return oLeft.text.localeCompare(oRight.text, "es");
             });
 
             oViewModel.setProperty("/employee", oEmployee || {});
             oViewModel.setProperty("/title", oEmployee ? "Historial de asistencia: " + oEmployee.name : "Registros de asistencia");
             oViewModel.setProperty("/allRecords", aFilteredByEmployee);
-            oViewModel.setProperty("/centerOptions", [{ key: "all", text: "Todos" }].concat(aCenterOptions));
+            if (bResetFilters || (oViewModel.getProperty("/centerOptions") || []).length <= 1) {
+                oViewModel.setProperty("/centerOptions", [{ key: "all", text: "Todos" }].concat(aCenterOptions));
+            }
             if (bResetFilters) {
                 oViewModel.setProperty("/center", "all");
                 oViewModel.setProperty("/scheduleId", "");
@@ -172,7 +191,7 @@ sap.ui.define([
             var aRecords = oViewModel.getProperty("/allRecords") || [];
             var aFiltered = aRecords.filter(function (oRecord) {
                 var oRecordDate = this._parseDisplayDate(oRecord.date);
-                return (sCenter === "all" || oRecord.center === sCenter) &&
+                return (sCenter === "all" || oRecord.centerCode === sCenter || oRecord.center === sCenter) &&
                     (!sScheduleId || oRecord.scheduleId === sScheduleId) &&
                     (sStatus === "all" || oRecord.status === sStatus) &&
                     (!oRecordDate || !oPeriodStart || !oPeriodEnd || (oRecordDate >= oPeriodStart && oRecordDate <= oPeriodEnd));
@@ -181,6 +200,7 @@ sap.ui.define([
             var iPresent = this._countStatus(aFiltered, "Presente");
             var iLate = this._countStatus(aFiltered, "Retardo");
             var iAbsent = this._countStatus(aFiltered, "Ausente");
+            var iIncomplete = this._countStatus(aFiltered, "Incompleto");
             var oStats = {
                 total: iTotal,
                 totalPercentage: iTotal ? "100%" : "0%",
@@ -193,7 +213,10 @@ sap.ui.define([
                 lateDescription: iLate + " de " + iTotal + " registros · retardos ÷ total",
                 absent: iAbsent,
                 absentPercentage: this._formatPercentage(iAbsent, iTotal),
-                absentDescription: iAbsent + " de " + iTotal + " registros · ausencias ÷ total"
+                absentDescription: iAbsent + " de " + iTotal + " registros · ausencias ÷ total",
+                incomplete: iIncomplete,
+                incompletePercentage: this._formatPercentage(iIncomplete, iTotal),
+                incompleteDescription: iIncomplete + " de " + iTotal + " registros · incompletos ÷ total"
             };
             oViewModel.setProperty("/records", aFiltered);
             oViewModel.setProperty("/stats", oStats);
@@ -321,6 +344,10 @@ sap.ui.define([
             if (this._employeeId !== "all" && sPersonalNumber) {
                 aFilters.push({ field: "PersonalNumber", value: sPersonalNumber });
             }
+            var sCenter = oViewModel.getProperty("/center");
+            if (sCenter && sCenter !== "all") {
+                aFilters.push({ field: "CenterOffice", value: sCenter });
+            }
 
             this.getView().setBusy(true);
             return this._attendanceApi.getAttendanceHistory(aFilters).then(function (aRows) {
@@ -371,7 +398,7 @@ sap.ui.define([
                 },
                 {
                     status: "Fuera de zona",
-                    description: "Marcación a más de 2 m del centro",
+                    description: "Marcación fuera del rango autorizado",
                     icon: "sap-icon://map-2",
                     color: "#bb0000"
                 }

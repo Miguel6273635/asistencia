@@ -78,7 +78,7 @@ function compactDate(value: unknown): string {
 
 function usableTime(value: unknown): string {
     const time = text(value);
-    return !time || time === "00:00:00" ? "—" : time.slice(0, 5);
+    return !time || /^00:00(?::00)?$/.test(time) ? "—" : time.slice(0, 5);
 }
 
 function durationTime(value: unknown): string {
@@ -129,9 +129,23 @@ function isOutsideZone(row: ODataRow): boolean {
 
 function attendanceStatus(row: ODataRow): string {
     if (isOutsideZone(row)) { return "Fuera de zona"; }
-    if (bool(row.IsAbsent)) { return "Ausente"; }
-    if (bool(row.IsIncomplete)) { return "Incompleto"; }
     const raw = text(row.DayStatus).toUpperCase();
+    const hasEntry = usableTime(row.P10Time) !== "—";
+    const hasExit = usableTime(row.P20Time) !== "—";
+    const hasOtherMark = [row.P15Time, row.P25Time, row.P20Time]
+        .some((value) => usableTime(value) !== "—");
+    const backendMarksAbsent = bool(row.IsAbsent) || raw === "AUSENTE";
+    const backendMarksIncomplete = bool(row.IsIncomplete) || raw === "INCOMPLETO";
+
+    // Una ausencia requiere que no exista ninguna marcación válida. SAP puede
+    // enviar IsAbsent/DayStatus=AUSENTE aun cuando existe P10 u otro evento.
+    if (backendMarksIncomplete) { return "Incompleto"; }
+    if (backendMarksAbsent && hasEntry) {
+        if (bool(row.IsLate)) { return "Retardo"; }
+        return hasExit ? "Presente" : "Incompleto";
+    }
+    if (backendMarksAbsent && hasOtherMark) { return "Incompleto"; }
+    if (backendMarksAbsent) { return "Ausente"; }
     const known: Record<string, string> = {
         PRESENTE: "Presente",
         RETARDO: "Retardo",
@@ -196,6 +210,7 @@ function mapRecords(rows: ODataRow[], schedules: Record<string, unknown>[]): Rec
             dateISO: text(row.WorkDate),
             workDate: text(row.WorkDate),
             center: text(row.CenterOffice) || centerCode,
+            centerCode,
             centerId: centerCode.toLowerCase(),
             zoneId: operationalZoneId(row.Zone),
             shift: text(row.ScheduleDescription) || text(schedule.name) || scheduleCode,
@@ -554,6 +569,9 @@ function mapLocations(
                 accuracy: distanceLabel,
                 latitude: hasEmployeeCoordinates ? latitudeEmployee : null,
                 longitude: hasEmployeeCoordinates ? longitudeEmployee : null,
+                coordinatesText: hasEmployeeCoordinates ?
+                    `${latitudeEmployee!.toFixed(6)}, ${longitudeEmployee!.toFixed(6)}` :
+                    "Sin coordenadas registradas",
                 tooltip: `${name} · ${geofence.label} · ${distanceLabel}`
             });
         }

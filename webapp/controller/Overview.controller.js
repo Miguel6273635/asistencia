@@ -5,8 +5,9 @@ sap.ui.define([
     "com/mitsu/monitorasistencia/model/AttendanceApi",
     "com/mitsu/monitorasistencia/model/MonitorData",
     "sap/ui/model/json/JSONModel",
-    "sap/m/MessageToast"
-], function (BaseController, periodHelper, justificationHelper, AttendanceApi, MonitorData, JSONModel, MessageToast) {
+    "sap/m/MessageToast",
+    "sap/ui/core/Fragment"
+], function (BaseController, periodHelper, justificationHelper, AttendanceApi, MonitorData, JSONModel, MessageToast, Fragment) {
     "use strict";
 
     var PRESENT_STATUSES = ["Presente", "Home office", "Viaje de trabajo"];
@@ -19,6 +20,26 @@ sap.ui.define([
         { id: "este", name: "Zona Este" },
         { id: "oeste", name: "Zona Oeste" }
     ];
+    var INCIDENT_BUTTONS = {
+        late: {
+            status: "Retardo",
+            label: "Retardados",
+            title: "Usuarios con retardos",
+            state: "Warning"
+        },
+        absent: {
+            status: "Ausente",
+            label: "Ausencias",
+            title: "Usuarios con ausencias",
+            state: "Error"
+        },
+        outside: {
+            status: "Fuera de zona",
+            label: "Fuera de zona",
+            title: "Usuarios fuera de zona",
+            state: "Information"
+        }
+    };
 
     function buildMonthOptions() {
         return MONTH_NAMES.map(function (sMonth, iIndex) {
@@ -57,6 +78,18 @@ sap.ui.define([
         return iScheduledEnd !== null && iExit < iScheduledEnd;
     }
 
+    function initials(sName) {
+        return String(sName || "")
+            .trim()
+            .split(/\s+/)
+            .filter(Boolean)
+            .slice(0, 2)
+            .map(function (sPart) {
+                return sPart.charAt(0).toUpperCase();
+            })
+            .join("") || "—";
+    }
+
     return BaseController.extend("com.mitsu.monitorasistencia.controller.Overview", {
         onInit: function () {
             var oToday = new Date();
@@ -78,6 +111,16 @@ sap.ui.define([
                 zoneSummaries: [],
                 zoneInefficiency: [],
                 incidentTrend: [],
+                incidentCounts: {
+                    late: 0,
+                    absent: 0,
+                    outside: 0
+                },
+                incidentDialogTitle: "Detalle de incidencias",
+                incidentDialogSummary: "",
+                incidentUsers: [],
+                incidentUserCount: 0,
+                incidentRecordCount: 0,
                 criticalCenters: [],
                 lateReviewCount: 0,
                 earlyExitReviewCount: 0,
@@ -95,6 +138,15 @@ sap.ui.define([
                 dynamicRecords: null
             }), "view");
             this.getRouter().getRoute("overview").attachPatternMatched(this._onRouteMatched, this);
+        },
+
+        onExit: function () {
+            if (this._incidentUsersDialogPromise) {
+                this._incidentUsersDialogPromise.then(function (oDialog) {
+                    oDialog.destroy();
+                });
+                this._incidentUsersDialogPromise = null;
+            }
         },
 
         _onRouteMatched: function () {
@@ -198,6 +250,7 @@ sap.ui.define([
             var oSapOverview = this.getModel("attendance").getProperty("/sapOverview");
             var oPeriod = this._getPeriod();
             var aRecords = this._getEnrichedRecords(oPeriod);
+            this._updateIncidentButtonCounts(aRecords);
             console.groupCollapsed("[Monitor][FILTERS][Resumen][APPLY]");
             console.info({
                 granularity: this.getModel("view").getProperty("/granularity"),
@@ -372,6 +425,66 @@ sap.ui.define([
             return aRecords.filter(function (oRecord) { return aStatuses.indexOf(oRecord.status) >= 0; }).length;
         },
 
+        _updateIncidentButtonCounts: function (aRecords) {
+            this.getModel("view").setProperty("/incidentCounts", {
+                late: this._countStatuses(aRecords, ["Retardo"]),
+                absent: this._countStatuses(aRecords, ["Ausente"]),
+                outside: this._countStatuses(aRecords, ["Fuera de zona"])
+            });
+        },
+
+        _buildIncidentUsers: function (aRecords, oIncident) {
+            var aEmployees = this.getModel("attendance").getProperty("/employees") || [];
+            var mEmployees = aEmployees.reduce(function (mResult, oEmployee) {
+                mResult[oEmployee.id] = oEmployee;
+                return mResult;
+            }, {});
+            var mUsers = {};
+
+            aRecords.forEach(function (oRecord) {
+                var oEmployee = mEmployees[oRecord.employeeId] || {};
+                var sName = oRecord.employee || oEmployee.name || "Colaborador";
+                var sNumber = oEmployee.number || oRecord.employeeNumber ||
+                    String(oRecord.employeeId || "").replace(/^employee-/, "") || "Sin nómina";
+                var sKey = oRecord.employeeId || sNumber || sName;
+                var sDate = oRecord.date || recordDate(oRecord) || "Sin fecha";
+
+                if (!mUsers[sKey]) {
+                    mUsers[sKey] = {
+                        employeeId: oRecord.employeeId || oEmployee.id || "",
+                        employeeNumber: sNumber,
+                        name: sName,
+                        initials: oEmployee.initials || initials(sName),
+                        email: oEmployee.email || "",
+                        center: oRecord.centerName || oRecord.center ||
+                            oEmployee.center || "Sin centro",
+                        zone: oRecord.zoneName || oEmployee.zone || "Sin zona",
+                        status: oIncident.status,
+                        state: oIncident.state,
+                        incidentCount: 0,
+                        dates: []
+                    };
+                }
+
+                mUsers[sKey].incidentCount += 1;
+                if (mUsers[sKey].dates.indexOf(sDate) < 0) {
+                    mUsers[sKey].dates.push(sDate);
+                }
+            });
+
+            return Object.keys(mUsers).map(function (sKey) {
+                var oUser = mUsers[sKey];
+                oUser.datesText = oUser.dates.join(" · ");
+                oUser.incidentCountText = oUser.incidentCount === 1
+                    ? "1 registro"
+                    : oUser.incidentCount + " registros";
+                return oUser;
+            }).sort(function (oFirst, oSecond) {
+                return oSecond.incidentCount - oFirst.incidentCount ||
+                    oFirst.name.localeCompare(oSecond.name);
+            });
+        },
+
         _getRisk: function (nInefficiency, iTotal) {
             if (!iTotal) { return { text: "Sin datos", state: "None" }; }
             if (nInefficiency >= 25) { return { text: "Riesgo alto", state: "Error" }; }
@@ -514,7 +627,7 @@ sap.ui.define([
                     },
                     title: { visible: false },
                     legend: {
-                        visible: true,
+                        visible: false,
                         position: "right",
                         alignment: "center",
                         label: { style: { color: "#233548", fontSize: "11px" } }
@@ -617,6 +730,84 @@ sap.ui.define([
                 return oItem.zone === sZoneName;
             });
             if (oZone) { this.navTo("centers", { zoneId: oZone.zoneId }); }
+        },
+
+        _getIncidentUsersDialog: function () {
+            if (!this._incidentUsersDialogPromise) {
+                this._incidentUsersDialogPromise = Fragment.load({
+                    id: this.getView().getId(),
+                    name: "com.mitsu.monitorasistencia.view.fragments.OverviewIncidentUsersDialog",
+                    controller: this
+                }).then(function (oDialog) {
+                    this.getView().addDependent(oDialog);
+                    return oDialog;
+                }.bind(this));
+            }
+
+            return this._incidentUsersDialogPromise;
+        },
+
+        onIncidentLegendPress: function (oEvent) {
+            var sIncidentType = oEvent.getSource().data("incidentType");
+            var oIncident = INCIDENT_BUTTONS[sIncidentType];
+
+            if (!oIncident) {
+                return;
+            }
+
+            var oPeriod = this._getPeriod();
+            var aIncidentRecords = this._getEnrichedRecords(oPeriod).filter(function (oRecord) {
+                return oRecord.status === oIncident.status;
+            });
+
+            if (!aIncidentRecords.length) {
+                MessageToast.show(
+                    "No hay usuarios con " + oIncident.label.toLowerCase() +
+                    " para los filtros seleccionados"
+                );
+                return;
+            }
+
+            var aUsers = this._buildIncidentUsers(aIncidentRecords, oIncident);
+            var oViewModel = this.getModel("view");
+            oViewModel.setProperty("/incidentDialogTitle", oIncident.title);
+            oViewModel.setProperty("/incidentUsers", aUsers);
+            oViewModel.setProperty("/incidentUserCount", aUsers.length);
+            oViewModel.setProperty("/incidentRecordCount", aIncidentRecords.length);
+            oViewModel.setProperty(
+                "/incidentDialogSummary",
+                aUsers.length + (aUsers.length === 1 ? " usuario" : " usuarios") +
+                " · " + aIncidentRecords.length +
+                (aIncidentRecords.length === 1 ? " registro" : " registros") +
+                " · " + oPeriod.label
+            );
+
+            this._getIncidentUsersDialog().then(function (oDialog) {
+                oDialog.open();
+            });
+        },
+
+        onCloseIncidentUsersDialog: function () {
+            this._getIncidentUsersDialog().then(function (oDialog) {
+                oDialog.close();
+            });
+        },
+
+        onIncidentPersonPress: function (oEvent) {
+            var oContext = oEvent.getSource().getBindingContext("view");
+            var sEmployeeId = oContext && oContext.getProperty("employeeId");
+
+            if (!sEmployeeId) {
+                MessageToast.show("No se encontró el identificador del colaborador");
+                return;
+            }
+
+            this._getIncidentUsersDialog().then(function (oDialog) {
+                oDialog.close();
+                this.navTo("userPerformance", {
+                    employeeId: sEmployeeId
+                });
+            }.bind(this));
         },
 
         onCriticalCenterPress: function (oEvent) {
