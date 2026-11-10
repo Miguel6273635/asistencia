@@ -23,7 +23,7 @@ sap.ui.define([
     var INCIDENT_BUTTONS = {
         late: {
             status: "Retardo",
-            label: "Retardados",
+            label: "Retardos",
             title: "Usuarios con retardos",
             state: "Warning"
         },

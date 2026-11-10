@@ -5,11 +5,12 @@
   "description": "Aplicación SAPUI5 de marcajes para el personal de Mitsubishi",
   "scripts": {
     "prebuild": "node ../scripts/sync-version.js",
-    "start": "ui5 serve --config ./ui5-local.yaml --open /index.html",
-    "start-basic": "ui5 serve --open /index.html",
-    "build": "ui5 build --clean-dest --dest dist",
-    "build:portable": "node scripts/build-portable.js",
-    "package:html5": "node scripts/package-html5.js"
+   "start": "ui5 serve --config ./ui5-local.yaml --open \"/index.html?testIdentity=tellusprueba5%40melco.com.mx\"",
+   "start:without-identity": "ui5 serve --config ./ui5-local.yaml --open /index.html",
+   "start-basic": "ui5 serve --open /index.html",
+   "build": "ui5 build --clean-dest --dest dist",
+   "build:portable": "node scripts/build-portable.js",
+   "package:html5": "node scripts/package-html5.js"
   },
   "devDependencies": {
     "@ui5/cli": "^4.0.33",

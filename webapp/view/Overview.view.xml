@@ -140,7 +140,7 @@
                                     <HBox alignItems="Center" class="incidentReviewCard incidentReviewFourthLate">
                                         <core:Icon src="sap-icon://number-sign" class="incidentReviewIcon" />
                                         <VBox class="incidentReviewBody">
-                                            <Title text="4.º retardo" level="H5" />
+                                            <Title text="Ausencia por retardos" level="H5" />
                                             <Text text="Casos pendientes de revisión por RH" />
                                         </VBox>
                                         <ObjectNumber number="{view>/fourthLateReviewCount}" state="Information" class="incidentReviewCount" />
@@ -161,7 +161,7 @@
                                 class="incidentLegendButtons">
 
                                 <Button
-                                    text="{= 'Retardados · ' + ${view>/incidentCounts/late}}"
+                                    text="{= 'Retardos · ' + ${view>/incidentCounts/late}}"
                                     icon="sap-icon://lateness"
                                     type="Transparent"
                                     enabled="{= ${view>/incidentCounts/late} &gt; 0}"

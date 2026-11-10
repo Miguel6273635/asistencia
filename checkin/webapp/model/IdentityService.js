@@ -11,7 +11,7 @@ sap.ui.define([
     email: "",
     userName: "",
     displayName: "",
-    device: "BTP-Web",
+    device: "",
     source: ""
   };
 
@@ -53,7 +53,7 @@ sap.ui.define([
       email: email.toLowerCase(),
       userName: userName,
       displayName: displayName,
-      device: "BTP-Web",
+      device: "",
       source: origin
     };
   }
@@ -162,7 +162,7 @@ sap.ui.define([
       email: "",
       userName: "",
       displayName: "",
-      device: "BTP-Web",
+      device: "",
       source: ""
     }, identity || {});
     Diagnostics.info("IDENTITY", "Identidad activa establecida", {
@@ -213,7 +213,7 @@ sap.ui.define([
         email: "",
         userName: "",
         displayName: "",
-        device: "BTP-Web",
+        device: "",
         source: ""
       };
       if (isDevelopmentHost()) {

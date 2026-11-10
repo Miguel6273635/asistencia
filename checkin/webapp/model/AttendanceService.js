@@ -733,7 +733,7 @@ sap.ui.define([
         EnterDate: enterDate,
         EnterHour: localTime(now),
         Chanel: "BTP",
-        Device: device || "BTP-Web",
+        Device: device || "",
         TypeSession: typeSession,
         Latitude: String(location.latitude || ""),
         Longitude: String(location.longitude || ""),

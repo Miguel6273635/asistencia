@@ -18,7 +18,7 @@
 
         <MessageStrip id="homeOfficeDateInformation"
           visible="{= ${attendance>/today/workModalityDraft/typeSession} === 'HO' }"
-          text="Para Home Office, DateFrom y DateTo se enviarán con la fecha actual."
+         text="Para Home Office" 
           type="Information" showIcon="true" class="sapUiSmallMarginTop" />
 
         <VBox id="businessTripDateFields" visible="{= ${attendance>/today/workModalityDraft/typeSession} === 'VN' }"
