@@ -404,6 +404,60 @@
                                             state="Information" />
                                     </HBox>
 
+                                    <VBox class="mapSelectedPersonEvents">
+                                        <HBox
+                                            width="100%"
+                                            alignItems="Center"
+                                            justifyContent="SpaceBetween"
+                                            class="mapSelectedPersonEventsHeader">
+                                            <Label
+                                                text="Estado de zona por marcación"
+                                                class="mapSelectedPersonEventsTitle" />
+                                            <Text
+                                                text="{map>/selectedPerson/attendanceEventDateText}"
+                                                class="mapSelectedPersonEventsDate" />
+                                        </HBox>
+
+                                        <FlexBox
+                                            wrap="Wrap"
+                                            items="{map>/selectedPerson/attendanceEvents}"
+                                            class="mapSelectedPersonEventsGrid">
+                                            <VBox class="mapSelectedPersonEventCard">
+                                                <HBox
+                                                    width="100%"
+                                                    alignItems="Center"
+                                                    class="mapSelectedPersonEventIdentity">
+                                                    <core:Icon src="{map>icon}" />
+                                                    <VBox>
+                                                        <Text
+                                                            text="{= ${map>label} + ' · ' + ${map>registerType}}"
+                                                            class="mapSelectedPersonEventName" />
+                                                        <Text
+                                                            text="{map>dateTimeText}"
+                                                            class="mapSelectedPersonEventTime" />
+                                                    </VBox>
+                                                </HBox>
+
+                                                <ObjectStatus
+                                                    text="{map>geoStatusText}"
+                                                    state="{map>geoState}"
+                                                    icon="{map>geoIcon}"
+                                                    class="mapSelectedPersonEventStatus" />
+
+                                                <Text
+                                                    text="{map>coordinatesText}"
+                                                    visible="{map>hasCoordinates}"
+                                                    wrapping="true"
+                                                    class="mapSelectedPersonEventMeta" />
+
+                                                <Text
+                                                    text="{map>channelText}"
+                                                    visible="{= !!${map>channelText}}"
+                                                    class="mapSelectedPersonEventMeta" />
+                                            </VBox>
+                                        </FlexBox>
+                                    </VBox>
+
                                     <FlexBox
                                         wrap="Wrap"
                                         class="mapSelectedPersonFacts">

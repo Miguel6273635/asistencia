@@ -2063,6 +2063,79 @@ body > div,
     max-width: 100%;
 }
 
+.mapSelectedPersonEvents {
+    gap: 0.45rem;
+    padding-top: 0.55rem;
+    border-top: 1px solid #e3edf5;
+}
+
+.mapSelectedPersonEventsHeader {
+    gap: 0.5rem;
+}
+
+.mapSelectedPersonEventsTitle {
+    color: var(--monitor-text) !important;
+    font-size: 0.68rem !important;
+    font-weight: 800 !important;
+}
+
+.mapSelectedPersonEventsDate {
+    color: var(--monitor-muted) !important;
+    font-size: 0.64rem !important;
+}
+
+.mapSelectedPersonEventsGrid {
+    gap: 0.45rem;
+}
+
+.mapSelectedPersonEventCard {
+    flex: 1 1 calc(50% - 0.25rem);
+    min-width: 9.5rem;
+    gap: 0.35rem;
+    padding: 0.55rem;
+    box-sizing: border-box;
+    border: 1px solid #dce8f2;
+    border-radius: 0.55rem;
+    background: linear-gradient(145deg, #f8fbfe, #ffffff);
+}
+
+.mapSelectedPersonEventIdentity {
+    gap: 0.45rem;
+}
+
+.mapSelectedPersonEventIdentity > .sapUiIcon {
+    flex: 0 0 1.55rem;
+    width: 1.55rem;
+    height: 1.55rem;
+    border-radius: 50%;
+    color: var(--monitor-blue);
+    background: rgba(10, 110, 209, 0.09);
+    line-height: 1.55rem;
+    text-align: center;
+}
+
+.mapSelectedPersonEventName {
+    color: var(--monitor-text) !important;
+    font-size: 0.68rem !important;
+    font-weight: 800 !important;
+}
+
+.mapSelectedPersonEventTime,
+.mapSelectedPersonEventMeta {
+    color: var(--monitor-muted) !important;
+    font-size: 0.62rem !important;
+}
+
+.mapSelectedPersonEventStatus {
+    max-width: 100%;
+}
+
+.mapSelectedPersonEventStatus .sapMObjStatusText {
+    white-space: normal;
+    font-size: 0.66rem !important;
+    font-weight: 700;
+}
+
 .mapSelectedPersonFacts {
     gap: 0.45rem;
     padding-top: 0.55rem;
