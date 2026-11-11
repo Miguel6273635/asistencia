@@ -514,6 +514,7 @@
 //     }
 // }
 /* global Promise */
+/* global Promise */
 
 export type AttendanceEntitySet =
     | "ZoneSummarySet"
@@ -531,6 +532,7 @@ export type AttendanceEntitySet =
     | "ScheduleSummarySet"
     | "ScheduleTypeDistributionSet"
     | "EmployeeSet"
+    | "RelationLaboralSet"
     | "EmployeeSummarySet"
     | "PerformanceTrendSet"
     | "GeneralMapUbicationsSet";

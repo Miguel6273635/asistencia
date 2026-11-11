@@ -140,11 +140,20 @@
                                     <HBox alignItems="Center" class="incidentReviewCard incidentReviewFourthLate">
                                         <core:Icon src="sap-icon://number-sign" class="incidentReviewIcon" />
                                         <VBox class="incidentReviewBody">
-                                            <Title text="Ausencia por retardos" level="H5" />
+                                            <Title text="4.º retardo" level="H5" />
                                             <Text text="Casos pendientes de revisión por RH" />
                                         </VBox>
                                         <ObjectNumber number="{view>/fourthLateReviewCount}" state="Information" class="incidentReviewCount" />
                                         <Button text="Revisar" icon="sap-icon://navigation-right-arrow" type="Transparent" press=".onFourthLateReviewPress" />
+                                    </HBox>
+                                    <HBox alignItems="Center" class="incidentReviewCard incidentReviewNoAttendance">
+                                        <core:Icon src="sap-icon://employee-rejections" class="incidentReviewIcon" />
+                                        <VBox class="incidentReviewBody">
+                                            <Title text="Inasistencias" level="H5" />
+                                            <Text text="Sin ninguna marcación en el periodo" />
+                                        </VBox>
+                                        <ObjectNumber number="{view>/noAttendanceReviewCount}" state="Error" class="incidentReviewCount" />
+                                        <Button text="Revisar" icon="sap-icon://navigation-right-arrow" type="Transparent" press=".onNoAttendanceReviewPress" />
                                     </HBox>
                                 </VBox>
                             </content>
@@ -161,7 +170,7 @@
                                 class="incidentLegendButtons">
 
                                 <Button
-                                    text="{= 'Retardos · ' + ${view>/incidentCounts/late}}"
+                                    text="{= 'Retardados · ' + ${view>/incidentCounts/late}}"
                                     icon="sap-icon://lateness"
                                     type="Transparent"
                                     enabled="{= ${view>/incidentCounts/late} &gt; 0}"

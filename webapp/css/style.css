@@ -1490,6 +1490,11 @@ body > div,
     background: linear-gradient(105deg, rgba(108, 76, 207, 0.08), #ffffff 72%);
 }
 
+
+.incidentReviewNoAttendance {
+    border-left-color: #bb0000;
+    background: linear-gradient(105deg, rgba(187, 0, 0, 0.08), #ffffff 72%);
+}
 .incidentReviewIcon {
     flex: 0 0 auto;
     width: 1.5rem;
@@ -1504,6 +1509,21 @@ body > div,
 
 .incidentReviewFourthLate .incidentReviewIcon {
     color: #5b3fc0;
+}
+.incidentReviewNoAttendance .incidentReviewIcon {
+    color: #bb0000;
+}
+
+.noAttendanceKpiRow .reviewKpiCard {
+    min-width: 15rem;
+}
+
+.noAttendanceTablePanel {
+    margin-top: 0.75rem;
+}
+
+.noAttendanceTable .sapMListTblCell {
+    vertical-align: middle;
 }
 
 .incidentReviewBody {

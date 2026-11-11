@@ -1,10 +1,10 @@
- {
+{
   "_version": "1.70.0",
   "sap.app": {
     "id": "com.mitsu.monitorasistencia",
     "type": "application",
     "applicationVersion": {
-      "version": "0.4.1"
+      "version": "0.4.2"
     },
     "title": "Monitor de Asistencia",
     "description": "Control y monitoreo de asistencia, turnos y horarios",
@@ -14,6 +14,21 @@
         "type": "OData",
         "settings": {
           "odataVersion": "2.0"
+        }
+      }
+    },
+    "crossNavigation": {
+      "inbounds": {
+        "monitor-asistencia-display": {
+          "semanticObject": "MonitorAsistencia",
+          "action": "display",
+          "title": "Monitor de Asistencia",
+          "subTitle": "Control y monitoreo de asistencia",
+          "icon": "sap-icon://business-objects-experience",
+          "signature": {
+            "parameters": {},
+            "additionalParameters": "allowed"
+          }
         }
       }
     }
@@ -128,6 +143,11 @@
           "target": "fourthLateJustifications"
         },
         {
+          "pattern": "attendance/no-records",
+          "name": "noAttendance",
+          "target": "noAttendance"
+        },
+        {
           "pattern": "map",
           "name": "map",
           "target": "map"
@@ -184,6 +204,10 @@
         "fourthLateJustifications": {
           "viewId": "fourthLateJustifications",
           "viewName": "FourthLateJustifications"
+        },
+        "noAttendance": {
+          "viewId": "noAttendance",
+          "viewName": "NoAttendance"
         },
         "map": {
           "viewId": "map",

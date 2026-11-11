@@ -54,9 +54,9 @@
                         </ComboBox>
                     </VBox>
                     <VBox class="filterField">
-                        <Label text="Estatus" />
-                        <Select width="11rem" selectedKey="{view>/status}" change=".onFilterChange" items="{attendance>/statusCatalog}">
-                            <core:Item key="{attendance>key}" text="{attendance>text}" />
+                        <Label text="Estatus laboral" />
+                        <Select width="13rem" selectedKey="{view>/laborStatus}" change=".onFilterChange" items="{view>/laborStatusOptions}">
+                            <core:Item key="{view>key}" text="{view>text}" />
                         </Select>
                     </VBox>
                     <ToolbarSpacer />
@@ -95,10 +95,12 @@
                                 <Column width="6rem" hAlign="Center"><Text text="Entrada" /></Column>
                                 <Column width="6rem" hAlign="Center"><Text text="Salida" /></Column>
                                 <Column width="10rem" hAlign="Center" minScreenWidth="Desktop" demandPopin="true"><Text text="Comida" /></Column>
-                                <Column width="9rem"><Text text="Estatus" /></Column>
+                                <Column width="11rem" minScreenWidth="Desktop" demandPopin="true"><Text text="Estatus laboral" /></Column>
+                                <Column width="9rem"><Text text="Estatus del día" /></Column>
+                                <Column width="12rem" minScreenWidth="Tablet" demandPopin="true"><Text text="GeoStatus" /></Column>
                             </columns>
                             <items>
-                                <ColumnListItem type="Active" selected="{= ${view>id} === ${view>/selectedRecord/id} }" highlight="{path:'view>status', formatter:'.formatter.statusState'}">
+                                <ColumnListItem type="Active" selected="{= ${view>id} === ${view>/selectedRecord/id} }" highlight="{path:'view>dayStatus', formatter:'.formatter.statusState'}">
                                     <cells>
                                         <Text text="{view>date}" />
                                         <ObjectIdentifier title="{view>employee}" text="{view>employeeNumber}" />
@@ -107,7 +109,9 @@
                                         <Text text="{view>entry}" />
                                         <Text text="{view>exit}" />
                                         <Text text="{view>mealRange}" class="recordMealCell" />
-                                        <ObjectStatus text="{view>status}" state="{path:'view>status', formatter:'.formatter.statusState'}" />
+                                        <ObjectStatus text="{view>laborStatus}" state="{view>laborStatusState}" />
+                                        <ObjectStatus text="{view>dayStatus}" state="{path:'view>dayStatus', formatter:'.formatter.statusState'}" tooltip="{= 'DayStatus: ' + (${view>dayStatusRaw} || 'Sin dato')}" />
+                                        <ObjectStatus text="{view>geofenceStatus}" state="{view>geofenceState}" tooltip="{= 'GeoStatus: ' + (${view>geoStatus} || 'Sin dato')}" />
                                     </cells>
                                 </ColumnListItem>
                             </items>
@@ -145,7 +149,7 @@
                                     <HBox alignItems="Center" class="recordMetaLine"><core:Icon src="sap-icon://building" /><Text text="{view>/selectedRecord/center}" wrapping="true" /></HBox>
                                 </VBox>
                             </HBox>
-                            <ObjectStatus text="{view>/selectedRecord/status}" state="{path:'view>/selectedRecord/status', formatter:'.formatter.statusState'}" class="detailStatusPill" />
+                            <ObjectStatus text="{view>/selectedRecord/dayStatus}" state="{path:'view>/selectedRecord/dayStatus', formatter:'.formatter.statusState'}" class="detailStatusPill" />
                         </HBox>
 
                         <VBox class="recordDetailSection recordScheduleSection">
@@ -155,6 +159,8 @@
                                 <VBox class="detailInfoCard"><Label text="Horario asignado" /><Text text="{view>/selectedRecord/scheduleName}" class="detailPrimaryValue" wrapping="true" /></VBox>
                                 <VBox class="detailInfoCard"><Label text="Turno operativo" /><Text text="{view>/selectedRecord/shift}" class="detailPrimaryValue" wrapping="true" /></VBox>
                                 <VBox class="detailInfoCard detailInfoCardWide"><Label text="Horario del día" /><Text text="{view>/selectedRecord/scheduled}" class="detailPrimaryValue" wrapping="true" /></VBox>
+                                <VBox class="detailInfoCard"><Label text="Estatus laboral" /><ObjectStatus text="{view>/selectedRecord/laborStatus}" state="{view>/selectedRecord/laborStatusState}" /></VBox>
+                                <VBox class="detailInfoCard"><Label text="Estatus del día" /><ObjectStatus text="{view>/selectedRecord/dayStatus}" state="{path:'view>/selectedRecord/dayStatus', formatter:'.formatter.statusState'}" /></VBox>
                             </FlexBox>
                             <HBox alignItems="Start" class="weeklyRuleCard"><core:Icon src="sap-icon://calendar" /><VBox><Label text="Regla semanal" /><Text text="{view>/selectedRecord/scheduleDescription}" wrapping="true" /></VBox></HBox>
                         </VBox>
@@ -167,7 +173,7 @@
                                 <VBox alignItems="Center" class="markingCard markingHours"><core:Icon src="sap-icon://history" /><Label text="Horas registradas" /><Text text="{view>/selectedRecord/hours}" /></VBox>
                                 <VBox alignItems="Center" class="markingCard markingMealOut"><core:Icon src="sap-icon://meal" /><Label text="Inicio de comida" /><Text text="{view>/selectedRecord/mealCheckOut}" /></VBox>
                                 <VBox alignItems="Center" class="markingCard markingMealIn"><core:Icon src="sap-icon://meal" /><Label text="Fin de comida" /><Text text="{view>/selectedRecord/mealCheckIn}" /></VBox>
-                                <VBox alignItems="Center" class="markingCard markingZone"><core:Icon src="sap-icon://map-2" /><Label text="Estado de zona" /><ObjectStatus text="{view>/selectedRecord/geofenceStatus}" state="{view>/selectedRecord/geofenceState}" /><Text text="{= 'GeoStatus: ' + (${view>/selectedRecord/geoStatus} || 'Sin dato') + ' · Distancia: ' + ${view>/selectedRecord/distanceLabel}}" wrapping="true" class="markingZoneMeta" /></VBox>
+                                <VBox alignItems="Center" class="markingCard markingZone"><core:Icon src="sap-icon://map-2" /><Label text="GeoStatus" /><ObjectStatus text="{view>/selectedRecord/geofenceStatus}" state="{view>/selectedRecord/geofenceState}" /><Text text="{= 'GeoStatus: ' + (${view>/selectedRecord/geoStatus} || 'Sin dato') + ' · Distancia: ' + ${view>/selectedRecord/distanceLabel}}" wrapping="true" class="markingZoneMeta" /></VBox>
                             </FlexBox>
                         </VBox>
 
@@ -180,7 +186,7 @@
                             <HBox alignItems="Center" class="detailSectionHeading"><core:Icon src="sap-icon://history" /><Title text="Historial de estatus" level="H4" class="detailSectionTitle" /></HBox>
                             <HBox alignItems="Center" justifyContent="SpaceBetween" wrap="Wrap" class="historyCard">
                                 <HBox alignItems="Center"><core:Icon src="sap-icon://date-time" class="historyEventIcon" /><VBox><Text text="{view>/selectedRecord/historyDate}" class="historyDate" /><Text text="Actualizado por Administrador" class="historyAuthor" /></VBox></HBox>
-                                <ObjectStatus text="{view>/selectedRecord/status}" state="{path:'view>/selectedRecord/status', formatter:'.formatter.statusState'}" class="detailStatusPill" />
+                                <ObjectStatus text="{view>/selectedRecord/dayStatus}" state="{path:'view>/selectedRecord/dayStatus', formatter:'.formatter.statusState'}" class="detailStatusPill" />
                             </HBox>
                         </VBox>
                     </VBox>

@@ -1,6 +1,6 @@
 _schema-version: "3.3"
 ID: mitsu-monitor-asistencia
-version: 0.4.1
+version: 0.4.2
 description: Monitor de asistencia para Mitsubishi Electric
 
 modules:

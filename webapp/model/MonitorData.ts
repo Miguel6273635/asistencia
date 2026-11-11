@@ -334,6 +334,7 @@ function mapRecords(rows: ODataRow[], schedules: Record<string, unknown>[]): Rec
             hours: text(row.NetHours) || "0:00",
             distanceMeters: distance ? number(distance) : null,
             status: attendanceStatus(row),
+            dayStatus: text(row.DayStatus),
             isLate: bool(row.IsLate),
             isAbsent: bool(row.IsAbsent),
             isIncomplete: bool(row.IsIncomplete),
@@ -363,7 +364,7 @@ function mapEmployees(rows: ODataRow[], history: ODataRow[]): Record<string, unk
         if (!personalNumber) { return; }
         const score = (text(row.Zone) ? 8 : 0) + (/^ML\d+/i.test(text(row.CenterCode)) ? 6 : 0) +
             (/^Z\d+/i.test(text(row.ScheduleCode)) ? 5 : 0) + (text(row.ScheduleDetail) ? 3 : 0) +
-            (text(row.Hourly) ? 2 : 0) + (text(row.Email) ? 1 : 0);
+            (text(row.Hourly) ? 2 : 0) + (text(row.RelationJob) ? 2 : 0) + (text(row.Email) ? 1 : 0);
         const candidate: Record<string, unknown> = {
             id: `employee-${personalNumber}`,
             number: personalNumber,
@@ -381,6 +382,8 @@ function mapEmployees(rows: ODataRow[], history: ODataRow[]): Record<string, unk
             scheduleDescription: text(row.ScheduleDetail),
             role: text(row.Position) || text(row.Role) || "Colaborador",
             status: text(row.DescriptionStatus),
+            relationJob: text(row.RelationJob),
+            relationJobDescription: text(row.RelationJobDescription),
             active: text(row.Status) !== "0",
             email: text(row.Email),
             lastUpdate: text(row.LastUpdate),
@@ -411,7 +414,10 @@ function mapEmployees(rows: ODataRow[], history: ODataRow[]): Record<string, unk
         if (!existing || number(candidate._score) > number(existing._score)) {
             employees.set(personalNumber, Object.assign({}, existing || {}, candidate));
         } else {
-            ["email", "role", "lastUpdate", "scheduleDescription"].forEach((property) => {
+            [
+                "email", "role", "lastUpdate", "scheduleDescription",
+                "relationJob", "relationJobDescription"
+            ].forEach((property) => {
                 if (!text(existing[property]) && text(candidate[property])) { existing[property] = candidate[property]; }
             });
         }
@@ -842,7 +848,8 @@ export async function loadMonitorData(
         { field: "DateTo", value: dateTo }
     ];
     const [zoneRows, indicators, centerRows, scheduleRows, rawHistoryRows, employeeRows, employeeSummaryRows,
-        scheduleSummaryRows, trendRows, distributionRows, mapRows, centerCatalogRows, zoneAttendanceRows, baseRows] = await Promise.all([
+        scheduleSummaryRows, trendRows, distributionRows, mapRows, centerCatalogRows, zoneAttendanceRows, baseRows,
+        relationLaboralRows] = await Promise.all([
         request("ZoneSummarySet", () => api.getCollection("ZoneSummarySet", { filters: periodFilter }), errors),
         request("CriticalIndicatorsSet", () => api.getCollection("CriticalIndicatorsSet", { filters: periodFilter }), errors),
         request("CenterOfficeSummarySet", () => api.getCollection("CenterOfficeSummarySet", { filters: periodFilter }), errors),
@@ -856,7 +863,8 @@ export async function loadMonitorData(
         request("GeneralMapUbicationsSet", () => api.getCollection("GeneralMapUbicationsSet"), errors),
         request("CenterOfficeSet", () => api.getCollection("CenterOfficeSet"), errors),
         request("ZoneAttendanceSet", () => api.getCollection("ZoneAttendanceSet"), errors),
-        request("BasesSet", () => api.getCollection("BasesSet"), errors)
+        request("BasesSet", () => api.getCollection("BasesSet"), errors),
+        request("RelationLaboralSet", () => api.getCollection("RelationLaboralSet"), errors)
     ]);
     // El backend puede devolver jornadas fuera del rango solicitado. El filtrado
     // defensivo evita contaminar los totales mensuales y anuales de la interfaz.
@@ -879,6 +887,12 @@ export async function loadMonitorData(
         "Presente", "Retardo", "Ausente", "Incompleto", "Viaje de trabajo",
         "Vacaciones", "Paternidad", "Home office", "Fuera de zona"
     ].map((status) => ({ key: status, text: status }));
+    const laborStatusCatalog = [{ key: "all", text: "Todos" }].concat(
+        relationLaboralRows.map((row) => ({
+            key: text(row.RelationJob),
+            text: text(row.RelationDescription) || text(row.RelationJob)
+        })).filter((item) => Boolean(item.key))
+    );
     const employeeSummary = employeeSummaryRows[0] || {};
     const derivedActiveEmployees = employees.filter((employee) => Boolean(employee.active)).length;
     const derivedInactiveEmployees = employees.length - derivedActiveEmployees;
@@ -889,6 +903,7 @@ export async function loadMonitorData(
             serviceState: { loading: false, live: true, periodType, errors },
             zones,
             statusCatalog: [{ key: "all", text: "Todos" }].concat(effectiveStatusCatalog),
+            laborStatusCatalog,
             centers,
             schedules,
             employees,
@@ -913,6 +928,7 @@ export async function loadMonitorData(
             sapBases: baseRows,
             sapZoneCatalog: zoneAttendanceRows,
             sapStatusCatalog: [],
+            sapRelationLaboralCatalog: relationLaboralRows,
             mapZones: locations.mapZones,
             mapCenters: locations.mapCenters,
             mapPersonnel: locations.mapPersonnel,
@@ -950,11 +966,12 @@ export function emptyMonitorData(error?: string): Record<string, unknown> {
             { key: "Home office", text: "Home office" },
             { key: "Fuera de zona", text: "Fuera de zona" }
         ],
+        laborStatusCatalog: [{ key: "all", text: "Todos" }],
         centers: [], schedules: [], employees: [], records: [], userPerformanceHistory: [],
         sapOverview: null, sapZoneSummaries: [], sapCriticalIndicators: [], sapCenterSummaries: [],
         sapScheduleDistribution: [], sapIncidentTrend: [], sapScheduleSummary: [], sapScheduleTypes: [],
         sapEmployees: [], sapEmployeeSummary: [], sapAttendanceHistory: [], sapMapLocations: [],
-        sapZoneCatalog: [], sapStatusCatalog: [],
+        sapZoneCatalog: [], sapStatusCatalog: [], sapRelationLaboralCatalog: [],
         mapZones: [], mapCenters: [], mapPersonnel: [],
         employeeSummary: { total: 0, active: 0, inactive: 0, centers: 0 },
         configuration: { lateTolerance: 10, earlyEntry: 20, automaticAbsence: "10:00", refreshMinutes: 5 }

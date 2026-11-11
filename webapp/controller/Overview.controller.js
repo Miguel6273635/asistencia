@@ -2,12 +2,13 @@ sap.ui.define([
     "com/mitsu/monitorasistencia/controller/BaseController",
     "com/mitsu/monitorasistencia/model/periodHelper",
     "com/mitsu/monitorasistencia/model/justificationHelper",
+    "com/mitsu/monitorasistencia/model/noAttendanceHelper",
     "com/mitsu/monitorasistencia/model/AttendanceApi",
     "com/mitsu/monitorasistencia/model/MonitorData",
     "sap/ui/model/json/JSONModel",
     "sap/m/MessageToast",
     "sap/ui/core/Fragment"
-], function (BaseController, periodHelper, justificationHelper, AttendanceApi, MonitorData, JSONModel, MessageToast, Fragment) {
+], function (BaseController, periodHelper, justificationHelper, noAttendanceHelper, AttendanceApi, MonitorData, JSONModel, MessageToast, Fragment) {
     "use strict";
 
     var PRESENT_STATUSES = ["Presente", "Home office", "Viaje de trabajo"];
@@ -23,7 +24,7 @@ sap.ui.define([
     var INCIDENT_BUTTONS = {
         late: {
             status: "Retardo",
-            label: "Retardos",
+            label: "Retardados",
             title: "Usuarios con retardos",
             state: "Warning"
         },
@@ -125,6 +126,7 @@ sap.ui.define([
                 lateReviewCount: 0,
                 earlyExitReviewCount: 0,
                 fourthLateReviewCount: 0,
+                noAttendanceReviewCount: 0,
                 fourthLateIntegrationPending: true,
                 overviewSummary: {
                     attendance: "0.0",
@@ -400,19 +402,50 @@ sap.ui.define([
             });
         },
 
-        _updateReviewCounts: function () {
+        _updateReviewCounts: function (aPeriodRecords) {
             var oPeriod = this._getPeriod();
             var iRequest = (this._reviewCountRequest || 0) + 1;
             this._reviewCountRequest = iRequest;
             var sDateFrom = this._formatODataDate(oPeriod.start);
             var sDateTo = this._formatODataDate(oPeriod.end);
+            var aEmployees = this.getModel("attendance").getProperty("/employees") || [];
+            var iFallbackNoAttendance = noAttendanceHelper.buildRows(
+                aEmployees,
+                aPeriodRecords || []
+            ).length;
+            var pNoAttendanceCount = this._attendanceApi.getAttendanceHistory([
+                { field: "DateFrom", value: sDateFrom },
+                { field: "DateTo", value: sDateTo }
+            ]).then(function (aHistoryRows) {
+                return noAttendanceHelper.buildRows(
+                    aEmployees,
+                    aHistoryRows || []
+                ).length;
+            }).catch(function (oError) {
+                console.warn(
+                    "[Monitor][NO-ATTENDANCE][COUNT][FALLBACK]",
+                    oError
+                );
+                return iFallbackNoAttendance;
+            });
+
+            this.getModel("view").setProperty(
+                "/noAttendanceReviewCount",
+                iFallbackNoAttendance
+            );
+
             return Promise.all([
                 this._attendanceApi.getProcessingJustifications(sDateFrom, sDateTo),
-                this._attendanceApi.getFourthLateReviews(sDateFrom, sDateTo)
+                this._attendanceApi.getFourthLateReviews(sDateFrom, sDateTo),
+                pNoAttendanceCount
             ]).then(function (aResults) {
                 if (iRequest !== this._reviewCountRequest) { return; }
                 var aRows = aResults[0] || [];
                 var aFourthLateRows = aResults[1] || [];
+                this.getModel("view").setProperty(
+                    "/noAttendanceReviewCount",
+                    aResults[2]
+                );
                 this.getModel("view").setProperty("/lateReviewCount", aRows.filter(function (oRow) {
                     return justificationHelper.matches(oRow, "late");
                 }).length);
@@ -889,6 +922,32 @@ sap.ui.define([
 
         onFourthLateReviewPress: function () {
             this._openJustificationReview("fourthLate");
+        },
+
+        onNoAttendanceReviewPress: function () {
+            var oPeriod = this._getPeriod();
+            var oContext = {
+                start: periodHelper.toKey(oPeriod.start),
+                end: periodHelper.toKey(oPeriod.end),
+                label: oPeriod.label
+            };
+
+            this.getModel("attendance").setProperty(
+                "/noAttendanceContext",
+                oContext
+            );
+            try {
+                window.sessionStorage.setItem(
+                    "monitor.noAttendanceContext",
+                    JSON.stringify(oContext)
+                );
+            } catch (oStorageError) {
+                console.warn(
+                    "[Monitor][NO-ATTENDANCE][CONTEXT][STORAGE]",
+                    oStorageError
+                );
+            }
+            this.navTo("noAttendance");
         }
     });
 });

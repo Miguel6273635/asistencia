@@ -503,7 +503,9 @@ sap.ui.define([
         _onRouteMatched: function (oEvent) {
             var sRouteName = oEvent.getParameter("name");
             var bIsJustificationDetail = sRouteName === "lateJustifications" ||
-                sRouteName === "earlyExitJustifications";
+                 sRouteName === "earlyExitJustifications" ||
+                sRouteName === "fourthLateJustifications" ||
+                sRouteName === "noAttendance";
             var mSelectedKeys = {
                 overview: "overview",
                 shifts: "shifts",
