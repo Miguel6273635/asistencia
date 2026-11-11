@@ -194,9 +194,120 @@ function mapSchedules(rows: ODataRow[], activeScheduleCount = 0): Record<string,
     });
 }
 
+const REGISTER_TIME_FIELDS: Record<string, string> = {
+    P10: "P10Time",
+    P15: "P15Time",
+    P25: "P25Time",
+    P20: "P20Time"
+};
+
+function firstNonEmpty(rows: ODataRow[], field: string): unknown {
+    const row = rows.find((candidate) => text(candidate[field]) !== "");
+    return row ? row[field] : "";
+}
+
+function firstUsableTime(rows: ODataRow[], field: string, registerType: string): unknown {
+    const aggregateRow = rows.find((candidate) => usableTime(candidate[field]) !== "—");
+    if (aggregateRow) { return aggregateRow[field]; }
+
+    const eventRow = rows.find((candidate) =>
+        text(candidate.RegisterType).toUpperCase() === registerType &&
+        usableTime(candidate.EnterHour) !== "—"
+    );
+    return eventRow ? eventRow.EnterHour : "";
+}
+
+function combinedText(rows: ODataRow[], field: string): string {
+    return Array.from(new Set(
+        rows.map((row) => text(row[field])).filter(Boolean)
+    )).join(" ");
+}
+
+function consolidatedDayStatus(rows: ODataRow[]): string {
+    const statuses = rows.map((row) => text(row.DayStatus).toUpperCase());
+    const priority = ["INCOMPLETO", "RETARDO", "PRESENTE", "AUSENTE"];
+    return priority.find((status) => statuses.includes(status)) ||
+        statuses.find(Boolean) || "";
+}
+
+/**
+ * AttendanceHistorySet devuelve una fila por marcación (P10, P15, P25 y P20).
+ * La pantalla de Registros representa jornadas, por lo que todas las filas del
+ * mismo empleado y fecha deben consolidarse antes de calcular KPIs y estatus.
+ */
+function consolidateAttendanceHistory(rows: ODataRow[]): ODataRow[] {
+    const groups = new Map<string, ODataRow[]>();
+
+    rows.forEach((row, index) => {
+        const personalNumber = text(row.PersonalNumber);
+        const workDate = compactDate(row.WorkDate || row.EnterDate);
+        const key = personalNumber && workDate
+            ? `${personalNumber}|${workDate}`
+            : `__unkeyed__|${index}`;
+        const group = groups.get(key) || [];
+        group.push(row);
+        groups.set(key, group);
+    });
+
+    return Array.from(groups.values()).map<ODataRow>((group) => {
+        if (group.length === 1) { return group[0]; }
+
+        const merged: Record<string, unknown> = { ...group[0] };
+
+        Object.entries(REGISTER_TIME_FIELDS).forEach(([registerType, field]) => {
+            merged[field] = firstUsableTime(group, field, registerType);
+        });
+
+        [
+            "FullName", "Email", "CenterOffice", "CenterCode", "Zone",
+            "Schedule", "ScheduleDescription", "ScheduleDetail", "NetHours",
+            "DistanceMeters", "StatusReq", "Justification", "JustificationText"
+        ].forEach((field) => {
+            merged[field] = firstNonEmpty(group, field);
+        });
+
+        merged.DayStatus = consolidatedDayStatus(group);
+        merged.IsLate = group.some((row) => bool(row.IsLate));
+        merged.IsAbsent = group.some((row) => bool(row.IsAbsent));
+        merged.IsIncomplete = group.some((row) => bool(row.IsIncomplete));
+        merged.IsEarlyExit = group.some((row) =>
+            bool(row.IsEarlyExit) || bool(row.EarlyExit) || bool(row.IsEarly)
+        );
+
+        const outsideRow = group.find((row) => isOutsideZone(row));
+        const insideRow = group.find((row) => {
+            const status = [
+                row.GeoStatus,
+                row.GeoStatusDescripcion,
+                row.GeoStatusDescription,
+                row.LocationStatus
+            ].map((value) => text(value).toUpperCase()).filter(Boolean).join(" ");
+            return /(^|\s)IN(?:SIDE)?(\s|$)|DENTRO(?:\s+DE)?\s+(?:DEL\s+RANGO|ZONA|GEOCERCA)/.test(status);
+        });
+        const geoRow = outsideRow || insideRow;
+
+        merged.IsOutOfZone = Boolean(outsideRow);
+        if (geoRow) {
+            merged.GeoStatus = text(geoRow.GeoStatus) || (outsideRow ? "OUT" : "IN");
+            merged.GeoStatusDescripcion = text(
+                geoRow.GeoStatusDescripcion || geoRow.GeoStatusDescription
+            ) || (outsideRow ? "Registro fuera de rango" : "Registro dentro del rango");
+            merged.DistanceMeters = firstNonEmpty(
+                [geoRow].concat(group),
+                "DistanceMeters"
+            );
+        }
+
+        merged.Observation = combinedText(group, "Observation");
+        merged.Message = combinedText(group, "Message");
+
+        return merged as ODataRow;
+    });
+}
+
 function mapRecords(rows: ODataRow[], schedules: Record<string, unknown>[]): Record<string, unknown>[] {
     const schedulesByCode = new Map(schedules.map((schedule) => [text(schedule.code), schedule]));
-    return rows.map((row) => {
+    return consolidateAttendanceHistory(rows).map((row) => {
         const personalNumber = text(row.PersonalNumber);
         const centerCode = text(row.CenterCode);
         const scheduleCode = text(row.Schedule);

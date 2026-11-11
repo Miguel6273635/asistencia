@@ -282,6 +282,54 @@ sap.ui.define([
         return vValue === null || vValue === undefined ? "" : String(vValue).trim();
     }
 
+    function sortableDate(sValue) {
+        var sDigits = safeText(sValue).replace(/[^0-9]/g, "").slice(0, 8);
+        if (!/^\d{8}$/.test(sDigits)) { return ""; }
+
+        // SAP normalmente entrega AAAAMMDD. También se admite DDMMAAAA
+        // para conservar el orden correcto si cambia el formato de la entidad.
+        return Number(sDigits.slice(0, 4)) >= 1900
+            ? sDigits
+            : sDigits.slice(4, 8) + sDigits.slice(2, 4) + sDigits.slice(0, 2);
+    }
+
+    function sortableTime(sValue) {
+        var sDigits = safeText(sValue).replace(/[^0-9]/g, "");
+        return /^\d{6}$/.test(sDigits) ? sDigits : "000000";
+    }
+
+    var REVIEW_CONFIG = {
+        late: {
+            title: "Revisión de retardos",
+            subtitle: "Consulta cada llegada tardía y acepta o rechaza la justificación del colaborador."
+        },
+        early: {
+            title: "Revisión de salidas anticipadas",
+            subtitle: "Consulta cada salida antes del horario y acepta o rechaza la justificación del colaborador."
+        },
+        fourthLate: {
+            title: "Revisión de 4.º retardo",
+            subtitle: "RH podrá aceptar o rechazar cada caso después de capturar un comentario obligatorio."
+        }
+    };
+
+    function reviewTypeFromRoute(sRouteName) {
+        if (sRouteName === "earlyExitJustifications") { return "early"; }
+        if (sRouteName === "fourthLateJustifications") { return "fourthLate"; }
+        return "late";
+    }
+
+    function normalizeFourthLateEntityRow(oRow) {
+        /*
+         * INTEGRATION_PENDING_FOURTH_LATE_MAPPING
+         * Aquí se mapearán los nombres reales de la nueva entidad hacia los
+         * campos comunes que consume esta pantalla: PersonalNumber, FullName,
+         * DateJustification, CenterOffice, ScheduleDetail, EnterHour,
+         * CommentsLog, DecisionRH y CommentsRH.
+         */
+        return oRow;
+    }
+
     return BaseController.extend("com.mitsu.monitorasistencia.controller.Justifications", {
         onInit: function () {
             this._attendanceApi = new AttendanceApi();
@@ -290,14 +338,15 @@ sap.ui.define([
                 type: "late", title: "Revisión de retardos",
                 subtitle: "Valida las justificaciones enviadas por los colaboradores.",
                 periodLabel: "", dateFrom: "", dateTo: "", count: 0, pendingCount: 0, resolvedCount: 0,
-                search: "", busy: false, error: "", rows: [], filteredRows: []
+                search: "", busy: false, error: "", integrationPending: false, rows: [], filteredRows: []
             }), "review");
             this.getRouter().getRoute("lateJustifications").attachPatternMatched(this._onRouteMatched, this);
             this.getRouter().getRoute("earlyExitJustifications").attachPatternMatched(this._onRouteMatched, this);
+            this.getRouter().getRoute("fourthLateJustifications").attachPatternMatched(this._onRouteMatched, this);
         },
 
         _onRouteMatched: function (oEvent) {
-            var sType = oEvent.getParameter("name") === "earlyExitJustifications" ? "early" : "late";
+            var sType = reviewTypeFromRoute(oEvent.getParameter("name"));
             this.getModel("attendance").dataLoaded().then(function () { return this._loadRows(sType); }.bind(this));
         },
 
@@ -326,27 +375,35 @@ sap.ui.define([
         _loadRows: function (sType) {
             var oPeriod = this._resolvePeriod();
             var oReviewModel = this.getModel("review");
+            var oConfiguration = REVIEW_CONFIG[sType] || REVIEW_CONFIG.late;
+            var bFourthLate = sType === "fourthLate";
             oReviewModel.setProperty("/busy", true);
             oReviewModel.setProperty("/error", "");
             oReviewModel.setProperty("/type", sType);
-            oReviewModel.setProperty("/title", sType === "late" ? "Revisión de retardos" : "Revisión de salidas anticipadas");
-            oReviewModel.setProperty("/subtitle", sType === "late" ?
-                "Consulta cada llegada tardía y acepta o rechaza la justificación del colaborador." :
-                "Consulta cada salida antes del horario y acepta o rechaza la justificación del colaborador.");
+            oReviewModel.setProperty("/title", oConfiguration.title);
+            oReviewModel.setProperty("/subtitle", oConfiguration.subtitle);
+            // Cambiar a false cuando la entidad GET/POST de 4.º retardo quede conectada.
+            oReviewModel.setProperty("/integrationPending", bFourthLate);
             oReviewModel.setProperty("/periodLabel", oPeriod.label);
             oReviewModel.setProperty("/dateFrom", oPeriod.from);
             oReviewModel.setProperty("/dateTo", oPeriod.to);
             // eslint-disable-next-line no-console
             console.info("[Monitor][JUSTIFICATIONS][LOAD]", { type: sType, period: oPeriod });
 
+            var pReviewRows = bFourthLate
+                ? this._attendanceApi.getFourthLateReviews(oPeriod.from, oPeriod.to)
+                : this._attendanceApi.getProcessingJustifications(oPeriod.from, oPeriod.to);
+
             return Promise.all([
-                this._attendanceApi.getProcessingJustifications(oPeriod.from, oPeriod.to),
+                pReviewRows,
                 this._attendanceApi.getEmployees().catch(function (oError) {
                     console.warn("[Monitor][JUSTIFICATIONS][EMPLOYEES][FALLBACK]", oError);
                     return [];
                 })
             ]).then(function (aResults) {
-                var aRows = aResults[0] || [];
+                var aRows = (aResults[0] || []).map(function (oRow) {
+                    return bFourthLate ? normalizeFourthLateEntityRow(oRow) : oRow;
+                });
                 var aSapEmployees = aResults[1] || [];
                 var aEmployees = (this.getModel("attendance").getProperty("/employees") || []).concat(aSapEmployees);
                 var aCenters = this.getModel("attendance").getProperty("/centers") || [];
@@ -359,7 +416,7 @@ sap.ui.define([
                 });
                 aCenters.forEach(function (oCenter) { mCenters[String(oCenter.code || "").trim()] = oCenter; });
                 var aMapped = aRows.filter(function (oRow) {
-                    return justificationHelper.matches(oRow, sType);
+                    return bFourthLate || justificationHelper.matches(oRow, sType);
                 }).map(function (oRow, iIndex) {
                     var sNumber = safeText(oRow.PersonalNumber);
                     var oEmployee = mEmployees[sNumber] || {};
@@ -401,8 +458,21 @@ sap.ui.define([
                         decision: sDecision,
                         approvalText: sDecision === "approved" ? "Aprobado" : (sDecision === "rejected" ? "Rechazado" : "Pendiente"),
                         approvalState: sDecision === "approved" ? "Success" : (sDecision === "rejected" ? "Error" : "Warning"),
+                        sortDate: sortableDate(oRow.DateJustification),
+                        sortTime: sortableTime(sEntryTime),
                         raw: oRow
                     };
+                }).sort(function (oLeft, oRight) {
+                    var iDateOrder = oRight.sortDate.localeCompare(oLeft.sortDate);
+                    if (iDateOrder !== 0) { return iDateOrder; }
+
+                    var iTimeOrder = oRight.sortTime.localeCompare(oLeft.sortTime);
+                    if (iTimeOrder !== 0) { return iTimeOrder; }
+
+                    return safeText(oLeft.personalNumber).localeCompare(
+                        safeText(oRight.personalNumber),
+                        "es"
+                    );
                 });
                 oReviewModel.setProperty("/rows", aMapped);
                 oReviewModel.setProperty("/filteredRows", aMapped);
@@ -497,8 +567,12 @@ sap.ui.define([
             };
             this._requestInProgress = true;
             this.getModel("review").setProperty("/busy", true);
-            return this._attendanceApi.submitJustificationDecision(oPayload).then(function () {
-                MessageToast.show(sDecisionRH === "A" ? "Justificación aceptada" : "Justificación rechazada");
+            var sType = this.getModel("review").getProperty("/type");
+            var pDecision = sType === "fourthLate"
+                ? this._attendanceApi.submitFourthLateDecision(oPayload)
+                : this._attendanceApi.submitJustificationDecision(oPayload);
+            return pDecision.then(function () {
+                MessageToast.show(sDecisionRH === "A" ? "Caso aceptado" : "Caso rechazado");
                 return this._loadRows(this.getModel("review").getProperty("/type"));
             }.bind(this)).catch(function (oError) {
                 MessageBox.error("SAP no pudo procesar la decisión. " + (oError.message || String(oError)));
@@ -515,5 +589,3 @@ sap.ui.define([
         onBack: function () { this.navTo("overview"); }
     });
 });
-
-

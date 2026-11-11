@@ -2394,7 +2394,7 @@ sap.ui.define([
         message = "Viaje de negocios identificado. Se enviará TypeSession VN y el periodo autorizado a SAP.";
         messageType = "Information";
       } else if (typeSession === "HO") {
-        message = "Home Office identificado. Se enviará TypeSession HO y la fecha del día a SAP.";
+        message = "Home Office identificado.";
         messageType = "Information";
       } else if (isLateNow && nextAction === "CHECK_IN") {
         message = "Entrada tarde";
