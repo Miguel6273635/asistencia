@@ -330,6 +330,7 @@
                 <Column width="12rem" minScreenWidth="Desktop" demandPopin="true"><Text text="Horario" /></Column>
                 <Column width="9rem" hAlign="Center" minScreenWidth="Tablet" demandPopin="true"><Text text="Entrada" /></Column>
                 <Column width="9rem" hAlign="Center" minScreenWidth="Tablet" demandPopin="true"><Text text="Salida" /></Column>
+                <Column width="10rem" minScreenWidth="Desktop" demandPopin="true"><Text text="Recuperar tiempo" /></Column>
                 <Column width="10rem" minScreenWidth="Desktop" demandPopin="true"><Text text="Justificación" /></Column>
                 <Column width="15rem" minScreenWidth="Desktop" demandPopin="true">
                   <Text text="Comentario RH" />
@@ -349,6 +350,7 @@
                       wrapping="true" />
                     <ObjectStatus text="{review>entryTime}" state="Warning" />
                     <ObjectStatus text="{review>exitTime}" />
+                    <ObjectStatus text="{review>recoverTimeText}" state="Information" />
                     <Button
                       text="Ver justificación"
                       icon="sap-icon://document-text"
@@ -392,5 +394,3 @@
     </content>
   </Page>
 </mvc:View>
-
-

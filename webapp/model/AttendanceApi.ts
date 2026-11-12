@@ -515,6 +515,9 @@
 // }
 /* global Promise */
 /* global Promise */
+/* global Promise */
+/* global Promise */
+/* global Promise */
 
 export type AttendanceEntitySet =
     | "ZoneSummarySet"
@@ -526,6 +529,7 @@ export type AttendanceEntitySet =
     | "AttendanceRecordSet"
     | "CatalogScheduleSet"
     | "ProcessingJustificationsSet"
+    | "ProcessingDelaysSet"
     | "CenterOfficeSet"
     | "ZoneAttendanceSet"
     | "BasesSet"
@@ -646,6 +650,27 @@ export interface ProcessingJustificationPayload {
     Email: string;
     CommentsLog: string;
     DecisionRH: string;
+    CommentsRH: string;
+    StatusRequest: string;
+    MessageRequest: string;
+}
+
+export interface ProcessingDelayPayload {
+    PersonalNumber: string;
+    FullName: string;
+    CenterOffice: string;
+    Zone: string;
+    Base: string;
+    ScheduleDetail: string;
+    DateFrom: string;
+    DateTo: string;
+    Period: string;
+    LastUpdate: string;
+    LastHourUpdate: string;
+    TotalDelays: string;
+    TotalAbsences: string;
+    Email: string;
+    DecisionRH: "A" | "R";
     CommentsRH: string;
     StatusRequest: string;
     MessageRequest: string;
@@ -859,38 +884,79 @@ export default class AttendanceApi {
         });
     }
 
-    /**
-     * INTEGRATION_PENDING_FOURTH_LATE_GET
-     *
-     * Punto reservado para la nueva entidad de casos de 4.º retardo.
-     * Cuando SAP entregue el nombre de la entidad, sus filtros y el JSON de
-     * respuesta, sustituir este respaldo por getCollection(<NUEVA_ENTIDAD>)
-     * y agregar dicha entidad a AttendanceEntitySet.
-     */
     public getFourthLateReviews(
         dateFrom: string,
         dateTo: string,
-        _signal?: AbortSignal
+        signal?: AbortSignal
     ): Promise<ODataRow[]> {
-        console.warn("[Monitor][4TH-LATE][PENDING-ENTITY][GET]", { dateFrom, dateTo });
-        return Promise.resolve([]);
+        return this.getCollection("ProcessingDelaysSet", {
+            filters: [
+                { field: "DateFrom", value: dateFrom },
+                { field: "DateTo", value: dateTo }
+            ],
+            signal
+        }).then((rows) => {
+            const fourthLateRows = rows.filter((row) => {
+                const totalDelays = Number(String(row.TotalDelays ?? "").trim());
+                return Number.isFinite(totalDelays) && totalDelays >= 4;
+            });
+            console.info("[Monitor][4TH-LATE][ELIGIBLE]", {
+                dateFrom,
+                dateTo,
+                received: rows.length,
+                eligible: fourthLateRows.length
+            });
+            return fourthLateRows;
+        });
     }
 
     public submitJustificationDecision(payload: ProcessingJustificationPayload): Promise<ODataRow> {
         return this.postEntity("ProcessingJustificationsSet", payload, "JUSTIFICATION-DECISION");
     }
 
-    /**
-     * INTEGRATION_PENDING_FOURTH_LATE_POST
-     *
-     * Punto reservado para el POST que aprobará o rechazará el 4.º retardo.
-     * El contrato final se mapeará aquí cuando se reciba la nueva entidad.
-     */
-    public submitFourthLateDecision(_payload: ProcessingJustificationPayload): Promise<ODataRow> {
-        return Promise.reject(new AttendanceApiError(
-            0,
-            "La entidad SAP para resolver el 4.º retardo todavía no está configurada."
-        ));
+    public submitFourthLateDecision(payload: ProcessingDelayPayload): Promise<ODataRow> {
+        console.group("[Monitor][4TH-LATE][POST][REQUEST]");
+        console.info("EntitySet", "ProcessingDelaysSet");
+        console.info("Payload", payload);
+        console.info("Payload JSON", JSON.stringify(payload, null, 2));
+        console.table([payload]);
+        console.groupEnd();
+
+        // Break temporal solicitado para inspeccionar el POST antes de enviarlo.
+        // Con DevTools abierto, continuar con F8 para ejecutar la petición.
+      
+
+        return this.postEntity("ProcessingDelaysSet", payload, "FOURTH-LATE-DECISION")
+            .then((response) => {
+                console.group("[Monitor][4TH-LATE][POST][RESPONSE]");
+                console.info("Respuesta SAP", response);
+                console.info("Respuesta JSON", JSON.stringify(response, null, 2));
+                console.groupEnd();
+
+                // Segunda pausa para inspeccionar la respuesta exitosa de SAP.
+            
+
+                const status = String(response.StatusRequest ?? "").trim().toUpperCase();
+                if (status && status !== "OK") {
+                    throw new AttendanceApiError(
+                        200,
+                        String(response.MessageRequest ?? "SAP rechazó la decisión del 4.º retardo."),
+                        JSON.stringify(response)
+                    );
+                }
+                return response;
+            })
+            .catch((error: AttendanceApiError) => {
+                console.group("[Monitor][4TH-LATE][POST][ERROR]");
+                console.error("Error", error);
+                console.error("HTTP status", error.status);
+                console.error("Response body", error.responseBody);
+                console.groupEnd();
+
+                // Tercera pausa para inspeccionar el body que SAP devolvió con error.
+           
+                throw error;
+            });
     }
 
     public async createAttendanceRecord(payload: AttendanceRecordPayload): Promise<ODataRow> {
@@ -899,7 +965,7 @@ export default class AttendanceApi {
 
     private async postEntity(
         entitySet: AttendanceEntitySet,
-        payload: AttendanceRecordPayload | ProcessingJustificationPayload,
+        payload: AttendanceRecordPayload | ProcessingJustificationPayload | ProcessingDelayPayload,
         logName: string
     ): Promise<ODataRow> {
         const url = `${this.serviceRoot}${entitySet}`;

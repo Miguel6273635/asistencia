@@ -62,7 +62,7 @@
                       <Button id="checkInAction" text="{attendance>/today/checkInText}" icon="sap-icon://log" type="Emphasized" press=".onCheckIn" />
                       <Button id="lateJustificationAction" text="{attendance>/today/lateJustificationButtonText}" icon="sap-icon://notes"
                         type="Attention" visible="{= ${attendance>/today/nextAction} === 'CHECK_IN' }"
-                        enabled="{= ${attendance>/today/isLateNow} &amp;&amp; ${attendance>/today/workModalityConfirmed} }"
+                        enabled="{= ${attendance>/today/isLateNow} &amp;&amp; ${attendance>/today/workModalityConfirmed} &amp;&amp; !${attendance>/today/isRelationBlocked} }"
                         tooltip="{= ${attendance>/today/isLateNow} ? 'Capturar la justificación del retraso' : 'Se habilitará si la entrada se registra después del inicio del horario' }"
                         press=".onOpenLateJustification" />
                       <Button id="mealStartAction" text="Iniciar comida" icon="sap-icon://meal" enabled="false" press=".onMealStart" />
@@ -71,11 +71,14 @@
                       <Button id="earlyExitJustificationAction" text="{attendance>/today/earlyExitJustificationButtonText}"
                         icon="sap-icon://notes" type="Attention"
                         visible="{= ${attendance>/today/canCheckOut} &amp;&amp; ${attendance>/today/isEarlyExit} }"
+                        enabled="{= !${attendance>/today/isRelationBlocked} }"
                         tooltip="Capturar el motivo de la salida anticipada"
                         press=".onOpenEarlyExitJustification" />
                     </HBox>
                     <MessageStrip visible="{= !!${app>/historyError} }" text="{app>/historyError}" type="Error" showIcon="true" />
-                   <!--  <MessageStrip text="Cada marcaje usa una ubicación reciente y precisa del dispositivo; no se utilizan coordenadas fijas. Si la precisión no es suficiente, el evento no se enviará a SAP." type="Information" showIcon="true" class="privacyStrip" /> -->
+                    <MessageStrip
+                      text="{= ${attendance>/today/isTravel} ? 'Viaje de negocios vigente: no se requieren marcajes.' : (${attendance>/today/isHomeOffice} ? 'Home Office: Entrada y Salida se registran sin solicitar ubicación GPS.' : 'Cada marcaje usa una ubicación reciente y precisa del dispositivo; no se utilizan coordenadas fijas. Si la precisión no es suficiente, el evento no se enviará a SAP.') }"
+                      type="Information" showIcon="true" class="privacyStrip" />
                   </VBox>
 
                   <VBox class="panel compactEmployeePanel" busy="{app>/employeeLoading}" busyIndicatorDelay="0">
@@ -97,6 +100,10 @@
                         <HBox class="compactProfileField" justifyContent="SpaceBetween"><Text text="Correo" /><Text text="{attendance>/employee/email}" wrapping="true" class="strongText compactProfileValue" /></HBox>
                         <HBox class="compactProfileField" justifyContent="SpaceBetween"><Text text="Puesto" /><Text text="{attendance>/employee/position}" wrapping="true" class="strongText compactProfileValue" /></HBox>
                         <HBox class="compactProfileField" justifyContent="SpaceBetween"><Text text="Centro" /><Text text="{attendance>/employee/center}" wrapping="true" class="strongText compactProfileValue" /></HBox>
+                        <HBox class="compactProfileField" justifyContent="SpaceBetween" visible="{= !!${attendance>/employee/relationJobDescription} }">
+                          <Text text="Situación laboral" />
+                          <ObjectStatus text="{attendance>/employee/relationJobDescription}" state="{= ${attendance>/today/isRelationBlocked} ? 'Error' : 'Information' }" />
+                        </HBox>
                       </VBox>
 
                       <VBox class="compactProfileGroup scheduleProfileGroup">
@@ -108,6 +115,12 @@
                         <HBox class="compactProfileField" justifyContent="SpaceBetween"><Text text="Turno" /><Text text="{= ${attendance>/employee/schedule} || ${attendance>/schedule/name} || 'Pendiente de SAP' }" wrapping="true" class="strongText compactProfileValue" /></HBox>
                         <HBox class="compactProfileField" justifyContent="SpaceBetween"><Text text="Jornada" /><Text text="{= ${attendance>/schedule/start} &amp;&amp; ${attendance>/schedule/end} ? ${attendance>/schedule/start} + ' – ' + ${attendance>/schedule/end} : 'Pendiente de SAP' }" wrapping="false" class="strongText compactProfileValue" /></HBox>
                         <HBox class="compactProfileField" justifyContent="SpaceBetween"><Text text="Modalidad" /><ObjectStatus text="{attendance>/today/workModalityText}" state="{= ${attendance>/today/typeSession} === 'VN' ? 'Warning' : (${attendance>/today/typeSession} === 'HO' ? 'Information' : 'None') }" /></HBox>
+                        <HBox class="compactProfileField" justifyContent="SpaceBetween">
+                          <Text text="Situación laboral" />
+                          <ObjectStatus
+                            text="{= ${attendance>/employee/relationJobDescription} ? ${attendance>/employee/relationJobDescription} + (${attendance>/employee/relationJob} ? ' (' + ${attendance>/employee/relationJob} + ')' : '') : (${attendance>/employee/relationJob} || 'Sin restricción') }"
+                            state="{= ${attendance>/today/isRelationBlocked} ? 'Error' : 'Success' }" />
+                        </HBox>
                         <HBox class="compactProfileField" justifyContent="SpaceBetween"><Text text="Base" /><Text text="{attendance>/employee/centerCode}" wrapping="true" class="strongText compactProfileValue" /></HBox>
                         <HBox class="compactProfileField" justifyContent="SpaceBetween"><Text text="Zona" /><Text text="{attendance>/employee/zone}" wrapping="true" class="strongText compactProfileValue" /></HBox>
                       </VBox>

@@ -246,6 +246,12 @@ sap.ui.define([
         return oDate.getFullYear() + String(oDate.getMonth() + 1).padStart(2, "0") + String(oDate.getDate()).padStart(2, "0");
     }
 
+    function localIsoDate(oDate) {
+        return oDate.getFullYear() + "-" +
+            String(oDate.getMonth() + 1).padStart(2, "0") + "-" +
+            String(oDate.getDate()).padStart(2, "0");
+    }
+
     function displayDate(sValue) {
         var sDate = String(sValue || "").replace(/[^0-9]/g, "").slice(0, 8);
         return /^\d{8}$/.test(sDate) ? sDate.slice(6, 8) + "/" + sDate.slice(4, 6) + "/" + sDate.slice(0, 4) : "—";
@@ -320,14 +326,15 @@ sap.ui.define([
     }
 
     function normalizeFourthLateEntityRow(oRow) {
-        /*
-         * INTEGRATION_PENDING_FOURTH_LATE_MAPPING
-         * Aquí se mapearán los nombres reales de la nueva entidad hacia los
-         * campos comunes que consume esta pantalla: PersonalNumber, FullName,
-         * DateJustification, CenterOffice, ScheduleDetail, EnterHour,
-         * CommentsLog, DecisionRH y CommentsRH.
-         */
-        return oRow;
+        var iTotalDelays = Number(safeText(oRow.TotalDelays)) || 0;
+        var iTotalAbsences = Number(safeText(oRow.TotalAbsences)) || 0;
+        return Object.assign({}, oRow, {
+            DateJustification: safeText(oRow.LastUpdate) || safeText(oRow.DateFrom),
+            EnterHour: safeText(oRow.LastHourUpdate),
+            ReasonType: iTotalDelays + " retardos acumulados" +
+                (iTotalAbsences ? " · " + iTotalAbsences + " ausencia(s)" : ""),
+            CommentsLog: safeText(oRow.MessageRequest)
+        });
     }
 
     return BaseController.extend("com.mitsu.monitorasistencia.controller.Justifications", {
@@ -382,8 +389,7 @@ sap.ui.define([
             oReviewModel.setProperty("/type", sType);
             oReviewModel.setProperty("/title", oConfiguration.title);
             oReviewModel.setProperty("/subtitle", oConfiguration.subtitle);
-            // Cambiar a false cuando la entidad GET/POST de 4.º retardo quede conectada.
-            oReviewModel.setProperty("/integrationPending", bFourthLate);
+            oReviewModel.setProperty("/integrationPending", false);
             oReviewModel.setProperty("/periodLabel", oPeriod.label);
             oReviewModel.setProperty("/dateFrom", oPeriod.from);
             oReviewModel.setProperty("/dateTo", oPeriod.to);
@@ -394,12 +400,35 @@ sap.ui.define([
                 ? this._attendanceApi.getFourthLateReviews(oPeriod.from, oPeriod.to)
                 : this._attendanceApi.getProcessingJustifications(oPeriod.from, oPeriod.to);
 
-            return Promise.all([
-                pReviewRows,
-                this._attendanceApi.getEmployees().catch(function (oError) {
+            var pEmployees = bFourthLate
+                ? pReviewRows.then(function (aRows) {
+                    var aNumbers = Array.from(new Set((aRows || []).map(function (oRow) {
+                        return safeText(oRow.PersonalNumber);
+                    }).filter(Boolean)));
+                    return Promise.all(aNumbers.map(function (sPersonalNumber) {
+                        return this._attendanceApi.getEmployees([
+                            { field: "PersonalNumber", value: sPersonalNumber }
+                        ]).catch(function (oError) {
+                            console.warn("[Monitor][4TH-LATE][EMPLOYEE][FALLBACK]", {
+                                personalNumber: sPersonalNumber,
+                                error: oError
+                            });
+                            return [];
+                        });
+                    }.bind(this))).then(function (aEmployeeCollections) {
+                        return aEmployeeCollections.reduce(function (aAll, aCollection) {
+                            return aAll.concat(aCollection || []);
+                        }, []);
+                    });
+                }.bind(this))
+                : this._attendanceApi.getEmployees().catch(function (oError) {
                     console.warn("[Monitor][JUSTIFICATIONS][EMPLOYEES][FALLBACK]", oError);
                     return [];
-                })
+                });
+
+            return Promise.all([
+                pReviewRows,
+                pEmployees
             ]).then(function (aResults) {
                 var aRows = (aResults[0] || []).map(function (oRow) {
                     return bFourthLate ? normalizeFourthLateEntityRow(oRow) : oRow;
@@ -437,19 +466,24 @@ sap.ui.define([
                         safeText(oRow.RegisterHour) || safeText(oRow.Hour) || safeText(oRow.TimeRegister) || "—";
                     var sExitTime = safeText(oRow.ExitHour) || safeText(oRow.ExitTime) ||
                         safeText(oRow.DepartureTime) || safeText(oRow.P20Time) || "—";
+                    var bRecoverTime = safeText(oRow.Istimepay).toUpperCase() === "X";
                     return {
                         id: sNumber + "-" + safeText(oRow.DateJustification) + "-" + justificationHelper.registerCode(oRow) + "-" + iIndex,
                         employeeId: oEmployee.id || (sNumber ? "employee-" + sNumber : ""),
-                          employee: safeText(oRow.FullName) || safeText(oEmployee.FullName) ||
-                              safeText(oEmployee.name) || sNumber || "Sin nombre",
+                        employee: safeText(oRow.FullName) || safeText(oEmployee.FullName) ||
+                            safeText(oEmployee.name) || sNumber || "Sin nombre",
+                        email: safeText(oRow.Email) || safeText(oEmployee.Email) ||
+                            safeText(oEmployee.email),
                         personalNumber: sNumber, date: displayDate(oRow.DateJustification),
-                        center: safeText(oCenter.name) || sCenterCode || "Sin centro",
+                        center: safeText(oEmployee.CenterOffice) || safeText(oEmployee.center) ||
+                            safeText(oCenter.name) || sCenterCode || "Sin centro",
                           schedule: safeText(oRow.ScheduleDetail) || safeText(oEmployee.ScheduleDetail) ||
                               safeText(oEmployee.scheduleDetail) || safeText(oEmployee.Shift) ||
                               safeText(oEmployee.Hourly) || safeText(oEmployee.shift) ||
                               safeText(oEmployee.schedule) || "—",
                         entryTime: displayTime(sEntryTime),
                         exitTime: displayTime(sExitTime),
+                        recoverTimeText: bRecoverTime ? "Recuperar tiempo" : "",
                         justification: sJustification || "Sin clasificación registrada",
                         commentsLog: sCommentsLog,
                         hasJustification: Boolean(sCommentsLog),
@@ -534,6 +568,7 @@ sap.ui.define([
 
         _confirmDecision: function (oRow, sDecisionRH) {
             var bApprove = sDecisionRH === "A";
+            var bFourthLate = this.getModel("review").getProperty("/type") === "fourthLate";
             if (this._requestInProgress) { MessageToast.show("Espera a que termine la solicitud actual"); return; }
             if (oRow.decision !== "pending") { MessageToast.show("La justificación ya tiene una decisión registrada"); return; }
             if (!safeText(oRow.commentsRH)) {
@@ -543,8 +578,11 @@ sap.ui.define([
                 return;
             }
             oRow.commentsRHState = "None";
-            MessageBox.confirm("¿Deseas " + (bApprove ? "aceptar" : "rechazar") + " la justificación de " + oRow.employee + "?", {
-                title: bApprove ? "Aceptar justificación" : "Rechazar justificación",
+            MessageBox.confirm("¿Deseas " + (bApprove ? "aceptar" : "rechazar") +
+                (bFourthLate ? " el caso de 4.º retardo de " : " la justificación de ") + oRow.employee + "?", {
+                title: bFourthLate
+                    ? (bApprove ? "Aceptar 4.º retardo" : "Rechazar 4.º retardo")
+                    : (bApprove ? "Aceptar justificación" : "Rechazar justificación"),
                 emphasizedAction: MessageBox.Action.OK,
                 onClose: function (sAction) {
                     if (sAction === MessageBox.Action.OK) { this._submitDecision(oRow, sDecisionRH); }
@@ -554,7 +592,28 @@ sap.ui.define([
 
         _submitDecision: function (oRow, sDecisionRH) {
             var oRaw = oRow.raw || {};
-            var oPayload = {
+            var sType = this.getModel("review").getProperty("/type");
+            var sDecisionDate = localIsoDate(new Date());
+            var oPayload = sType === "fourthLate" ? {
+                PersonalNumber: safeText(oRaw.PersonalNumber) || safeText(oRow.personalNumber),
+                FullName: safeText(oRaw.FullName) || safeText(oRow.employee),
+                CenterOffice: safeText(oRaw.CenterOffice),
+                Zone: safeText(oRaw.Zone),
+                Base: safeText(oRaw.Base),
+                ScheduleDetail: safeText(oRaw.ScheduleDetail),
+                DateFrom: sDecisionDate,
+                DateTo: sDecisionDate,
+                Period: safeText(oRaw.Period),
+                LastUpdate: safeText(oRaw.LastUpdate),
+                LastHourUpdate: safeText(oRaw.LastHourUpdate),
+                TotalDelays: String(oRaw.TotalDelays === undefined || oRaw.TotalDelays === null ? "" : oRaw.TotalDelays),
+                TotalAbsences: String(oRaw.TotalAbsences === undefined || oRaw.TotalAbsences === null ? "" : oRaw.TotalAbsences),
+                Email: safeText(oRaw.Email) || safeText(oRow.email),
+                DecisionRH: sDecisionRH,
+                CommentsRH: safeText(oRow.commentsRH),
+                StatusRequest: safeText(oRaw.StatusRequest),
+                MessageRequest: safeText(oRaw.MessageRequest)
+            } : {
                 PersonalNumber: safeText(oRaw.PersonalNumber), FullName: safeText(oRaw.FullName),
                 CenterOffice: safeText(oRaw.CenterOffice), Zone: safeText(oRaw.Zone), Base: safeText(oRaw.Base),
                 DateJustification: safeText(oRaw.DateJustification), TypeRegister: safeText(oRaw.TypeRegister),
@@ -567,7 +626,6 @@ sap.ui.define([
             };
             this._requestInProgress = true;
             this.getModel("review").setProperty("/busy", true);
-            var sType = this.getModel("review").getProperty("/type");
             var pDecision = sType === "fourthLate"
                 ? this._attendanceApi.submitFourthLateDecision(oPayload)
                 : this._attendanceApi.submitJustificationDecision(oPayload);

@@ -45,7 +45,7 @@ sap.ui.define([], function () {
     if (!isEnabled()) { return; }
     if (breakMode === "all" || breakMode === String(stage || "").toLowerCase()) {
       // Abre DevTools antes de usar debugBreak para que el navegador se detenga aquí.
-      debugger;
+      
     }
   }
 

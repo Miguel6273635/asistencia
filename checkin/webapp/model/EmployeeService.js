@@ -369,6 +369,8 @@ sap.ui.define([
       zone: firstValue(record, ["Zone"]),
       status: firstValue(record, ["Status"]),
       statusDescription: firstValue(record, ["DescriptionStatus"]),
+      relationJob: firstValue(record, ["RelationJob"]),
+      relationJobDescription: firstValue(record, ["RelationJobDescription", "RelationDescription"]),
       dayStatus: firstValue(record, ["DayStatus"]),
       typeSession: firstValue(record, ["TypeSession", "SessionType", "WorkMode", "WorkModality", "Modality"]),
       dateFrom: firstValue(record, ["DateFrom", "TravelDateFrom", "TripDateFrom", "StartDate"]),
@@ -533,4 +535,5 @@ sap.ui.define([
     }
   };
 });
+
 

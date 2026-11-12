@@ -367,7 +367,7 @@ sap.ui.define([
     console.trace("Punto donde se envía POST " + entitySet);
     console.groupEnd();
 
-    debugger;
+   
   }
 
   function debugPostResponse(entitySet, response, body, flowId) {
