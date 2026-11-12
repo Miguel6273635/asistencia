@@ -1,0 +1,17 @@
+{
+  "xsappname": "mitsu-checkin",
+  "tenant-mode": "dedicated",
+  "scopes": [
+    {
+      "name": "$XSAPPNAME.Marcaje",
+      "description": "Permite registrar eventos propios de asistencia"
+    }
+  ],
+  "role-templates": [
+    {
+      "name": "Colaborador",
+      "description": "Personal de Mitsubishi autorizado para registrar su propia jornada",
+      "scope-references": ["$XSAPPNAME.Marcaje"]
+    }
+  ]
+}

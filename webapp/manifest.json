@@ -4,10 +4,38 @@
     "id": "com.mitsu.monitorasistencia",
     "type": "application",
     "applicationVersion": {
-      "version": "0.2.0"
+      "version": "0.4.2"
     },
     "title": "Monitor de Asistencia",
-    "description": "Control y monitoreo de asistencia, turnos y horarios"
+    "description": "Control y monitoreo de asistencia, turnos y horarios",
+    "dataSources": {
+      "attendanceService": {
+        "uri": "sap/opu/odata/sap/ZHMC_ATTENDANCE_MONITORING_SRV/",
+        "type": "OData",
+        "settings": {
+          "odataVersion": "2.0"
+        }
+      }
+    },
+    "crossNavigation": {
+      "inbounds": {
+        "monitor-asistencia-display": {
+          "semanticObject": "MonitorAsistencia",
+          "action": "display",
+          "title": "Monitor de Asistencia",
+          "subTitle": "Control y monitoreo de asistencia",
+          "icon": "sap-icon://business-objects-experience",
+          "signature": {
+            "parameters": {},
+            "additionalParameters": "allowed"
+          }
+        }
+      }
+    }
+  },
+  "sap.cloud": {
+    "public": true,
+    "service": "mitsu.monitorasistencia"
   },
   "sap.ui": {
     "technology": "UI5",
@@ -27,6 +55,8 @@
         "sap.f": {},
         "sap.tnt": {},
         "sap.ui.layout": {},
+        "sap.ui.unified": {},
+        "sap.ui.export": {},
         "sap.viz": {},
         "sap.ui.vbm": {}
       }
@@ -38,7 +68,6 @@
     "models": {
       "attendance": {
         "type": "sap.ui.model.json.JSONModel",
-        "uri": "model/data.json",
         "settings": {
           "sizeLimit": 1000
         }
@@ -79,11 +108,6 @@
           "target": "centers"
         },
         {
-          "pattern": "center/{centerId}",
-          "name": "center",
-          "target": "center"
-        },
-        {
           "pattern": "records/{employeeId}",
           "name": "records",
           "target": "records"
@@ -102,6 +126,26 @@
           "pattern": "user-performance/{employeeId}",
           "name": "userPerformance",
           "target": "userPerformance"
+        },
+        {
+          "pattern": "justifications/late",
+          "name": "lateJustifications",
+          "target": "lateJustifications"
+        },
+        {
+          "pattern": "justifications/early-exit",
+          "name": "earlyExitJustifications",
+          "target": "earlyExitJustifications"
+        },
+        {
+          "pattern": "justifications/fourth-late",
+          "name": "fourthLateJustifications",
+          "target": "fourthLateJustifications"
+        },
+        {
+          "pattern": "attendance/no-records",
+          "name": "noAttendance",
+          "target": "noAttendance"
         },
         {
           "pattern": "map",
@@ -133,10 +177,6 @@
           "viewId": "centers",
           "viewName": "Centers"
         },
-        "center": {
-          "viewId": "center",
-          "viewName": "Center"
-        },
         "records": {
           "viewId": "records",
           "viewName": "Records"
@@ -152,6 +192,22 @@
         "userPerformance": {
           "viewId": "userPerformance",
           "viewName": "UserPerformance"
+        },
+        "lateJustifications": {
+          "viewId": "lateJustifications",
+          "viewName": "LateJustifications"
+        },
+        "earlyExitJustifications": {
+          "viewId": "earlyExitJustifications",
+          "viewName": "EarlyExitJustifications"
+        },
+        "fourthLateJustifications": {
+          "viewId": "fourthLateJustifications",
+          "viewName": "FourthLateJustifications"
+        },
+        "noAttendance": {
+          "viewId": "noAttendance",
+          "viewName": "NoAttendance"
         },
         "map": {
           "viewId": "map",

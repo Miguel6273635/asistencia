@@ -1,0 +1,52 @@
+<core:FragmentDefinition xmlns="sap.m" xmlns:core="sap.ui.core">
+  <Dialog id="workModalityDialog" title="Modalidad de trabajo" contentWidth="32rem"
+    draggable="true" resizable="true" stretchOnPhone="true">
+    <content>
+      <VBox id="workModalityContent" class="sapUiMediumMargin">
+        <MessageStrip id="workModalityInformation"
+          text="Selecciona la modalidad que corresponde a este inicio de labores. Se enviará a SAP en el campo TypeSession."
+          type="Information" showIcon="true" class="sapUiSmallMarginBottom" />
+
+        <Label id="workModalityLabel" text="Modalidad" labelFor="workModalitySelect" required="true" />
+        <Select id="workModalitySelect" width="100%"
+          selectedKey="{attendance>/today/workModalityDraft/typeSession}"
+          change=".onWorkModalityChange">
+          <core:Item id="workModalityPresentialItem" key="" text="Presencial" />
+          <core:Item id="workModalityHomeOfficeItem" key="HO" text="Home Office" />
+          <core:Item id="workModalityBusinessTripItem" key="VN" text="Viaje de negocios" />
+        </Select>
+
+        <MessageStrip id="homeOfficeDateInformation"
+          visible="{= ${attendance>/today/workModalityDraft/typeSession} === 'HO' }"
+         text="Para Home Office" 
+          type="Information" showIcon="true" class="sapUiSmallMarginTop" />
+
+        <VBox id="businessTripDateFields" visible="{= ${attendance>/today/workModalityDraft/typeSession} === 'VN' }"
+          class="sapUiSmallMarginTop">
+          <Label id="businessTripDateFromLabel" text="Inicio del viaje" labelFor="businessTripDateFrom" required="true" />
+          <DatePicker id="businessTripDateFrom" width="100%"
+            value="{attendance>/today/workModalityDraft/dateFrom}"
+            valueFormat="yyyy-MM-dd" displayFormat="dd/MM/yyyy"
+            change=".onWorkModalityChange" />
+
+          <Label id="businessTripDateToLabel" text="Fin del viaje" labelFor="businessTripDateTo" required="true"
+            class="sapUiSmallMarginTop" />
+          <DatePicker id="businessTripDateTo" width="100%"
+            value="{attendance>/today/workModalityDraft/dateTo}"
+            valueFormat="yyyy-MM-dd" displayFormat="dd/MM/yyyy"
+            change=".onWorkModalityChange" />
+        </VBox>
+
+        <MessageStrip id="workModalityError" visible="{= !!${attendance>/today/workModalityDraft/error} }"
+          text="{attendance>/today/workModalityDraft/error}" type="Error" showIcon="true"
+          class="sapUiSmallMarginTop" />
+      </VBox>
+    </content>
+    <beginButton>
+      <Button id="saveWorkModalityButton" text="Continuar" type="Emphasized" press=".onSaveWorkModality" />
+    </beginButton>
+    <endButton>
+      <Button id="cancelWorkModalityButton" text="Cancelar" press=".onCancelWorkModality" />
+    </endButton>
+  </Dialog>
+</core:FragmentDefinition>

@@ -1,28 +1,112 @@
+
 <mvc:View
     controllerName="com.mitsu.monitorasistencia.controller.Users"
     xmlns:mvc="sap.ui.core.mvc"
     xmlns="sap.m"
-    xmlns:core="sap.ui.core">
+    xmlns:core="sap.ui.core"
+    xmlns:u="sap.ui.unified"
+    xmlns:f="sap.ui.layout.form">
+
     <Page showHeader="false" class="monitorPage">
         <content>
             <VBox class="pageContainer compactPage usersPage">
-                <Breadcrumbs currentLocationText="Usuarios" class="sapUiTinyMarginBottom"><Link text="Inicio" press=".onNavOverview" /></Breadcrumbs>
-                <Title text="Administración de usuarios" level="H1" class="pageTitle" />
-                <Text text="Alta, consulta y baja lógica de colaboradores" class="pageSubtitle" />
 
-                <FlexBox wrap="Wrap" class="kpiRow sapUiSmallMarginTop">
-                    <VBox class="kpiCard kpiBlue"><HBox alignItems="Center"><core:Icon src="sap-icon://group" class="kpiIcon blue" /><VBox><Text text="Usuarios" /><ObjectNumber number="{view>/stats/total}" /></VBox></HBox></VBox>
-                    <VBox class="kpiCard kpiGreen"><HBox alignItems="Center"><core:Icon src="sap-icon://accept" class="kpiIcon green" /><VBox><Text text="Activos" /><ObjectNumber number="{view>/stats/active}" state="Success" /></VBox></HBox></VBox>
-                    <VBox class="kpiCard kpiRed"><HBox alignItems="Center"><core:Icon src="sap-icon://decline" class="kpiIcon red" /><VBox><Text text="Inactivos" /><ObjectNumber number="{view>/stats/inactive}" /></VBox></HBox></VBox>
-                    <VBox class="kpiCard kpiCyan"><HBox alignItems="Center"><core:Icon src="sap-icon://building" class="kpiIcon cyan" /><VBox><Text text="Centros" /><ObjectNumber number="{view>/stats/centers}" /></VBox></HBox></VBox>
+                <Breadcrumbs
+                    currentLocationText="Usuarios"
+                    class="sapUiTinyMarginBottom">
+                    <Link
+                        text="Inicio"
+                        press=".onNavOverview" />
+                </Breadcrumbs>
+
+                <Title
+                    text="Administración de usuarios"
+                    level="H1"
+                    class="pageTitle" />
+
+                <Text
+                    text="Consulta, carga masiva desde Excel y actualización individual de colaboradores"
+                    class="pageSubtitle" />
+
+                <!-- ESTADÍSTICAS -->
+                <FlexBox
+                    wrap="Wrap"
+                    class="kpiRow sapUiSmallMarginTop">
+
+                    <VBox class="kpiCard kpiBlue">
+                        <HBox alignItems="Center">
+                            <core:Icon
+                                src="sap-icon://group"
+                                class="kpiIcon blue" />
+                            <VBox>
+                                <Text text="Usuarios" />
+                                <ObjectNumber
+                                    number="{view>/stats/total}" />
+                            </VBox>
+                        </HBox>
+                    </VBox>
+
+                    <VBox class="kpiCard kpiGreen">
+                        <HBox alignItems="Center">
+                            <core:Icon
+                                src="sap-icon://accept"
+                                class="kpiIcon green" />
+                            <VBox>
+                                <Text text="Activos" />
+                                <ObjectNumber
+                                    number="{view>/stats/active}"
+                                    state="Success" />
+                            </VBox>
+                        </HBox>
+                    </VBox>
+
+                    <VBox class="kpiCard kpiRed">
+                        <HBox alignItems="Center">
+                            <core:Icon
+                                src="sap-icon://decline"
+                                class="kpiIcon red" />
+                            <VBox>
+                                <Text text="Inactivos" />
+                                <ObjectNumber
+                                    number="{view>/stats/inactive}" />
+                            </VBox>
+                        </HBox>
+                    </VBox>
+
+                    <VBox class="kpiCard kpiCyan">
+                        <HBox alignItems="Center">
+                            <core:Icon
+                                src="sap-icon://building"
+                                class="kpiIcon cyan" />
+                            <VBox>
+                                <Text text="Centros" />
+                                <ObjectNumber
+                                    number="{view>/stats/centers}" />
+                            </VBox>
+                        </HBox>
+                    </VBox>
+
                 </FlexBox>
 
-                <Panel class="dashboardPanel sapUiSmallMarginTop">
+                <!-- PANEL DE USUARIOS -->
+                <Panel
+                    class="dashboardPanel sapUiSmallMarginTop">
+
                     <headerToolbar>
                         <OverflowToolbar>
-                            <Title text="Usuarios" level="H3" />
+
+                            <Title
+                                text="Usuarios"
+                                level="H3" />
+
                             <ToolbarSpacer />
-                            <SearchField width="16rem" placeholder="Nombre o número" liveChange=".onSearch" class="modernSearchField" />
+
+                            <SearchField
+                                width="16rem"
+                                placeholder="Nombre, número o correo"
+                                liveChange=".onSearch"
+                                class="modernSearchField" />
+
                             <ComboBox
                                 width="14rem"
                                 selectedKey="{view>/scheduleId}"
@@ -32,98 +116,566 @@
                                 filterSecondaryValues="true"
                                 placeholder="Todos los horarios"
                                 class="modernSelect">
-                                <core:ListItem key="{attendance>id}" text="{attendance>name}" additionalText="{attendance>code}" />
+
+                                <core:ListItem
+                                    key="{attendance>id}"
+                                    text="{attendance>name}"
+                                    additionalText="{attendance>code}" />
+
                             </ComboBox>
-                            <Select width="12rem" selectedKey="{view>/status}" change=".onFilterChange" class="modernSelect">
-                                <core:Item key="all" text="Todos los estatus" />
-                                <core:Item key="active" text="Activos" />
-                                <core:Item key="inactive" text="Inactivos" />
+
+                            <Select
+                                width="12rem"
+                                selectedKey="{view>/status}"
+                                change=".onFilterChange"
+                                class="modernSelect">
+
+                                <core:Item
+                                    key="all"
+                                    text="Todos los estatus" />
+
+                                <core:Item
+                                    key="active"
+                                    text="Activos" />
+
+                                <core:Item
+                                    key="inactive"
+                                    text="Inactivos" />
+
                             </Select>
-                            <Button text="Exportar" icon="sap-icon://download" press=".onExport" />
-                            <Button text="Alta de usuario" icon="sap-icon://add" type="Emphasized" press=".onOpenUserDialog" />
+
+                            <Button
+                                text="Plantilla"
+                                icon="sap-icon://document"
+                                tooltip="Descargar plantilla Excel"
+                                press=".onDownloadTemplate" />
+
+                            <Button
+                                text="Datos de prueba"
+                                icon="sap-icon://excel-attachment"
+                                press=".onDownloadExample" />
+
+                            <Button
+                                text="Exportar"
+                                icon="sap-icon://download"
+                                press=".onExport" />
+
+                            <Button
+                                text="Carga masiva Excel"
+                                icon="sap-icon://excel-attachment"
+                                type="Emphasized"
+                                press=".onOpenUploadDialog" />
+
                         </OverflowToolbar>
                     </headerToolbar>
+
                     <content>
-                        <ScrollContainer vertical="true" horizontal="false" focusable="true" class="tableScrollContainer usersTableScroll">
-                            <Table items="{view>/employees}" class="scrollTable" noDataText="No hay usuarios para los filtros seleccionados">
-                                <columns>
-                                    <Column><Text text="Usuario" /></Column>
-                                    <Column minScreenWidth="Tablet" demandPopin="true"><Text text="Núm. empleado" /></Column>
-                                    <Column minScreenWidth="Tablet" demandPopin="true"><Text text="Centro de trabajo" /></Column>
-                                    <Column minScreenWidth="Tablet" demandPopin="true"><Text text="Horario asignado" /></Column>
-                                    <Column minScreenWidth="Desktop" demandPopin="true"><Text text="Rol" /></Column>
-                                    <Column><Text text="Estatus" /></Column>
-                                    <Column minScreenWidth="Desktop" demandPopin="true"><Text text="Última actualización" /></Column>
-                                    <Column hAlign="Center" width="6.5rem"><Text text="Acciones" /></Column>
-                                </columns>
-                                <items>
-                                    <ColumnListItem>
-                                        <cells>
-                                            <ObjectIdentifier
-                                                title="{view>name}"
-                                                text="{view>initials}"
-                                                titleActive="true"
-                                                titlePress=".onOpenUserPerformance"
-                                                tooltip="Abrir desempeño semanal, mensual y anual" />
-                                            <Text text="{view>number}" />
-                                            <Text text="{view>center}" />
-                                            <ObjectIdentifier title="{view>scheduleName}" text="{view>scheduleDescription}" tooltip="{view>scheduleDescription}" />
-                                            <Text text="{view>role}" />
-                                            <ObjectStatus text="{path:'view>active', formatter:'.formatter.activeText'}" state="{path:'view>active', formatter:'.formatter.activeState'}" />
-                                            <Text text="{view>lastUpdate}" />
-                                            <HBox justifyContent="Center">
-                                                <Button icon="sap-icon://map-2" type="Transparent" tooltip="Ver ubicación en el mapa" press=".onOpenUserMap" />
-                                                <Button
-                                                    icon="{= ${view>active} ? 'sap-icon://decline' : 'sap-icon://accept'}"
-                                                    type="Transparent"
-                                                    tooltip="Activar o dar de baja"
-                                                    press=".onToggleUserStatus" />
-                                            </HBox>
-                                        </cells>
-                                    </ColumnListItem>
-                                </items>
-                            </Table>
-                        </ScrollContainer>
+
+                        <MessageStrip
+                            text="La tabla presenta los 22 campos del layout. Utiliza las flechas laterales o la barra horizontal para consultar toda la información."
+                            type="Information"
+                            showIcon="true"
+                            class="sapUiTinyMargin" />
+
+                        <!-- NAVEGACIÓN HORIZONTAL -->
+                        <HBox
+                            class="usersTableHorizontalLayout"
+                            alignItems="Stretch"
+                            width="100%"
+                            renderType="Bare">
+
+                            <!-- FLECHA IZQUIERDA -->
+                            <VBox
+                                class="usersScrollSide usersScrollSideLeft"
+                                alignItems="Center"
+                                justifyContent="Center">
+
+                                <Button
+                                    icon="sap-icon://navigation-left-arrow"
+                                    type="Transparent"
+                                    tooltip="Desplazar columnas a la izquierda"
+                                    press=".onScrollUsersLeft"
+                                    class="usersScrollSideButton" />
+
+                            </VBox>
+
+                            <!-- TABLA CON SCROLL -->
+                            <ScrollContainer
+                                id="usersTableScroll"
+                                vertical="true"
+                                horizontal="true"
+                                focusable="true"
+                                class="tableScrollContainer usersTableScroll usersWideTableScroll">
+
+                                <Table
+                                    items="{view>/employees}"
+                                    itemPress=".onOpenUserPerformance"
+                                    class="scrollTable usersWideTable"
+                                    fixedLayout="false"
+                                    noDataText="No hay usuarios para los filtros seleccionados">
+
+                                    <columns>
+
+                                        <Column width="9rem">
+                                            <Text text="Núm. personal" />
+                                        </Column>
+
+                                        <Column width="8rem">
+                                            <Text text="Contratación" />
+                                        </Column>
+
+                                        <Column width="8rem">
+                                            <Text text="Posición" />
+                                        </Column>
+
+                                        <Column width="8rem">
+                                            <Text text="División" />
+                                        </Column>
+
+                                        <Column width="7rem">
+                                            <Text text="Grupo" />
+                                        </Column>
+
+                                        <Column width="7rem">
+                                            <Text text="Área" />
+                                        </Column>
+
+                                        <Column width="10rem">
+                                            <Text text="Nombre" />
+                                        </Column>
+
+                                        <Column width="11rem">
+                                            <Text text="Apellido" />
+                                        </Column>
+
+                                        <Column width="8rem">
+                                            <Text text="Nacimiento" />
+                                        </Column>
+
+                                        <Column width="6rem">
+                                            <Text text="Idioma" />
+                                        </Column>
+
+                                        <Column width="8rem">
+                                            <Text text="País nac." />
+                                        </Column>
+
+                                        <Column width="6rem">
+                                            <Text text="Sexo" />
+                                        </Column>
+
+                                        <Column width="9rem">
+                                            <Text text="Base" />
+                                        </Column>
+
+                                        <Column width="8rem">
+                                            <Text text="Canal" />
+                                        </Column>
+
+                                        <Column width="7rem">
+                                            <Text text="Zona" />
+                                        </Column>
+
+                                        <Column width="9rem">
+                                            <Text text="Localidad" />
+                                        </Column>
+
+                                        <Column width="8rem">
+                                            <Text text="Región" />
+                                        </Column>
+
+                                        <Column width="9rem">
+                                            <Text text="Municipio" />
+                                        </Column>
+
+                                        <Column width="8rem">
+                                            <Text text="País dom." />
+                                        </Column>
+
+                                        <Column width="8rem">
+                                            <Text text="Vivienda" />
+                                        </Column>
+
+                                        <Column width="8rem">
+                                            <Text text="Horario" />
+                                        </Column>
+
+                                        <Column width="16rem">
+                                            <Text text="Correo" />
+                                        </Column>
+
+                                        <Column width="7rem">
+                                            <Text text="Estatus" />
+                                        </Column>
+
+                                        <Column
+                                            hAlign="Center"
+                                            width="10rem">
+                                            <Text text="Acciones" />
+                                        </Column>
+
+                                    </columns>
+
+                                    <items>
+
+                                        <ColumnListItem type="Navigation">
+
+                                            <cells>
+
+                                                <ObjectIdentifier
+                                                    title="{view>PersonnelNumber}"
+                                                    text="{view>number}" />
+
+                                                <Text text="{view>HireDate}" />
+                                                <Text text="{view>Position}" />
+                                                <Text text="{view>PersonnelArea}" />
+                                                <Text text="{view>EmployeeGroup}" />
+                                                <Text text="{view>EmployeeSubgroup}" />
+                                                <Text text="{view>FirstName}" />
+                                                <Text text="{view>LastName}" />
+                                                <Text text="{view>BirthDate}" />
+                                                <Text text="{view>Language}" />
+                                                <Text text="{view>BirthCountry}" />
+                                                <Text text="{view>Gender}" />
+                                                <Text text="{view>PersonnelSubarea}" />
+                                                <Text text="{view>AttendanceChannel}" />
+                                                <Text text="{view>Zone}" />
+                                                <Text text="{view>City}" />
+                                                <Text text="{view>Region}" />
+                                                <Text text="{view>Municipality}" />
+                                                <Text text="{view>Country}" />
+                                                <Text text="{view>ResidenceType}" />
+                                                <Text text="{view>Schedule}" />
+                                                <Text text="{view>Email}" />
+
+                                                <ObjectStatus
+                                                    text="{path:'view>active', formatter:'.formatter.activeText'}"
+                                                    state="{path:'view>active', formatter:'.formatter.activeState'}" />
+
+                                                <HBox justifyContent="Center">
+
+                                                    <Button
+                                                        icon="sap-icon://edit"
+                                                        type="Transparent"
+                                                        tooltip="Modificar empleado"
+                                                        press=".onOpenEmployeeEdit" />
+
+                                                    <Button
+                                                        icon="sap-icon://map-2"
+                                                        type="Transparent"
+                                                        tooltip="Ver ubicación en el mapa"
+                                                        press=".onOpenUserMap" />
+
+                                                    <Button
+                                                        icon="{= ${view>active} ? 'sap-icon://decline' : 'sap-icon://accept'}"
+                                                        type="Transparent"
+                                                        tooltip="Activar o dar de baja"
+                                                        press=".onToggleUserStatus" />
+
+                                                </HBox>
+
+                                            </cells>
+
+                                        </ColumnListItem>
+
+                                    </items>
+
+                                </Table>
+
+                            </ScrollContainer>
+
+                            <!-- FLECHA DERECHA -->
+                            <VBox
+                                class="usersScrollSide usersScrollSideRight"
+                                alignItems="Center"
+                                justifyContent="Center">
+
+                                <Button
+                                    icon="sap-icon://navigation-right-arrow"
+                                    type="Transparent"
+                                    tooltip="Desplazar columnas a la derecha"
+                                    press=".onScrollUsersRight"
+                                    class="usersScrollSideButton" />
+
+                            </VBox>
+
+                        </HBox>
+
                     </content>
+
                 </Panel>
+
             </VBox>
         </content>
 
+        <!-- DIÁLOGOS -->
         <dependents>
-            <Dialog id="userDialog" title="Alta de usuario" contentWidth="42rem" stretchOnPhone="true" class="userDialog">
+
+            <!-- CARGA MASIVA EXCEL -->
+            <Dialog
+                id="employeeUploadDialog"
+                title="Carga masiva de empleados desde Excel"
+                contentWidth="64rem"
+                contentHeight="43rem"
+                stretchOnPhone="true"
+                busy="{view>/uploadBusy}"
+                class="userDialog">
+
                 <content>
                     <VBox class="sapUiMediumMargin userDialogContent">
-                        <HBox justifyContent="SpaceBetween" class="userDialogRow">
-                            <VBox width="58%"><Label text="Nombre completo" required="true" labelFor="userName" /><Input id="userName" placeholder="Nombre y apellidos" /></VBox>
-                            <VBox width="38%"><Label text="Número de empleado" required="true" labelFor="userNumber" /><Input id="userNumber" placeholder="EMP-0000" /></VBox>
+
+                        <MessageStrip
+                            text="Selecciona el archivo con la hoja Layout_Carga. La aplicación valida las 22 columnas y convierte todas las filas al deep insert de SAP."
+                            type="Information"
+                            showIcon="true" />
+
+                        <HBox
+                            wrap="Wrap"
+                            class="sapUiSmallMarginTop employeeTemplateActions">
+
+                            <Button
+                                text="Descargar plantilla"
+                                icon="sap-icon://document"
+                                press=".onDownloadTemplate"
+                                class="sapUiTinyMarginEnd" />
+
+                            <Button
+                                text="Descargar datos de prueba"
+                                icon="sap-icon://excel-attachment"
+                                press=".onDownloadExample" />
+
                         </HBox>
-                        <HBox justifyContent="SpaceBetween" class="userDialogRow sapUiSmallMarginTop">
-                            <VBox width="48%">
-                                <Label text="Centro de trabajo" required="true" labelFor="userCenter" />
-                                <ComboBox id="userCenter" width="100%" items="{attendance>/centers}" showSecondaryValues="true" filterSecondaryValues="true">
-                                    <core:ListItem key="{attendance>id}" text="{attendance>name}" additionalText="{attendance>code}" />
-                                </ComboBox>
-                            </VBox>
-                            <VBox width="48%">
-                                <Label text="Rol" required="true" labelFor="userRole" />
-                                <Select id="userRole" width="100%" selectedKey="Empleado">
-                                    <core:Item key="Empleado" text="Empleado" /><core:Item key="Supervisor" text="Supervisor" /><core:Item key="Recursos Humanos" text="Recursos Humanos" /><core:Item key="Administrador" text="Administrador" />
+
+                        <HBox
+                            wrap="Wrap"
+                            class="employeeUploadOptions sapUiSmallMarginTop">
+
+                            <VBox class="sapUiSmallMarginEnd">
+
+                                <Label
+                                    text="Operación"
+                                    required="true" />
+
+                                <Select
+                                    width="12rem"
+                                    selectedKey="{view>/uploadOperation}"
+                                    change=".onUploadOperationChange">
+
+                                    <core:Item
+                                        key="CREATE"
+                                        text="Crear empleados" />
+
+                                    <core:Item
+                                        key="UPDATE"
+                                        text="Modificar empleados" />
+
                                 </Select>
+
                             </VBox>
+
+                            <VBox class="sapUiSmallMarginEnd">
+
+                                <Label text="Modo" />
+
+                                <Input
+                                    width="10rem"
+                                    value="{view>/uploadProcessingMode}"
+                                    editable="false" />
+
+                            </VBox>
+
+                            <VBox>
+
+                                <Label
+                                    text="EntitySet"
+                                    required="true" />
+
+                                <Input
+                                    width="18rem"
+                                    value="{view>/uploadEntitySet}"
+                                    placeholder="EmployeesUploadSet" />
+
+                            </VBox>
+
                         </HBox>
-                        <VBox class="userScheduleSelector sapUiSmallMarginTop">
-                            <Label text="Horario semanal" required="true" labelFor="userSchedule" />
-                            <ComboBox id="userSchedule" width="100%" items="{attendance>/schedules}" showSecondaryValues="true" filterSecondaryValues="true" placeholder="Busca por número, tipo o jornada">
-                                <core:ListItem key="{attendance>id}" text="{attendance>name}" additionalText="{attendance>shortDescription}" />
-                            </ComboBox>
-                            <Text text="El horario seleccionado se utilizará en registros, filtros, centros de trabajo y reportes." class="userScheduleHelp" />
-                        </VBox>
-                        <HBox alignItems="Center" class="userActiveRow sapUiSmallMarginTop"><Switch id="userActive" state="true" /><VBox class="sapUiTinyMarginBegin"><Text text="Usuario activo" class="userActiveTitle" /><Text text="Permite iniciar registros desde el primer día." class="userScheduleHelp" /></VBox></HBox>
+
+                        <Label
+                            text="Archivo Excel (.xlsx o .xls)"
+                            required="true"
+                            class="sapUiSmallMarginTop" />
+
+                        <u:FileUploader
+                            id="employeeExcelUploader"
+                            width="100%"
+                            fileType="xlsx,xls"
+                            sameFilenameAllowed="true"
+                            change=".onExcelSelected"
+                            placeholder="Selecciona el layout de empleados"
+                            buttonText="Examinar" />
+
+                        <ObjectStatus
+                            text="{= ${view>/uploadRowCount} + ' empleado(s) preparados · ' + (${view>/uploadFileName} || 'sin archivo')}"
+                            state="{= ${view>/uploadRowCount} > 0 ? 'Success' : 'Information'}"
+                            class="sapUiSmallMarginTop" />
+
+                        <Label
+                            text="Vista previa del JSON generado"
+                            class="sapUiSmallMarginTop" />
+
+                        <TextArea
+                            value="{view>/uploadJson}"
+                            editable="false"
+                            width="100%"
+                            height="21rem"
+                            growing="false" />
+
                     </VBox>
                 </content>
-                <beginButton><Button text="Guardar" type="Emphasized" press=".onSaveUser" /></beginButton>
-                <endButton><Button text="Cancelar" press=".onCloseUserDialog" /></endButton>
+
+                <beginButton>
+                    <Button
+                        text="Enviar a SAP"
+                        icon="sap-icon://upload"
+                        type="Emphasized"
+                        enabled="{= ${view>/uploadRowCount} > 0}"
+                        press=".onSubmitEmployeeUpload" />
+                </beginButton>
+
+                <endButton>
+                    <Button
+                        text="Cancelar"
+                        press=".onCloseUploadDialog" />
+                </endButton>
+
             </Dialog>
+
+            <!-- MODIFICAR EMPLEADO -->
+            <Dialog
+                id="employeeEditDialog"
+                title="Modificar empleado"
+                contentWidth="62rem"
+                contentHeight="44rem"
+                stretchOnPhone="true"
+                busy="{view>/editBusy}"
+                class="userDialog">
+
+                <content>
+
+                    <ScrollContainer
+                        vertical="true"
+                        horizontal="false"
+                        height="36rem"
+                        width="100%">
+
+                        <VBox class="sapUiMediumMargin userDialogContent">
+
+                            <MessageStrip
+                                text="La modificación envía Operation = UPDATE y un solo elemento en ToEmployeesUpload. Completa cualquier campo que SAP no haya devuelto en EmployeeSet."
+                                type="Information"
+                                showIcon="true" />
+
+                            <f:SimpleForm
+                                editable="true"
+                                layout="ColumnLayout"
+                                columnsXL="3"
+                                columnsL="3"
+                                columnsM="2"
+                                class="sapUiSmallMarginTop">
+
+                                <Label text="Número de personal" required="true" />
+                                <Input value="{view>/editEmployee/PersonnelNumber}" />
+
+                                <Label text="Fecha de contratación (AAAAMMDD)" required="true" />
+                                <Input value="{view>/editEmployee/HireDate}" />
+
+                                <Label text="Posición" required="true" />
+                                <Input value="{view>/editEmployee/Position}" />
+
+                                <Label text="División de personal" required="true" />
+                                <Input value="{view>/editEmployee/PersonnelArea}" />
+
+                                <Label text="Grupo de personal" required="true" />
+                                <Input value="{view>/editEmployee/EmployeeGroup}" />
+
+                                <Label text="Área de personal" required="true" />
+                                <Input value="{view>/editEmployee/EmployeeSubgroup}" />
+
+                                <Label text="Nombre" required="true" />
+                                <Input value="{view>/editEmployee/FirstName}" />
+
+                                <Label text="Apellido" required="true" />
+                                <Input value="{view>/editEmployee/LastName}" />
+
+                                <Label text="Fecha de nacimiento (AAAAMMDD)" required="true" />
+                                <Input value="{view>/editEmployee/BirthDate}" />
+
+                                <Label text="Idioma" required="true" />
+                                <Input value="{view>/editEmployee/Language}" />
+
+                                <Label text="País de nacimiento" required="true" />
+                                <Input value="{view>/editEmployee/BirthCountry}" />
+
+                                <Label text="Sexo" required="true" />
+                                <Input value="{view>/editEmployee/Gender}" />
+
+                                <Label text="Base / subdivisión" required="true" />
+                                <Input value="{view>/editEmployee/PersonnelSubarea}" />
+
+                                <Label text="Canal de marcaje" required="true" />
+                                <Input value="{view>/editEmployee/AttendanceChannel}" />
+
+                                <Label text="Zona" required="true" />
+                                <Input value="{view>/editEmployee/Zone}" />
+
+                                <Label text="Localidad" required="true" />
+                                <Input value="{view>/editEmployee/City}" />
+
+                                <Label text="Estado / región" required="true" />
+                                <Input value="{view>/editEmployee/Region}" />
+
+                                <Label text="Municipio" required="true" />
+                                <Input value="{view>/editEmployee/Municipality}" />
+
+                                <Label text="País domicilio" required="true" />
+                                <Input value="{view>/editEmployee/Country}" />
+
+                                <Label text="Tipo de vivienda" required="true" />
+                                <Input value="{view>/editEmployee/ResidenceType}" />
+
+                                <Label text="Horario" required="true" />
+                                <Input value="{view>/editEmployee/Schedule}" />
+
+                                <Label text="Correo electrónico" required="true" />
+                                <Input
+                                    value="{view>/editEmployee/Email}"
+                                    type="Email" />
+
+                            </f:SimpleForm>
+
+                        </VBox>
+
+                    </ScrollContainer>
+
+                </content>
+
+                <beginButton>
+                    <Button
+                        text="Enviar modificación"
+                        icon="sap-icon://save"
+                        type="Emphasized"
+                        press=".onSubmitEmployeeEdit" />
+                </beginButton>
+
+                <endButton>
+                    <Button
+                        text="Cancelar"
+                        press=".onCloseEmployeeEdit" />
+                </endButton>
+
+            </Dialog>
+
         </dependents>
+
     </Page>
+
 </mvc:View>

@@ -1,0 +1,20 @@
+{
+  "xsappname": "mitsu-monitor-asistencia",
+  "tenant-mode": "dedicated",
+  "description": "Seguridad del Monitor de Asistencia",
+  "scopes": [
+    {
+      "name": "$XSAPPNAME.User",
+      "description": "Acceso al Monitor de Asistencia"
+    }
+  ],
+  "role-templates": [
+    {
+      "name": "User",
+      "description": "Usuario del Monitor de Asistencia",
+      "scope-references": [
+        "$XSAPPNAME.User"
+      ]
+    }
+  ]
+}

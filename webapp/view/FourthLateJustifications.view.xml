@@ -1,0 +1,113 @@
+<mvc:View
+  controllerName="com.mitsu.monitorasistencia.controller.Justifications"
+  xmlns:mvc="sap.ui.core.mvc"
+  xmlns="sap.m">
+  <Page id="fourthLateReviewPage" showHeader="false" busy="{review>/busy}"
+    busyIndicatorDelay="0" class="monitorPage justificationReviewPage">
+    <content>
+      <VBox id="fourthLatePageContainer" class="pageContainer compactPage">
+        <Breadcrumbs id="fourthLateBreadcrumbs" currentLocationText="4.º retardo">
+          <Link id="fourthLateBackLink" text="Resumen" press=".onBack" />
+        </Breadcrumbs>
+
+        <HBox id="fourthLateHeading" justifyContent="SpaceBetween" alignItems="Center"
+          wrap="Wrap" class="reviewPageHeading">
+          <VBox id="fourthLateHeadingTexts">
+            <Title id="fourthLateTitle" text="{review>/title}" level="H1" class="pageTitle" />
+            <Text id="fourthLateSubtitle" text="{review>/subtitle}" class="pageSubtitle" />
+          </VBox>
+          <ObjectStatus id="fourthLatePeriod" text="{review>/periodLabel}"
+            state="Information" inverted="true" />
+        </HBox>
+
+        <MessageStrip id="fourthLateIntegrationPendingMessage"
+          visible="{review>/integrationPending}"
+          text="Integración preparada. Falta configurar la nueva entidad SAP, sus campos de consulta y el POST de decisión."
+          type="Information" showIcon="true" class="sapUiSmallMarginBottom" />
+
+        <HBox id="fourthLateKpis" wrap="Wrap" class="reviewKpiRow">
+          <VBox id="fourthLateTotalKpi" class="reviewKpiCard">
+            <Text id="fourthLateTotalLabel" text="Casos de 4.º retardo" />
+            <ObjectNumber id="fourthLateTotalNumber" number="{review>/count}" state="Information" />
+            <Text id="fourthLateTotalDescription" text="Registros consultados" />
+          </VBox>
+          <VBox id="fourthLatePendingKpi" class="reviewKpiCard reviewKpiPending">
+            <Text id="fourthLatePendingLabel" text="Pendientes" />
+            <ObjectNumber id="fourthLatePendingNumber" number="{review>/pendingCount}" state="Error" />
+            <Text id="fourthLatePendingDescription" text="Requieren revisión de RH" />
+          </VBox>
+          <VBox id="fourthLateResolvedKpi" class="reviewKpiCard reviewKpiResolved">
+            <Text id="fourthLateResolvedLabel" text="Resueltos" />
+            <ObjectNumber id="fourthLateResolvedNumber" number="{review>/resolvedCount}" state="Success" />
+            <Text id="fourthLateResolvedDescription" text="Aceptados o rechazados" />
+          </VBox>
+        </HBox>
+
+        <Panel id="fourthLateReviewPanel" class="dashboardPanel reviewTablePanel">
+          <headerToolbar>
+            <OverflowToolbar id="fourthLateToolbar">
+              <Title id="fourthLateTableTitle" text="Detalle de 4.º retardo" />
+              <ToolbarSpacer id="fourthLateToolbarSpacer" />
+              <SearchField id="fourthLateSearch" width="20rem"
+                placeholder="Buscar empleado, centro o comentario"
+                liveChange=".onSearch" />
+              <Button id="fourthLateRefresh" text="Actualizar" icon="sap-icon://refresh"
+                type="Emphasized" press=".onRefresh" />
+            </OverflowToolbar>
+          </headerToolbar>
+          <content>
+            <Table id="fourthLateTable" items="{review>/filteredRows}" growing="true"
+              growingScrollToLoad="true"
+              noDataText="La entidad SAP de 4.º retardo está pendiente de configurar"
+              sticky="ColumnHeaders" class="reviewTable">
+              <columns>
+                <Column id="fourthLateEmployeeColumn" width="14rem"><Text id="fourthLateEmployeeColumnText" text="Empleado" /></Column>
+                <Column id="fourthLateNumberColumn" width="7rem" minScreenWidth="Tablet" demandPopin="true"><Text id="fourthLateNumberColumnText" text="Núm. empleado" /></Column>
+                <Column id="fourthLateDateColumn" width="7rem"><Text id="fourthLateDateColumnText" text="Fecha" /></Column>
+                <Column id="fourthLateCenterColumn" width="11rem" minScreenWidth="Desktop" demandPopin="true"><Text id="fourthLateCenterColumnText" text="Centro" /></Column>
+                <Column id="fourthLateScheduleColumn" width="12rem" minScreenWidth="Desktop" demandPopin="true"><Text id="fourthLateScheduleColumnText" text="Horario" /></Column>
+                <Column id="fourthLateEntryColumn" width="9rem" hAlign="Center" minScreenWidth="Tablet" demandPopin="true"><Text id="fourthLateEntryColumnText" text="Entrada" /></Column>
+                <Column id="fourthLateJustificationColumn" width="10rem" minScreenWidth="Desktop" demandPopin="true"><Text id="fourthLateJustificationColumnText" text="Detalle" /></Column>
+                <Column id="fourthLateCommentColumn" width="15rem" minScreenWidth="Desktop" demandPopin="true"><Text id="fourthLateCommentColumnText" text="Comentario obligatorio de RH" /></Column>
+                <Column id="fourthLateStatusColumn" width="8rem"><Text id="fourthLateStatusColumnText" text="Estado" /></Column>
+                <Column id="fourthLateDecisionColumn" width="8rem" hAlign="Center"><Text id="fourthLateDecisionColumnText" text="Decisión" /></Column>
+              </columns>
+              <items>
+                <ColumnListItem id="fourthLateRow">
+                  <cells>
+                    <Link id="fourthLateEmployeeLink" text="{review>employee}" press=".onEmployeePress" />
+                    <Text id="fourthLatePersonalNumber" text="{review>personalNumber}" />
+                    <Text id="fourthLateDate" text="{review>date}" />
+                    <Text id="fourthLateCenter" text="{review>center}" />
+                    <Text id="fourthLateSchedule" text="{= ${review>raw/ScheduleDetail} || ${review>schedule} || '—' }" wrapping="true" />
+                    <ObjectStatus id="fourthLateEntryTime" text="{review>entryTime}" state="Warning" />
+                    <Button id="fourthLateDetailsButton" text="Ver detalle" icon="sap-icon://document-text"
+                      type="Transparent" visible="{review>hasJustification}" press=".onShowJustification" />
+                    <Input id="fourthLateRhComment" value="{review>commentsRH}"
+                      placeholder="Comentario obligatorio" required="{= ${review>decision} === 'pending' }"
+                      enabled="{= ${review>decision} === 'pending' &amp;&amp; !${review>/integrationPending} }"
+                      valueState="{review>commentsRHState}"
+                      valueStateText="Captura un comentario antes de aceptar o rechazar"
+                      liveChange=".onCommentsRHChange" />
+                    <ObjectStatus id="fourthLateApprovalStatus" text="{review>approvalText}"
+                      state="{review>approvalState}" inverted="true" />
+                    <HBox id="fourthLateDecisionButtons" justifyContent="Center">
+                      <Button id="fourthLateApproveButton" icon="sap-icon://accept" type="Accept"
+                        tooltip="Aceptar 4.º retardo"
+                        enabled="{= !${review>/integrationPending} &amp;&amp; ${review>decision} === 'pending' &amp;&amp; !!${review>commentsRH} }"
+                        press=".onApprove" />
+                      <Button id="fourthLateRejectButton" icon="sap-icon://decline" type="Reject"
+                        tooltip="Rechazar 4.º retardo"
+                        enabled="{= !${review>/integrationPending} &amp;&amp; ${review>decision} === 'pending' &amp;&amp; !!${review>commentsRH} }"
+                        press=".onReject" class="sapUiTinyMarginBegin" />
+                    </HBox>
+                  </cells>
+                </ColumnListItem>
+              </items>
+            </Table>
+          </content>
+        </Panel>
+      </VBox>
+    </content>
+  </Page>
+</mvc:View>

@@ -1,0 +1,95 @@
+<core:FragmentDefinition
+    xmlns="sap.m"
+    xmlns:core="sap.ui.core">
+    <Dialog
+        id="overviewIncidentUsersDialog"
+        title="{view>/incidentDialogTitle}"
+        contentWidth="52rem"
+        contentHeight="32rem"
+        stretchOnPhone="true"
+        horizontalScrolling="false"
+        verticalScrolling="false"
+        class="overviewIncidentUsersDialog">
+
+        <subHeader>
+            <Toolbar class="incidentUsersSummaryBar">
+                <ObjectStatus
+                    text="{view>/incidentDialogSummary}"
+                    icon="sap-icon://group"
+                    state="Information" />
+            </Toolbar>
+        </subHeader>
+
+        <content>
+            <List
+                items="{view>/incidentUsers}"
+                showSeparators="Inner"
+                noDataText="No hay usuarios para esta incidencia"
+                class="incidentUsersList">
+
+                <CustomListItem
+                    type="Active"
+                    highlight="{view>state}"
+                    press=".onIncidentPersonPress"
+                    class="incidentUserItem">
+
+                    <HBox
+                        width="100%"
+                        alignItems="Center"
+                        justifyContent="SpaceBetween"
+                        class="incidentUserRow">
+
+                        <HBox
+                            alignItems="Center"
+                            class="incidentUserIdentity">
+                            <Avatar
+                                initials="{view>initials}"
+                                displayShape="Circle"
+                                displaySize="S"
+                                class="incidentUserAvatar" />
+
+                            <VBox class="sapUiTinyMarginBegin incidentUserMain">
+                                <Title
+                                    text="{view>name}"
+                                    level="H5"
+                                    wrapping="true" />
+                                <Text
+                                    text="{= ${view>employeeNumber} + (${view>email} ? ' · ' + ${view>email} : '')}"
+                                    wrapping="true"
+                                    class="incidentUserMeta" />
+                                <Text
+                                    text="{= ${view>center} + ' · ' + ${view>zone}}"
+                                    wrapping="true"
+                                    class="incidentUserMeta" />
+                            </VBox>
+                        </HBox>
+
+                        <VBox
+                            alignItems="End"
+                            class="incidentUserResult">
+                            <ObjectStatus
+                                text="{view>status}"
+                                state="{view>state}"
+                                inverted="true" />
+                            <ObjectNumber
+                                number="{view>incidentCount}"
+                                unit="registros"
+                                state="{view>state}" />
+                            <Text
+                                text="{view>datesText}"
+                                wrapping="true"
+                                textAlign="End"
+                                class="incidentUserDates" />
+                        </VBox>
+                    </HBox>
+                </CustomListItem>
+            </List>
+        </content>
+
+        <beginButton>
+            <Button
+                text="Cerrar"
+                press=".onCloseIncidentUsersDialog" />
+        </beginButton>
+    </Dialog>
+</core:FragmentDefinition>

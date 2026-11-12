@@ -1,0 +1,33 @@
+<core:FragmentDefinition xmlns="sap.m" xmlns:core="sap.ui.core">
+  <Dialog id="earlyExitJustificationDialog" title="Justificación de salida anticipada" contentWidth="30rem"
+    draggable="true" resizable="true" stretchOnPhone="true">
+    <content>
+      <VBox class="sapUiMediumMargin">
+        <MessageStrip text="La salida se registrará antes de que termine el horario. Captura el motivo antes de enviar el marcaje a SAP."
+          type="Warning" showIcon="true" class="sapUiSmallMarginBottom" />
+        <Label text="Motivo" labelFor="earlyExitReasonSelect" required="true" />
+        <Select id="earlyExitReasonSelect" width="100%"
+          selectedKey="{attendance>/today/earlyExitJustification/reason}"
+          change=".onEarlyExitJustificationChange">
+          <core:Item key="" text="Selecciona un motivo" />
+          <core:Item key="Laboral" text="Laboral" />
+          <core:Item key="Personal" text="Personal" />
+        </Select>
+        <Label text="Comentario" labelFor="earlyExitCommentInput" class="sapUiSmallMarginTop" />
+        <TextArea id="earlyExitCommentInput" value="{attendance>/today/earlyExitJustification/comment}"
+          placeholder="Describe brevemente la causa de la salida anticipada" rows="4" maxLength="160" width="100%"
+          liveChange=".onEarlyExitJustificationChange" />
+        <CheckBox text="Recuperaré el tiempo" selected="{attendance>/today/earlyExitJustification/recoverTime}"
+          class="sapUiSmallMarginTop" />
+        <MessageStrip visible="{= !!${attendance>/today/earlyExitJustification/error} }"
+          text="{attendance>/today/earlyExitJustification/error}" type="Error" showIcon="true" class="sapUiSmallMarginTop" />
+      </VBox>
+    </content>
+    <beginButton>
+      <Button text="Justificar y registrar salida" type="Emphasized" press=".onSaveEarlyExitJustification" />
+    </beginButton>
+    <endButton>
+      <Button text="Cancelar" press=".onCancelEarlyExitJustification" />
+    </endButton>
+  </Dialog>
+</core:FragmentDefinition>
