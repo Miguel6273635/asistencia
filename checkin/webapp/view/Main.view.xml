@@ -59,15 +59,24 @@
                       text="{attendance>/today/validationMessage}" type="{attendance>/today/validationType}"
                       showIcon="true" class="validationStrip" />
                     <HBox class="markActions" wrap="Wrap">
-                      <Button id="checkInAction" text="{attendance>/today/checkInText}" icon="sap-icon://log" type="Emphasized" press=".onCheckIn" />
+                      <Button id="businessTripAction" text="{= ${attendance>/today/businessTripRegistered} ? 'Viaje de negocios registrado' : 'Registrar viaje de negocios' }"
+                        icon="sap-icon://flight" type="Emphasized"
+                        visible="{= ${attendance>/today/typeSession} === 'VN' }"
+                        enabled="{= !${attendance>/today/businessTripRegistered} }"
+                        press=".onRegisterBusinessTrip" />
+                      <Button id="checkInAction" text="{attendance>/today/checkInText}" icon="sap-icon://log" type="Emphasized"
+                        visible="{= ${attendance>/today/typeSession} !== 'VN' }" press=".onCheckIn" />
                       <Button id="lateJustificationAction" text="{attendance>/today/lateJustificationButtonText}" icon="sap-icon://notes"
-                        type="Attention" visible="{= ${attendance>/today/nextAction} === 'CHECK_IN' }"
+                        type="Attention" visible="{= ${attendance>/today/typeSession} !== 'VN' &amp;&amp; ${attendance>/today/nextAction} === 'CHECK_IN' }"
                         enabled="{= ${attendance>/today/isLateNow} &amp;&amp; ${attendance>/today/workModalityConfirmed} &amp;&amp; !${attendance>/today/isRelationBlocked} }"
                         tooltip="{= ${attendance>/today/isLateNow} ? 'Capturar la justificación del retraso' : 'Se habilitará si la entrada se registra después del inicio del horario' }"
                         press=".onOpenLateJustification" />
-                      <Button id="mealStartAction" text="Iniciar comida" icon="sap-icon://meal" enabled="false" press=".onMealStart" />
-                      <Button id="mealEndAction" text="Finalizar comida" icon="sap-icon://meal" enabled="false" press=".onMealEnd" />
-                      <Button id="checkOutAction" text="{attendance>/today/checkOutText}" icon="sap-icon://log" enabled="false" press=".onCheckOut" />
+                      <Button id="mealStartAction" text="Iniciar comida" icon="sap-icon://meal" enabled="false"
+                        visible="{= ${attendance>/today/typeSession} !== 'VN' }" press=".onMealStart" />
+                      <Button id="mealEndAction" text="Finalizar comida" icon="sap-icon://meal" enabled="false"
+                        visible="{= ${attendance>/today/typeSession} !== 'VN' }" press=".onMealEnd" />
+                      <Button id="checkOutAction" text="{attendance>/today/checkOutText}" icon="sap-icon://log" enabled="false"
+                        visible="{= ${attendance>/today/typeSession} !== 'VN' }" press=".onCheckOut" />
                       <Button id="earlyExitJustificationAction" text="{attendance>/today/earlyExitJustificationButtonText}"
                         icon="sap-icon://notes" type="Attention"
                         visible="{= ${attendance>/today/canCheckOut} &amp;&amp; ${attendance>/today/isEarlyExit} }"
@@ -76,9 +85,6 @@
                         press=".onOpenEarlyExitJustification" />
                     </HBox>
                     <MessageStrip visible="{= !!${app>/historyError} }" text="{app>/historyError}" type="Error" showIcon="true" />
-                    <MessageStrip
-                      text="{= ${attendance>/today/isTravel} ? 'Viaje de negocios vigente: no se requieren marcajes.' : (${attendance>/today/isHomeOffice} ? 'Home Office: Entrada y Salida se registran sin solicitar ubicación GPS.' : 'Cada marcaje usa una ubicación reciente y precisa del dispositivo; no se utilizan coordenadas fijas. Si la precisión no es suficiente, el evento no se enviará a SAP.') }"
-                      type="Information" showIcon="true" class="privacyStrip" />
                   </VBox>
 
                   <VBox class="panel compactEmployeePanel" busy="{app>/employeeLoading}" busyIndicatorDelay="0">

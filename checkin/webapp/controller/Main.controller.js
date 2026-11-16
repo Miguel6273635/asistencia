@@ -1822,7 +1822,7 @@ sap.ui.define([
       code: code,
       description: description,
       message: "No puedes realizar marcaciones porque tu situación laboral actual es \"" +
-        description + "\" (código " + code + ")."
+        description + "\"."
     };
   }
 
@@ -2421,6 +2421,11 @@ sap.ui.define([
       model.setProperty("/today/status", today.status || "");
       model.setProperty("/today/isLate", Boolean(today.isLate));
       model.setProperty("/today/isTravel", Boolean(today.isTravel));
+      model.setProperty("/today/businessTripRegistered", Boolean(
+        today.typeSession === "VN" ||
+        today.isTravel ||
+        this._rememberedMark("BUSINESS_TRIP", employee)
+      ));
       model.setProperty("/today/isHomeOffice", Boolean(today.isHomeOffice));
       model.setProperty("/today/typeSession", today.typeSession || "");
       model.setProperty("/today/sessionDateFrom", today.sessionDateFrom || "");
@@ -2695,10 +2700,27 @@ sap.ui.define([
       this._confirmAction("CHECK_IN");
     },
 
+    onRegisterBusinessTrip: function () {
+      var model = this.getView().getModel("attendance");
+
+      if (model.getProperty("/today/businessTripRegistered")) {
+        MessageToast.show("El viaje de negocios ya fue registrado");
+        return;
+      }
+
+      this._openWorkModalityDialog("BUSINESS_TRIP");
+    },
+
     _openWorkModalityDialog: function (pendingAction) {
       var model = this.getView().getModel("attendance");
       var typeSession = String(model.getProperty("/today/typeSession") || "").trim().toUpperCase();
-      var isBusinessTrip = typeSession === "VN";
+      var assignedTypeSession = relationJobSessionCode(model.getProperty("/employee") || {});
+      var isBusinessTrip = typeSession === "VN" || assignedTypeSession === "VN";
+
+      if (isBusinessTrip) {
+        typeSession = "VN";
+      }
+      model.setProperty("/today/workModalityLocked", assignedTypeSession === "VN");
 
       model.setProperty("/today/workModalityDraft", {
         typeSession: ["HO", "VN"].indexOf(typeSession) >= 0 ? typeSession : "",
@@ -2788,15 +2810,73 @@ sap.ui.define([
       this._getWorkModalityDialog().then(function (dialog) {
         dialog.close();
         if (typeSession === "VN") {
-          MessageBox.information(
-            "Viaje de negocios vigente. No necesitas realizar marcajes de entrada, comida ni salida.",
-            { title: "Marcajes no requeridos" }
-          );
+          window.setTimeout(function () {
+            this._registerBusinessTrip();
+          }.bind(this), 0);
           return;
         }
         window.setTimeout(function () {
           this._confirmAction(pendingAction);
         }.bind(this), 0);
+      }.bind(this));
+    },
+
+    _registerBusinessTrip: function () {
+      var appModel = this.getView().getModel("app");
+      var attendanceModel = this.getView().getModel("attendance");
+      var employee = attendanceModel.getProperty("/employee") || {};
+      var dateFrom = normalizeIsoDateValue(attendanceModel.getProperty("/today/sessionDateFrom"));
+      var dateTo = normalizeIsoDateValue(attendanceModel.getProperty("/today/sessionDateTo"));
+      var dataSource = this.getOwnerComponent().getManifestEntry("/sap.app/dataSources/attendanceOData");
+      var serviceRoot = resolveServiceRoot(dataSource.uri);
+
+      if (this._markRequestInProgress) {
+        MessageToast.show("Ya existe un registro en proceso");
+        return Promise.resolve();
+      }
+      if (!employee.id || !dateFrom || !dateTo) {
+        MessageBox.error("No se puede registrar el viaje porque faltan el colaborador o las fechas del periodo.");
+        return Promise.resolve();
+      }
+      if (dateFrom > dateTo) {
+        MessageBox.error("La fecha inicial del viaje no puede ser posterior a la fecha final.");
+        return Promise.resolve();
+      }
+
+      this._markRequestInProgress = true;
+      appModel.setProperty("/busy", true);
+      Diagnostics.info("BUSINESS_TRIP", "Enviando viaje de negocios a SAP", {
+        employeeId: employee.id,
+        registerType: "P15",
+        typeSession: "VN",
+        dateFrom: dateFrom,
+        dateTo: dateTo
+      });
+
+      return AttendanceService.registerBusinessTrip(
+        serviceRoot,
+        employee,
+        dateFrom,
+        dateTo
+      ).then(function (result) {
+        var sapStatus = String(result.sapStatus || "").trim().toUpperCase();
+        if (sapStatus && sapStatus !== "OK") {
+          throw new Error(result.sapMessage || "SAP no confirmó el viaje de negocios.");
+        }
+
+        attendanceModel.setProperty("/today/businessTripRegistered", true);
+        this._rememberMark("BUSINESS_TRIP", employee, localIsoDate(new Date()));
+        this._updateActionUI();
+        MessageToast.show("Viaje de negocios registrado correctamente", { duration: 4000 });
+        return result;
+      }.bind(this)).catch(function (error) {
+        Diagnostics.error("BUSINESS_TRIP", "No fue posible registrar el viaje de negocios", error);
+        MessageBox.error("No fue posible registrar el viaje de negocios en SAP. " +
+          (error.message || "Error no especificado"));
+      }).finally(function () {
+        this._markRequestInProgress = false;
+        appModel.setProperty("/busy", false);
+        this._updateActionUI();
       }.bind(this));
     },
 

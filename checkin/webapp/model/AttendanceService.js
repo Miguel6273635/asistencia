@@ -367,7 +367,7 @@ sap.ui.define([
     console.trace("Punto donde se envía POST " + entitySet);
     console.groupEnd();
 
-   
+    debugger;
   }
 
   function debugPostResponse(entitySet, response, body, flowId) {
@@ -695,6 +695,64 @@ sap.ui.define([
 
     captureLocation: captureLocation,
 
+    registerBusinessTrip: function (serviceRoot, employee, dateFromValue, dateToValue) {
+      var now = new Date();
+      var enterDate = localDate(now);
+      var dateFrom = normalizeDate(dateFromValue);
+      var dateTo = normalizeDate(dateToValue);
+      var flowId = "BUSINESS-TRIP-" + now.getTime() + "-" + String(employee && employee.id || "SIN-PERNR");
+
+      if (!dateFrom || !dateTo) {
+        return Promise.reject(new Error("Las fechas de inicio y fin del viaje son obligatorias."));
+      }
+      if (dateFrom > dateTo) {
+        return Promise.reject(new Error("La fecha inicial del viaje no puede ser posterior a la fecha final."));
+      }
+
+      var payload = {
+        PersonalNumber: employee.id,
+        RegisterType: "P15",
+        FullName: employee.name,
+        Email: employee.email || "",
+        EnterDate: enterDate,
+        EnterHour: localTime(now),
+        Chanel: "BTP",
+        Device: "",
+        TypeSession: "VN",
+        Latitude: "",
+        Longitude: "",
+        GeoStatus: "",
+        IsLate: "",
+        Id_log: "",
+        StatusReq: "",
+        Message: "",
+        DateFrom: dateFrom,
+        DateTo: dateTo
+      };
+      var root = resolveServiceRoot(serviceRoot);
+
+      Diagnostics.info("BUSINESS_TRIP", "Flujo de viaje de negocios preparado", {
+        flowId: flowId,
+        attendanceRecord: payload
+      });
+
+      return requestCsrfToken(root).then(function (token) {
+        return postEntity(root, token, "AttendanceRecordSet", payload, flowId);
+      }).then(function (postResult) {
+        var validation = validateMarkResponse(postResult.payload);
+        return {
+          success: true,
+          flowId: flowId,
+          payload: payload,
+          response: postResult.payload,
+          sapEntity: validation.entity,
+          sapStatus: validation.status,
+          sapMessage: validation.message,
+          registeredAt: now
+        };
+      });
+    },
+
     mark: function (serviceRoot, action, employee, device, options) {
       var now = new Date();
       var enterDate = localDate(now);
@@ -733,7 +791,7 @@ sap.ui.define([
         EnterDate: enterDate,
         EnterHour: localTime(now),
         Chanel: "BTP",
-        Device: device || "",
+        Device: device || "BTP-Web",
         TypeSession: typeSession,
         Latitude: String(location.latitude || ""),
         Longitude: String(location.longitude || ""),
