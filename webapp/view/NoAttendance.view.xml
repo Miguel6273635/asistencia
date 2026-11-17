@@ -56,7 +56,7 @@
                         <ObjectNumber
                             number="{noAttendance>/withAttendanceCount}"
                             state="Success" />
-                        <Text text="Diferencia frente a DailyAbsencesSet" />
+                        <Text text="Presentes en AttendanceHistorySet" />
                     </VBox>
                     <VBox class="reviewKpiCard reviewKpiPending">
                         <Text text="Sin asistencia" />
@@ -70,7 +70,7 @@
                 <Panel class="dashboardPanel reviewTablePanel noAttendanceTablePanel">
                     <headerToolbar>
                         <OverflowToolbar>
-                            <Title text="Inasistencias reportadas por SAP" />
+                            <Title text="Personal sin marcaciones" />
                             <ToolbarSpacer />
                             <SearchField
                                 width="22rem"
@@ -90,7 +90,7 @@
                             growingThreshold="50"
                             growingScrollToLoad="true"
                             sticky="ColumnHeaders"
-                            noDataText="DailyAbsencesSet no devolvió inasistencias"
+                            noDataText="Todos los empleados tienen al menos una marcación en el periodo"
                             class="reviewTable noAttendanceTable">
                             <columns>
                                 <Column width="16rem">

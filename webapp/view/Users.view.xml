@@ -224,14 +224,14 @@
                 <content>
                     <VBox class="sapUiMediumMargin userDialogContent">
                         <MessageStrip
-                            text="Captura la nómina, la semana y al menos un estatus diario. La información se enviará a WeeklyLoadSet con el mismo contrato utilizado por la carga de Excel."
+                            text="Captura la nómina y al menos un valor diario. La semana se calcula automáticamente con la fecha de la petición y se envía a WeeklyLoadSet."
                             type="Information"
                             showIcon="true" />
                         <f:SimpleForm editable="true" layout="ColumnLayout" columnsXL="2" columnsL="2" columnsM="2" class="sapUiSmallMarginTop">
                             <Label text="Número de personal" required="true" />
                             <Input value="{view>/weeklySingle/PersonalNumber}" placeholder="10000001" />
-                            <Label text="Semana" required="true" />
-                            <Input value="{view>/weeklySingle/Semana}" placeholder="202646" maxLength="6" />
+                            <Label text="Semana automática" />
+                            <Input value="{view>/weeklySingle/Semana}" editable="false" />
                             <Label text="Lunes" />
                             <Input value="{view>/weeklySingle/Lunes}" placeholder="Home Office" />
                             <Label text="Martes" />
