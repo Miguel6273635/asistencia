@@ -13,9 +13,9 @@
           <core:Item key="Laboral" text="Laboral" />
           <core:Item key="Personal" text="Personal" />
         </Select>
-        <Label text="Comentario" labelFor="earlyExitCommentInput" class="sapUiSmallMarginTop" />
+         <Label text="Comentario" labelFor="earlyExitCommentInput" required="true" class="sapUiSmallMarginTop" />
         <TextArea id="earlyExitCommentInput" value="{attendance>/today/earlyExitJustification/comment}"
-          placeholder="Describe brevemente la causa de la salida anticipada" rows="4" maxLength="160" width="100%"
+          placeholder="Describe brevemente la causa de la salida anticipada" rows="4" maxLength="500" width="100%"
           liveChange=".onEarlyExitJustificationChange" />
         <CheckBox text="Recuperaré el tiempo" selected="{attendance>/today/earlyExitJustification/recoverTime}"
           class="sapUiSmallMarginTop" />

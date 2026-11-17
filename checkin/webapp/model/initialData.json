@@ -13,6 +13,11 @@
     "initials": "",
     "email": "",
     "zone": "",
+    "status": "",
+    "statusDescription": "",
+    "groupPerson": "",
+    "groupPersonDescription": "",
+    "authorisedRegister": "",
     "relationJob": "",
     "relationJobDescription": "",
     "dayStatus": "",
@@ -31,12 +36,17 @@
     "status": "",
     "isLate": false,
     "isLateNow": false,
+    "isFourthLate": false,
+    "isFourthLateRecorded": false,
+    "isAbsence": false,
+    "isAttendanceBlocked": false,
+    "isCheckInAllowed": false,
     "isEarlyExit": false,
     "canCheckOut": false,
     "isTravel": false,
     "isHomeOffice": false,
     "typeSession": "",
-    "workModalityText": "Presencial",
+    "workModalityText": "Pendiente",
     "workModalityConfirmed": false,
     "sessionDateFrom": "",
     "sessionDateTo": "",
@@ -47,6 +57,7 @@
       "error": ""
     },
     "isMealWindowRestricted": false,
+    "hasMealEvents": false,
     "isWithinMealWindow": false,
     "mealStartAllowed": true,
     "mealEndAllowed": true,
@@ -57,6 +68,10 @@
     "validationMessage": "",
     "validationType": "Information",
     "scheduleLabel": "",
+    "delaysLoaded": false,
+    "homeOfficeUsedThisWeek": false,
+    "homeOfficeQuotaBlocked": false,
+    "isEmployeeEnabled": false,
     "lateJustificationButtonText": "Justificar retraso",
     "lateJustification": {
       "reason": "",
@@ -73,6 +88,23 @@
       "saved": false,
       "error": ""
     }
+  },
+  "employeePolicy": {
+    "enabled": false,
+    "active": false,
+    "group": "",
+    "confidence": false,
+    "unionized": false,
+    "channel": "",
+    "viewOnly": false,
+    "reason": ""
+  },
+  "delays": {
+    "period": "",
+    "totalDelays": null,
+    "totalAbsences": null,
+    "lastUpdate": "",
+    "lastHourUpdate": ""
   },
   "schedule": {
     "code": "",

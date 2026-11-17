@@ -10,9 +10,9 @@ sap.ui.define([
     CHECK_OUT: "P20"
   };
 
-  var LOCATION_CAPTURE_TIMEOUT_MS = 20000;
+  var LOCATION_CAPTURE_TIMEOUT_MS = 25000;
   var LOCATION_MAX_AGE_MS = 15000;
-  var LOCATION_MAX_ACCURACY_METERS = 200;
+  var LOCATION_MAX_ACCURACY_METERS = 250;
 
   function resolveServiceRoot(serviceRoot) {
     var configuredRoot = String(serviceRoot || "").trim();
@@ -225,10 +225,8 @@ sap.ui.define([
     var entity = odataEntity(payload);
     var status = String(entity.StatusReq || "").trim().toUpperCase();
     var message = String(entity.Message || "").trim();
-    var rejectedStatuses = ["E", "A", "X", "ERROR", "FAIL", "FAILED", "REJECTED"];
-
-    if (rejectedStatuses.indexOf(status) >= 0) {
-      throw new Error(message || ("SAP rechazó el marcaje con estatus " + status));
+    if (status !== "OK") {
+      throw new Error(message || ("SAP no confirmó el marcaje (StatusReq: " + (status || "vacío") + ")."));
     }
 
     return {
@@ -242,10 +240,8 @@ sap.ui.define([
     var entity = odataEntity(payload);
     var status = String(entity.Status || "").trim().toUpperCase();
     var message = String(entity.Message || "").trim();
-    var rejectedStatuses = ["E", "A", "X", "ERROR", "FAIL", "FAILED", "REJECTED"];
-
-    if (rejectedStatuses.indexOf(status) >= 0) {
-      throw new Error(message || ("SAP rechazó la justificación con estatus " + status));
+    if (["S", "OK"].indexOf(status) < 0) {
+      throw new Error(message || ("SAP no confirmó la justificación (Status: " + (status || "vacío") + ")."));
     }
 
     return {
@@ -299,14 +295,14 @@ sap.ui.define([
       employeeValue(employee, ["centerCode"], center);
   }
 
-  function lateJustificationPayload(employee, justification, now) {
+  function buildJustificationPayload(employee, action, justification, now) {
     var reason = String(justification.reason || "").trim();
 
     return {
       PersonalNumber: employeeValue(employee, ["id", "PersonalNumber", "PersonnelNumber"]),
       WorkDate: localDate(now),
       RegisterHourLate: localTime(now),
-      RegisterType: EVENT_CODES.CHECK_IN,
+      RegisterType: EVENT_CODES[action],
       IncidentType: reason,
       ReasonType: reason,
       Comment: String(justification.comment || "").trim(),
@@ -479,6 +475,15 @@ sap.ui.define([
     return false;
   }
 
+  function nonNegativeInteger(value, field) {
+    var text = String(value === undefined || value === null ? "" : value).trim();
+    var number = Number(text);
+    if (!/^\d{1,6}$/.test(text) || !Number.isSafeInteger(number) || number < 0) {
+      throw new Error("ProcessingDelaysSet devolvió " + field + " inválido.");
+    }
+    return number;
+  }
+
   function sapBoolean(value) {
     var normalized = String(value || "").trim().toUpperCase();
     return value === true || ["X", "1", "TRUE", "SI", "SÍ", "YES"].indexOf(normalized) >= 0;
@@ -497,7 +502,24 @@ sap.ui.define([
     return "Sin marcajes";
   }
 
-  function mapHistory(records) {
+  function previousIsoDate(isoDate) {
+    var parts = String(isoDate || "").split("-").map(Number);
+    var date = new Date(parts[0], parts[1] - 1, parts[2] - 1, 12, 0, 0, 0);
+    return localDate(date);
+  }
+
+  function isOvernightSchedule(value) {
+    var matcher = /(\d{1,2}):(\d{2})\s*[-–—]\s*(\d{1,2}):(\d{2})/g;
+    var match;
+    while ((match = matcher.exec(String(value || ""))) !== null) {
+      if (Number(match[3]) * 60 + Number(match[4]) < Number(match[1]) * 60 + Number(match[2])) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  function mapHistory(records, fallbackScheduleDetail) {
     var days = {};
     records.forEach(function (record) {
       var workDate = String(record.WorkDate || "").trim();
@@ -516,6 +538,7 @@ sap.ui.define([
           exit: "—",
           hours: "—",
           status: "Sin marcajes",
+          dayStatus: "",
           isLate: false,
           isTravel: false,
           isHomeOffice: false,
@@ -531,7 +554,7 @@ sap.ui.define([
             zone: String(record.Zone || "").trim(),
             scheduleCode: String(record.Schedule || "").trim(),
             schedule: String(record.ScheduleDescription || record.Schedule || "").trim(),
-            scheduleDetail: String(record.ScheduleDetail || "").trim(),
+            scheduleDetail: String(record.ScheduleDetail || fallbackScheduleDetail || "").trim(),
             position: String(record.Position || "").trim()
           },
           rawRecords: []
@@ -539,6 +562,7 @@ sap.ui.define([
       }
 
       days[date].rawRecords.push(record);
+      days[date].dayStatus = String(record.DayStatus || days[date].dayStatus || "").trim();
 
       var time = normalizeTime(record.EnterHour);
       if (record.RegisterType === EVENT_CODES.CHECK_IN) { days[date].entry = time; }
@@ -569,6 +593,8 @@ sap.ui.define([
         days[date].typeSession = "VN";
       } else if (recordTypeSession === "HO" || days[date].isHomeOffice) {
         days[date].typeSession = "HO";
+      } else if (recordTypeSession === "PR") {
+        days[date].typeSession = "PR";
       }
       if (days[date].typeSession) {
         days[date].sessionDateFrom = normalizeDate(record.DateFrom) || days[date].sessionDateFrom;
@@ -576,6 +602,29 @@ sap.ui.define([
       }
       days[date].status = attendanceStatus(record, days[date]);
 
+    });
+
+    Object.keys(days).sort().forEach(function (key) {
+      var current = days[key];
+      var previous = days[previousIsoDate(key)];
+      var detail = previous && previous.employee.scheduleDetail || current.employee.scheduleDetail || fallbackScheduleDetail;
+      if (!previous || previous.entry === "—" || previous.exit !== "—" || current.entry !== "—" ||
+          !isOvernightSchedule(detail)) {
+        return;
+      }
+
+      ["mealStart", "mealEnd", "exit"].forEach(function (field) {
+        if (previous[field] === "—" && current[field] !== "—") {
+          previous[field] = current[field];
+          current[field] = "—";
+        }
+      });
+      previous.rawRecords = previous.rawRecords.concat(current.rawRecords || []);
+      if (!previous.typeSession && current.typeSession) { previous.typeSession = current.typeSession; }
+      if (!previous.dayStatus && current.dayStatus) { previous.dayStatus = current.dayStatus; }
+      if (current.entry === "—" && current.mealStart === "—" && current.mealEnd === "—" && current.exit === "—" && !current.dayStatus) {
+        delete days[key];
+      }
     });
 
     return Object.keys(days).sort().reverse().map(function (key) {
@@ -695,7 +744,7 @@ sap.ui.define([
 
     captureLocation: captureLocation,
 
-    registerBusinessTrip: function (serviceRoot, employee, dateFromValue, dateToValue) {
+    registerBusinessTrip: function (serviceRoot, employee, dateFromValue, dateToValue, device, locationValue) {
       var now = new Date();
       var enterDate = localDate(now);
       var dateFrom = normalizeDate(dateFromValue);
@@ -709,19 +758,20 @@ sap.ui.define([
         return Promise.reject(new Error("La fecha inicial del viaje no puede ser posterior a la fecha final."));
       }
 
+      var location = locationValue || {};
       var payload = {
         PersonalNumber: employee.id,
-        RegisterType: "P15",
+        RegisterType: "P10",
         FullName: employee.name,
         Email: employee.email || "",
         EnterDate: enterDate,
         EnterHour: localTime(now),
         Chanel: "BTP",
-        Device: "",
+        Device: device || "",
         TypeSession: "VN",
-        Latitude: "",
-        Longitude: "",
-        GeoStatus: "",
+        Latitude: String(location.latitude || ""),
+        Longitude: String(location.longitude || ""),
+        GeoStatus: String(location.geoStatus || ""),
         IsLate: "",
         Id_log: "",
         StatusReq: "",
@@ -761,9 +811,9 @@ sap.ui.define([
       var location = markOptions.location || {};
       var justification = markOptions.lateJustification || {};
       var earlyExitJustification = markOptions.earlyExitJustification || {};
-      var typeSession = String(markOptions.typeSession || "").trim().toUpperCase();
-      if (["HO", "VN"].indexOf(typeSession) < 0) {
-        typeSession = "";
+      var typeSession = String(markOptions.typeSession || "PR").trim().toUpperCase();
+      if (["PR", "HO", "VN"].indexOf(typeSession) < 0) {
+        typeSession = "PR";
       }
       var dateFrom = normalizeDate(markOptions.dateFrom) || enterDate;
       var dateTo = normalizeDate(markOptions.dateTo) || enterDate;
@@ -774,15 +824,6 @@ sap.ui.define([
       if (dateFrom > dateTo) {
         return Promise.reject(new Error("La fecha inicial de la modalidad no puede ser posterior a la fecha final."));
       }
-      var justificationMessage = "";
-      if (action === "CHECK_OUT" && markOptions.isEarlyExit && earlyExitJustification.saved) {
-        justificationMessage = "JUSTIFICACION SALIDA ANTICIPADA | Motivo: " + String(earlyExitJustification.reason || "").trim();
-        if (String(earlyExitJustification.comment || "").trim()) {
-          justificationMessage += " | Comentario: " + String(earlyExitJustification.comment).trim();
-        }
-        justificationMessage += " | Recupera tiempo: " + (earlyExitJustification.recoverTime ? "Si" : "No");
-        justificationMessage = justificationMessage.slice(0, 255);
-      }
       var payload = {
         PersonalNumber: employee.id,
         RegisterType: EVENT_CODES[action],
@@ -791,34 +832,53 @@ sap.ui.define([
         EnterDate: enterDate,
         EnterHour: localTime(now),
         Chanel: "BTP",
-        Device: device || "BTP-Web",
+        Device: device || "",
         TypeSession: typeSession,
         Latitude: String(location.latitude || ""),
         Longitude: String(location.longitude || ""),
         GeoStatus: String(location.geoStatus || ""),
-        IsLate: action === "CHECK_IN" && markOptions.isLate ? "X" : "",
+        IsLate: "",
         Id_log: "",
         StatusReq: "",
-        Message: justificationMessage,
+        Message: "",
         DateFrom: dateFrom,
         DateTo: dateTo
       };
-      var shouldPostLateJustification = action === "CHECK_IN" &&
-        markOptions.isLate && justification.saved;
-      var justificationPayload = shouldPostLateJustification
-        ? lateJustificationPayload(employee, justification, now)
+      if (typeSession === "HO") {
+        delete payload.Latitude;
+        delete payload.Longitude;
+      }
+      var shouldPostJustification = !markOptions.isFourthLate && (
+        (action === "CHECK_IN" && markOptions.isLate && justification.saved) ||
+        (action === "CHECK_OUT" && markOptions.isEarlyExit && earlyExitJustification.saved)
+      );
+      var selectedJustification = action === "CHECK_OUT" ? earlyExitJustification : justification;
+      if (shouldPostJustification && ["Personal", "Laboral"].indexOf(String(selectedJustification.reason || "").trim()) < 0) {
+        return Promise.reject(new Error("La justificación requiere motivo Personal o Laboral."));
+      }
+      if (shouldPostJustification && !String(selectedJustification.comment || "").trim()) {
+        return Promise.reject(new Error("La justificación requiere un comentario."));
+      }
+      if (shouldPostJustification && String(selectedJustification.comment || "").trim().length > 500) {
+        return Promise.reject(new Error("El comentario de la justificación no puede exceder 500 caracteres."));
+      }
+      var justificationPayload = shouldPostJustification
+        ? buildJustificationPayload(employee, action, selectedJustification, now)
         : null;
       var root = resolveServiceRoot(serviceRoot);
 
       Diagnostics.info("MARK", "Flujo de marcaje preparado", {
         flowId: flowId,
-        postsEsperados: shouldPostLateJustification ? 2 : 1,
+        postsEsperados: shouldPostJustification ? 2 : 1,
         attendanceRecord: payload,
         justificationLog: justificationPayload
       });
       return requestCsrfToken(root).then(function (token) {
         return postEntity(root, token, "AttendanceRecordSet", payload, flowId).then(function (postResult) {
           var validation = validateMarkResponse(postResult.payload);
+          if (justificationPayload) {
+            justificationPayload.Id_log = String(validation.entity.Id_log || validation.entity.IdLog || "").trim();
+          }
           Diagnostics.mapping("AttendanceRecordSet", postResult.payload, {
             flowId: flowId,
             success: true,
@@ -881,6 +941,80 @@ sap.ui.define([
         });
       }).catch(function (error) {
         Diagnostics.error("MARK", "Falló el flujo de registro de asistencia", error);
+        throw error;
+      });
+    },
+
+    readDelays: function (serviceRoot, personalNumber, dateValue) {
+      var root = resolveServiceRoot(serviceRoot);
+      var date = dateValue || new Date();
+      var year = date.getFullYear();
+      var month = pad(date.getMonth() + 1);
+      var period = String(year) + month;
+      var lastDay = pad(new Date(year, date.getMonth() + 1, 0).getDate());
+      var normalizedNumber = String(personalNumber || "").trim();
+      var numberForFilter = /^\d+$/.test(normalizedNumber)
+        ? (normalizedNumber.replace(/^0+/, "") || "0")
+        : normalizedNumber;
+      var filter = "DateFrom eq '" + period + "01' and DateTo eq '" + period + lastDay +
+        "' and PersonalNumber eq '" + numberForFilter.replace(/'/g, "''") + "'";
+      var url = root + "ProcessingDelaysSet?$filter=" + encodeURIComponent(filter) + "&$format=json";
+      var requestId = Diagnostics.request("GET", url, {
+        entitySet: "ProcessingDelaysSet",
+        filter: filter,
+        period: period
+      });
+
+      if (!normalizedNumber) {
+        return Promise.reject(new Error("No existe número de nómina para consultar ProcessingDelaysSet."));
+      }
+
+      return fetch(url, {
+        method: "GET",
+        credentials: "same-origin",
+        headers: { "Accept": "application/json" }
+      }).then(function (response) {
+        return response.text().then(function (body) {
+          Diagnostics.response(requestId, response.status, response.statusText, body, {
+            contentType: response.headers.get("content-type"),
+            finalUrl: response.url
+          });
+          if (!response.ok) {
+            throw new Error("ProcessingDelaysSet respondió con HTTP " + response.status + ".");
+          }
+          var payload;
+          try {
+            payload = body ? JSON.parse(body) : {};
+          } catch (parseError) {
+            throw new Error("ProcessingDelaysSet devolvió una respuesta que no es JSON.");
+          }
+          var rows = odataResults(payload);
+          if (!rows.length) {
+            return {
+              period: period,
+              totalDelays: 0,
+              totalAbsences: 0,
+              lastUpdate: "",
+              lastHourUpdate: ""
+            };
+          }
+          var matches = rows.filter(function (row) {
+            return samePersonalNumber(row.PersonalNumber, normalizedNumber) &&
+              String(row.Period || "").trim() === period;
+          });
+          if (matches.length !== 1) {
+            throw new Error("ProcessingDelaysSet no devolvió un registro único para el empleado y mes consultados.");
+          }
+          return {
+            period: period,
+            totalDelays: nonNegativeInteger(matches[0].TotalDelays, "TotalDelays"),
+            totalAbsences: nonNegativeInteger(matches[0].TotalAbsences, "TotalAbsences"),
+            lastUpdate: String(matches[0].LastUpdate || "").trim(),
+            lastHourUpdate: String(matches[0].LastHourUpdate || "").trim()
+          };
+        });
+      }).catch(function (error) {
+        Diagnostics.error("DELAYS", "Falló la consulta de ProcessingDelaysSet", error, requestId);
         throw error;
       });
     },
@@ -989,7 +1123,7 @@ sap.ui.define([
           };
         });
       }).then(function (resolvedHistory) {
-        var history = mapHistory(resolvedHistory.employeeRecords);
+        var history = mapHistory(resolvedHistory.employeeRecords, settings.scheduleDetail);
         Diagnostics.mapping("AttendanceHistorySet", resolvedHistory.result.payload, history, resolvedHistory.result.requestId);
         return history;
       });

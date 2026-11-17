@@ -12,7 +12,7 @@
           enabled="{= !${attendance>/today/workModalityLocked} }"
           selectedKey="{attendance>/today/workModalityDraft/typeSession}"
           change=".onWorkModalityChange">
-          <core:Item id="workModalityPresentialItem" key="" text="Presencial" />
+          <core:Item id="workModalityPresentialItem" key="PR" text="Presencial" />
           <core:Item id="workModalityHomeOfficeItem" key="HO" text="Home Office" />
           <core:Item id="workModalityBusinessTripItem" key="VN" text="Viaje de negocios" />
         </Select>

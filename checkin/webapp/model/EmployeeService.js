@@ -369,6 +369,8 @@ sap.ui.define([
       zone: firstValue(record, ["Zone"]),
       status: firstValue(record, ["Status"]),
       statusDescription: firstValue(record, ["DescriptionStatus"]),
+      groupPerson: firstValue(record, ["GroupPerson"]),
+      groupPersonDescription: firstValue(record, ["GroupPersonDescription"]),
       relationJob: firstValue(record, ["RelationJob"]),
       relationJobDescription: firstValue(record, ["RelationJobDescription", "RelationDescription"]),
       dayStatus: firstValue(record, ["DayStatus"]),

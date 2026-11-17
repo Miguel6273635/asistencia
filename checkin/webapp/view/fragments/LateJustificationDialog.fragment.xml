@@ -12,9 +12,9 @@
           <core:Item key="Laboral" text="Laboral" />
           <core:Item key="Personal" text="Personal" />
         </Select>
-        <Label text="Comentario" labelFor="lateCommentInput" class="sapUiSmallMarginTop" />
+        <Label text="Comentario" labelFor="lateCommentInput" required="true" class="sapUiSmallMarginTop" />
         <TextArea id="lateCommentInput" value="{attendance>/today/lateJustification/comment}"
-          placeholder="Describe brevemente la causa del retraso" rows="4" maxLength="160" width="100%"
+         placeholder="Describe brevemente la causa del retraso" rows="4" maxLength="500" width="100%"
           liveChange=".onLateJustificationChange" />
         <CheckBox text="Recuperaré el tiempo" selected="{attendance>/today/lateJustification/recoverTime}"
           class="sapUiSmallMarginTop" />

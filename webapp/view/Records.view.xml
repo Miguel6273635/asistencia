@@ -64,25 +64,43 @@
                     <Button text="Exportar" icon="sap-icon://download" press=".onExport" />
                 </OverflowToolbar>
 
-                <FlexBox wrap="Wrap" class="kpiRow">
-                    <VBox class="kpiCard kpiBlue"><HBox alignItems="Center"><core:Icon src="sap-icon://table-view" class="kpiIcon blue" /><VBox width="100%"><Text text="Registros" /><HBox alignItems="Center" justifyContent="SpaceBetween"><ObjectNumber number="{view>/stats/total}" /><ObjectStatus text="{view>/stats/totalPercentage}" state="Information" class="recordsKpiPercent" /></HBox><Text text="{view>/stats/totalDescription}" class="recordsKpiDescription" /></VBox></HBox></VBox>
-                    <VBox class="kpiCard kpiGreen"><HBox alignItems="Center"><core:Icon src="sap-icon://sys-enter-2" class="kpiIcon green" /><VBox width="100%"><Text text="Presentes" /><HBox alignItems="Center" justifyContent="SpaceBetween"><ObjectNumber number="{view>/stats/present}" state="Success" /><ObjectStatus text="{view>/stats/presentPercentage}" state="Success" class="recordsKpiPercent" /></HBox><Text text="{view>/stats/presentDescription}" class="recordsKpiDescription" /></VBox></HBox></VBox>
-                    <VBox class="kpiCard kpiAmber"><HBox alignItems="Center"><core:Icon src="sap-icon://lateness" class="kpiIcon amber" /><VBox width="100%"><Text text="Retardos" /><HBox alignItems="Center" justifyContent="SpaceBetween"><ObjectNumber number="{view>/stats/late}" state="Warning" /><ObjectStatus text="{view>/stats/latePercentage}" state="Warning" class="recordsKpiPercent" /></HBox><Text text="{view>/stats/lateDescription}" class="recordsKpiDescription" /></VBox></HBox></VBox>
-                    <VBox class="kpiCard kpiRed"><HBox alignItems="Center"><core:Icon src="sap-icon://employee-rejections" class="kpiIcon red" /><VBox width="100%"><Text text="Ausencias" /><HBox alignItems="Center" justifyContent="SpaceBetween"><ObjectNumber number="{view>/stats/absent}" state="Error" /><ObjectStatus text="{view>/stats/absentPercentage}" state="Error" class="recordsKpiPercent" /></HBox><Text text="{view>/stats/absentDescription}" class="recordsKpiDescription" /></VBox></HBox></VBox>
-                    <VBox class="kpiCard kpiViolet"><HBox alignItems="Center"><core:Icon src="sap-icon://message-warning" class="kpiIcon" /><VBox width="100%"><Text text="Incompletos" /><HBox alignItems="Center" justifyContent="SpaceBetween"><ObjectNumber number="{view>/stats/incomplete}" state="Information" /><ObjectStatus text="{view>/stats/incompletePercentage}" state="Information" class="recordsKpiPercent" /></HBox><Text text="{view>/stats/incompleteDescription}" class="recordsKpiDescription" /></VBox></HBox></VBox>
-                </FlexBox>
+                <List id="recordKpiFilterList" mode="SingleSelectMaster" includeItemInSelection="true" rememberSelections="false" showSeparators="None" selectionChange=".onRecordFilterSelectionChange" class="kpiRow recordsFilterList">
+                    <CustomListItem type="Active" selected="{= ${view>/recordFilter} === 'all' }" tooltip="Mostrar todos los registros" class="kpiCard kpiBlue">
+                        <customData><core:CustomData key="recordFilter" value="all" /></customData>
+                        <HBox alignItems="Center"><core:Icon src="sap-icon://table-view" class="kpiIcon blue" /><VBox width="100%"><Text text="Registros" /><HBox alignItems="Center" justifyContent="SpaceBetween"><ObjectNumber number="{view>/stats/total}" /><ObjectStatus text="{view>/stats/totalPercentage}" state="Information" class="recordsKpiPercent" /></HBox><Text text="{view>/stats/totalDescription}" class="recordsKpiDescription" /></VBox></HBox>
+                    </CustomListItem>
+                    <CustomListItem type="Active" selected="{= ${view>/recordFilter} === 'Presente' }" tooltip="Filtrar por presentes" class="kpiCard kpiGreen">
+                        <customData><core:CustomData key="recordFilter" value="Presente" /></customData>
+                        <HBox alignItems="Center"><core:Icon src="sap-icon://sys-enter-2" class="kpiIcon green" /><VBox width="100%"><Text text="Presentes" /><HBox alignItems="Center" justifyContent="SpaceBetween"><ObjectNumber number="{view>/stats/present}" state="Success" /><ObjectStatus text="{view>/stats/presentPercentage}" state="Success" class="recordsKpiPercent" /></HBox><Text text="{view>/stats/presentDescription}" class="recordsKpiDescription" /></VBox></HBox>
+                    </CustomListItem>
+                    <CustomListItem type="Active" selected="{= ${view>/recordFilter} === 'Retardo' }" tooltip="Filtrar por retardos" class="kpiCard kpiAmber">
+                        <customData><core:CustomData key="recordFilter" value="Retardo" /></customData>
+                        <HBox alignItems="Center"><core:Icon src="sap-icon://lateness" class="kpiIcon amber" /><VBox width="100%"><Text text="Retardos" /><HBox alignItems="Center" justifyContent="SpaceBetween"><ObjectNumber number="{view>/stats/late}" state="Warning" /><ObjectStatus text="{view>/stats/latePercentage}" state="Warning" class="recordsKpiPercent" /></HBox><Text text="{view>/stats/lateDescription}" class="recordsKpiDescription" /></VBox></HBox>
+                    </CustomListItem>
+                    <CustomListItem type="Active" selected="{= ${view>/recordFilter} === 'Ausente' }" tooltip="Filtrar por ausencias" class="kpiCard kpiRed">
+                        <customData><core:CustomData key="recordFilter" value="Ausente" /></customData>
+                        <HBox alignItems="Center"><core:Icon src="sap-icon://employee-rejections" class="kpiIcon red" /><VBox width="100%"><Text text="Ausencias" /><HBox alignItems="Center" justifyContent="SpaceBetween"><ObjectNumber number="{view>/stats/absent}" state="Error" /><ObjectStatus text="{view>/stats/absentPercentage}" state="Error" class="recordsKpiPercent" /></HBox><Text text="{view>/stats/absentDescription}" class="recordsKpiDescription" /></VBox></HBox>
+                    </CustomListItem>
+                    <CustomListItem type="Active" selected="{= ${view>/recordFilter} === 'Incompleto' }" tooltip="Filtrar por registros incompletos" class="kpiCard kpiViolet">
+                        <customData><core:CustomData key="recordFilter" value="Incompleto" /></customData>
+                        <HBox alignItems="Center"><core:Icon src="sap-icon://message-warning" class="kpiIcon" /><VBox width="100%"><Text text="Incompletos" /><HBox alignItems="Center" justifyContent="SpaceBetween"><ObjectNumber number="{view>/stats/incomplete}" state="Information" /><ObjectStatus text="{view>/stats/incompletePercentage}" state="Information" class="recordsKpiPercent" /></HBox><Text text="{view>/stats/incompleteDescription}" class="recordsKpiDescription" /></VBox></HBox>
+                    </CustomListItem>
+                </List>
 
-                <FlexBox wrap="Wrap" items="{view>/statusCards}" class="recordsStatusRow sapUiTinyMarginTop">
+                <List id="recordStatusFilterList" mode="SingleSelectMaster" includeItemInSelection="true" rememberSelections="false" showSeparators="None" selectionChange=".onRecordFilterSelectionChange" items="{view>/statusCards}" class="recordsStatusRow recordsFilterList recordsStatusFilterList sapUiTinyMarginTop">
                     <items>
-                        <HBox alignItems="Center" class="recordsStatusCard">
-                            <core:Icon src="{view>icon}" color="{view>color}" class="recordsStatusIcon" />
-                            <VBox width="100%" class="recordsStatusContent">
-                                <HBox justifyContent="SpaceBetween" alignItems="Center"><Text text="{view>status}" class="recordsStatusTitle" /><Text text="{= ${view>count} + ' de ' + ${view>/stats/total} + ' · ' + ${view>percentage}}" class="recordsStatusMetric" /></HBox>
-                                <Text text="{view>description}" class="recordsStatusDescription" />
-                            </VBox>
-                        </HBox>
+                        <CustomListItem type="Active" selected="{= ${view>/recordFilter} === ${view>filterKey} }" tooltip="{= 'Filtrar por ' + ${view>status}}" class="recordsStatusCard">
+                            <customData><core:CustomData key="recordFilter" value="{view>filterKey}" /></customData>
+                            <HBox alignItems="Center" width="100%">
+                                <core:Icon src="{view>icon}" color="{view>color}" class="recordsStatusIcon" />
+                                <VBox width="100%" class="recordsStatusContent">
+                                    <HBox justifyContent="SpaceBetween" alignItems="Center"><Text text="{view>status}" class="recordsStatusTitle" /><Text text="{= ${view>count} + ' de ' + ${view>/stats/total} + ' · ' + ${view>percentage}}" class="recordsStatusMetric" /></HBox>
+                                    <Text text="{view>description}" class="recordsStatusDescription" />
+                                </VBox>
+                            </HBox>
+                        </CustomListItem>
                     </items>
-                </FlexBox>
+                </List>
 
                 <Panel headerText="Registros de asistencia" class="dashboardPanel recordsTablePanel recordsTablePanelExpanded sapUiSmallMarginTop">
                     <content>

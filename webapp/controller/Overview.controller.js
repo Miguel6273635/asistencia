@@ -413,21 +413,19 @@ sap.ui.define([
                 aEmployees,
                 aPeriodRecords || []
             ).length;
-            var pNoAttendanceCount = this._attendanceApi.getAttendanceHistory([
-                { field: "DateFrom", value: sDateFrom },
-                { field: "DateTo", value: sDateTo }
-            ]).then(function (aHistoryRows) {
-                return noAttendanceHelper.buildRows(
-                    aEmployees,
-                    aHistoryRows || []
-                ).length;
-            }).catch(function (oError) {
-                console.warn(
-                    "[Monitor][NO-ATTENDANCE][COUNT][FALLBACK]",
-                    oError
-                );
-                return iFallbackNoAttendance;
-            });
+            var pNoAttendanceCount = this._attendanceApi
+                .getDailyAbsences()
+                .then(function (aAbsenceRows) {
+                    return noAttendanceHelper.mapDailyAbsences(
+                        aAbsenceRows || []
+                    ).length;
+                }).catch(function (oError) {
+                    console.warn(
+                        "[Monitor][NO-ATTENDANCE][COUNT][FALLBACK]",
+                        oError
+                    );
+                    return iFallbackNoAttendance;
+                });
 
             this.getModel("view").setProperty(
                 "/noAttendanceReviewCount",

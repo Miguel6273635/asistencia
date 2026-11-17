@@ -41,6 +41,7 @@ sap.ui.define([
                 center: "all",
                 scheduleId: "",
                 laborStatus: "all",
+                recordFilter: "all",
                 periodType: "month",
                 referenceDate: sToday,
                 selectedMonth: String(oToday.getMonth() + 1).padStart(2, "0"),
@@ -207,6 +208,7 @@ sap.ui.define([
                 oViewModel.setProperty("/center", "all");
                 oViewModel.setProperty("/scheduleId", "");
                 oViewModel.setProperty("/laborStatus", "all");
+                oViewModel.setProperty("/recordFilter", "all");
             }
             this._updatePeriodRange();
             this._applyFilters();
@@ -220,21 +222,25 @@ sap.ui.define([
             var sCenter = oViewModel.getProperty("/center");
             var sScheduleId = oViewModel.getProperty("/scheduleId");
             var sLaborStatus = oViewModel.getProperty("/laborStatus");
+            var sRecordFilter = oViewModel.getProperty("/recordFilter") || "all";
             var oPeriodStart = oViewModel.getProperty("/periodStart");
             var oPeriodEnd = oViewModel.getProperty("/periodEnd");
             var aRecords = oViewModel.getProperty("/allRecords") || [];
-            var aFiltered = aRecords.filter(function (oRecord) {
+            var aScopedRecords = aRecords.filter(function (oRecord) {
                 var oRecordDate = this._parseDisplayDate(oRecord.date);
                 return (sCenter === "all" || oRecord.centerCode === sCenter || oRecord.center === sCenter) &&
                     (!sScheduleId || oRecord.scheduleId === sScheduleId) &&
                     (sLaborStatus === "all" || oRecord.laborStatusCode === sLaborStatus) &&
                     (!oRecordDate || !oPeriodStart || !oPeriodEnd || (oRecordDate >= oPeriodStart && oRecordDate <= oPeriodEnd));
             }.bind(this));
-            var iTotal = aFiltered.length;
-            var iPresent = this._countStatus(aFiltered, "Presente");
-            var iLate = this._countStatus(aFiltered, "Retardo");
-            var iAbsent = this._countStatus(aFiltered, "Ausente");
-            var iIncomplete = this._countStatus(aFiltered, "Incompleto");
+            var aFilteredRecords = aScopedRecords.filter(function (oRecord) {
+                return this._matchesRecordFilter(oRecord, sRecordFilter);
+            }.bind(this));
+            var iTotal = aScopedRecords.length;
+            var iPresent = this._countStatus(aScopedRecords, "Presente");
+            var iLate = this._countStatus(aScopedRecords, "Retardo");
+            var iAbsent = this._countStatus(aScopedRecords, "Ausente");
+            var iIncomplete = this._countStatus(aScopedRecords, "Incompleto");
             var oStats = {
                 total: iTotal,
                 totalPercentage: iTotal ? "100%" : "0%",
@@ -252,19 +258,21 @@ sap.ui.define([
                 incompletePercentage: this._formatPercentage(iIncomplete, iTotal),
                 incompleteDescription: iIncomplete + " de " + iTotal + " registros · incompletos ÷ total"
             };
-            oViewModel.setProperty("/records", aFiltered);
+            oViewModel.setProperty("/records", aFilteredRecords);
             oViewModel.setProperty("/stats", oStats);
-            oViewModel.setProperty("/statusCards", this._createStatusCards(aFiltered, iTotal));
+            oViewModel.setProperty("/statusCards", this._createStatusCards(aScopedRecords, iTotal));
             oViewModel.setProperty("/currentPage", 1);
             console.groupCollapsed("[Monitor][FILTERS][Registros][APPLY]");
             console.info({
                 center: sCenter,
                 scheduleId: sScheduleId,
                 laborStatus: sLaborStatus,
+                recordFilter: sRecordFilter,
                 periodStart: oPeriodStart,
                 periodEnd: oPeriodEnd,
                 sourceRows: aRecords.length,
-                resultRows: aFiltered.length
+                scopedRows: aScopedRecords.length,
+                resultRows: aFilteredRecords.length
             });
             console.groupEnd();
             this._updatePage(true);
@@ -274,6 +282,22 @@ sap.ui.define([
             return aRecords.filter(function (oRecord) {
                 return oRecord.dayStatus === sStatus;
             }).length;
+        },
+
+        _matchesRecordFilter: function (oRecord, sRecordFilter) {
+            if (!sRecordFilter || sRecordFilter === "all") {
+                return true;
+            }
+            if (sRecordFilter === "Fuera de zona") {
+                return oRecord.geofenceState === "Error" || oRecord.isOutOfZone;
+            }
+            if (sRecordFilter === "Oficina central") {
+                return oRecord.dayStatus === "Oficina central" || oRecord.dayStatus === "Home office";
+            }
+            if (sRecordFilter === "Home office") {
+                return oRecord.dayStatus === "Home office" || oRecord.dayStatus === "Oficina central";
+            }
+            return oRecord.dayStatus === sRecordFilter;
         },
 
         _formatDayStatus: function (sDayStatus, sFallbackStatus) {
@@ -481,6 +505,7 @@ sap.ui.define([
                     }).length :
                     this._countStatus(aRecords, oDefinition.status);
                 return Object.assign({}, oDefinition, {
+                    filterKey: oDefinition.status,
                     count: iCount,
                     percentage: this._formatPercentage(iCount, iTotal)
                 });
@@ -524,6 +549,23 @@ sap.ui.define([
 
         onFilterChange: function () {
             this._applyFilters();
+        },
+
+        onRecordFilterSelectionChange: function (oEvent) {
+            var oViewModel = this.getModel("view");
+            var oItem = oEvent.getParameter("listItem");
+            var oContext = oItem && oItem.getBindingContext("view");
+            var oCard = oContext && oContext.getObject();
+            var sRequestedFilter = String(
+                oItem && oItem.data("recordFilter") ||
+                oCard && (oCard.filterKey || oCard.status) ||
+                "all"
+            ).trim() || "all";
+
+            oViewModel.setProperty("/recordFilter", sRequestedFilter);
+            this._applyFilters();
+            MessageToast.show(sRequestedFilter === "all" ?
+                "Mostrando todos los registros" : "Filtro aplicado: " + sRequestedFilter);
         },
 
         onPeriodChange: function () {

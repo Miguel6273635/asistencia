@@ -1006,6 +1006,44 @@ body > div,
     width: 100%;
 }
 
+.recordsFilterList.sapMList {
+    border: 0;
+    background: transparent;
+}
+
+.recordsFilterList .sapMListUl {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    padding: 0;
+}
+
+.recordsFilterList .sapMLIB {
+    cursor: pointer;
+    border-bottom: 0;
+}
+
+.recordsFilterList .sapMLIBContent {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    padding: 0;
+}
+
+.recordsFilterList .kpiCard.sapMLIBSelected,
+.recordsStatusFilterList .recordsStatusCard.sapMLIBSelected {
+    transform: translateY(-0.12rem);
+    border-color: rgba(var(--kpi-accent-rgb, 10, 110, 209), 0.72);
+    box-shadow:
+        0 0 0 0.14rem rgba(var(--kpi-accent-rgb, 10, 110, 209), 0.15),
+        0 0.38rem 1rem rgba(var(--kpi-accent-rgb, 10, 110, 209), 0.16);
+}
+
+.recordsFilterList .sapMLIBFocusable:focus {
+    outline: 0.14rem solid rgba(10, 110, 209, 0.32);
+    outline-offset: 0.12rem;
+}
+
 .recordsKpiPercent.sapMObjStatus {
     padding: 0.06rem 0.38rem;
     border: 1px solid currentColor;
@@ -1034,6 +1072,7 @@ body > div,
 }
 
 .recordsStatusCard {
+    --kpi-accent-rgb: 10, 110, 209;
     flex: 1 1 11.5rem;
     min-width: 11.5rem;
     padding: 0.45rem 0.62rem;
