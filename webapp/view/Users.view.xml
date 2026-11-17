@@ -224,7 +224,7 @@
                 <content>
                     <VBox class="sapUiMediumMargin userDialogContent">
                         <MessageStrip
-                            text="Captura la nómina y al menos un valor diario. La semana se calcula automáticamente con la fecha de la petición y se envía a WeeklyLoadSet."
+                            text="Captura la nómina y al menos un valor diario. Se genera una cabecera por usuario y se envía a WeeklyLoadHeadSet con la semana ISO calculada automáticamente."
                             type="Information"
                             showIcon="true" />
                         <f:SimpleForm editable="true" layout="ColumnLayout" columnsXL="2" columnsL="2" columnsM="2" class="sapUiSmallMarginTop">

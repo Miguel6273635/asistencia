@@ -1,3 +1,4 @@
+/* global Promise */
 sap.ui.define([
     "com/mitsu/monitorasistencia/controller/BaseController",
     "com/mitsu/monitorasistencia/model/formatter",
@@ -18,6 +19,38 @@ sap.ui.define([
             candidate && candidate.read && candidate.writeFile && candidate.utils
         );
     }
+
+    function getBrowserXlsx() {
+        var candidate = window.XLSX;
+        var initializeLibrary = Reflect.get(window, "make_xlsx_lib");
+
+        if (!hasXlsxApi(candidate) && typeof initializeLibrary === "function") {
+            candidate = candidate || {};
+            initializeLibrary(candidate);
+        }
+        return candidate;
+    }
+
+    function requestWeekCode(date) {
+        // SAP espera AAAASS usando la semana ISO: inicia en lunes y la
+        // primera semana del año es la que contiene el primer jueves.
+        var requestDate = date instanceof Date ? date : new Date();
+        var isoDate = new Date(Date.UTC(
+            requestDate.getFullYear(),
+            requestDate.getMonth(),
+            requestDate.getDate()
+        ));
+        var day = isoDate.getUTCDay() || 7;
+
+        isoDate.setUTCDate(isoDate.getUTCDate() + 4 - day);
+        var weekYear = isoDate.getUTCFullYear();
+        var firstDayOfWeekYear = new Date(Date.UTC(weekYear, 0, 1));
+        var week = Math.ceil(
+            (((isoDate - firstDayOfWeekYear) / 86400000) + 1) / 7
+        );
+
+        return String(weekYear) + String(week).padStart(2, "0");
+    }
     var ITEM_FIELDS = [
         "PersonnelNumber", "HireDate", "Position", "PersonnelArea", "EmployeeGroup",
         "EmployeeSubgroup", "FirstName", "LastName", "BirthDate", "Language",
@@ -32,7 +65,7 @@ sap.ui.define([
         "Lunes", "Martes", "Miercoles", "Jueves", "Viernes", "Sabado",
         "Domingo"
     ];
-    var WEEKLY_ITEM_FIELDS = ["PersonalNumber", "Semana"].concat(
+    var WEEKLY_ITEM_FIELDS = ["PersonalNumber"].concat(
         WEEKLY_DAY_FIELDS
     );
     var UPLOAD_CONFIGURATION = {
@@ -54,14 +87,15 @@ sap.ui.define([
         },
         WEEKLY: {
             title: "Carga semanal de usuarios",
-            description: "La carga semanal envía una cabecera con nómina y semana, más las posiciones de lunes a domingo.",
-            fieldsText: "Nómina · Semana · Lunes · Martes · Miércoles · Jueves · Viernes · Sábado · Domingo",
-            placeholder: "Selecciona el Excel con la semana y los estatus diarios",
+            description: "La carga semanal genera una cabecera independiente por usuario. La semana ISO se calcula automáticamente con la fecha de la petición.",
+            fieldsText: "Nómina · Lunes · Martes · Miércoles · Jueves · Viernes · Sábado · Domingo",
+            placeholder: "Selecciona el Excel con la nómina y los valores diarios",
             sendText: "Enviar carga semanal",
-            entitySet: "WeeklyLoadSet"
+            entitySet: "WeeklyLoadHeadSet"
         }
     };
     var FIELD_LABELS = {
+        PersonalNumber: "Nómina",
         PersonnelNumber: "Número de personal",
         HireDate: "Fecha de contratación",
         Position: "Puesto de trabajo",
@@ -242,10 +276,13 @@ sap.ui.define([
         },
 
         _emptyWeeklyRecord: function () {
-            return WEEKLY_ITEM_FIELDS.reduce(function (result, field) {
+            var record = WEEKLY_ITEM_FIELDS.reduce(function (result, field) {
                 result[field] = "";
                 return result;
             }, {});
+
+            record.Semana = requestWeekCode(new Date());
+            return record;
         },
 
         _fieldsForOperation: function (operation) {
@@ -263,14 +300,14 @@ sap.ui.define([
                 return UPDATE_ITEM_FIELDS;
             }
             if (operation === "WEEKLY") {
-                return ["PersonalNumber", "Semana"];
+                return ["PersonalNumber"];
             }
             return ITEM_FIELDS;
         },
 
         _ensureXlsx: function () {
-            if (!hasXlsxApi(XLSX) && hasXlsxApi(window.XLSX)) {
-                XLSX = window.XLSX;
+            if (!hasXlsxApi(XLSX)) {
+                XLSX = getBrowserXlsx();
             }
             if (hasXlsxApi(XLSX)) {
                 return Promise.resolve(XLSX);
@@ -279,7 +316,7 @@ sap.ui.define([
                 var libraryResource =
                     "com/mitsu/monitorasistencia/thirdparty/xlsx.full.min.js";
                 var libraryUrl = sap.ui.require.toUrl(libraryResource);
-                 var manifest = this.getOwnerComponent().getManifest();
+                var manifest = this.getOwnerComponent().getManifest();
                 var applicationVersion = manifest["sap.app"] &&
                     manifest["sap.app"].applicationVersion &&
                     manifest["sap.app"].applicationVersion.version;
@@ -289,11 +326,12 @@ sap.ui.define([
                         applicationVersion
                     );
                 }
+
                 this._xlsxPromise = includeScript({
                     url: libraryUrl,
                     id: XLSX_SCRIPT_ID
                 }).then(function () {
-                    XLSX = window.XLSX;
+                    XLSX = getBrowserXlsx();
                     if (!hasXlsxApi(XLSX)) {
                         throw new Error(
                             "La biblioteca local de Excel no expuso la API XLSX esperada."
@@ -351,7 +389,14 @@ sap.ui.define([
             if (headerIndex < 0) {
                 throw new Error("No se encontró la columna 'Número de personal' o 'Nómina'.");
             }
-            var mappedHeaders = matrix[headerIndex].map(normalizeHeader).map(function (header) { return HEADER_MAP[header] || ""; });
+            var mappedHeaders = matrix[headerIndex].map(normalizeHeader).map(function (header) {
+                var mappedField = HEADER_MAP[header] || "";
+
+                if (operation === "WEEKLY" && mappedField === "PersonnelNumber") {
+                    return "PersonalNumber";
+                }
+                return mappedField;
+            });
             var expectedFields = this._fieldsForOperation(operation);
             var missingHeaders = expectedFields.filter(function (field) {
                 return mappedHeaders.indexOf(field) < 0;
@@ -420,7 +465,7 @@ sap.ui.define([
         onOpenWeeklySingle: function () {
             var model = this.getModel("view");
             model.setProperty("/weeklySingle", this._emptyWeeklyRecord());
-            model.setProperty("/uploadEntitySet", "WeeklyLoadSet");
+            model.setProperty("/uploadEntitySet", "WeeklyLoadHeadSet");
             this.byId("weeklySingleDialog").open();
         },
 
@@ -505,7 +550,7 @@ sap.ui.define([
 
         _buildPayload: function (rows, operation) {
             if (operation === "WEEKLY") {
-                return this._buildWeeklyPayload(rows);
+                return this._buildWeeklyPayloads(rows);
             }
             var requestId = this._requestId();
             var fields = this._fieldsForOperation(operation);
@@ -521,36 +566,58 @@ sap.ui.define([
             return payload;
         },
 
-        _buildWeeklyPayload: function (rows) {
-            var firstRow = rows[0] || {};
-            var weeks = Array.from(new Set(rows.map(function (row) {
-                return cleanText(row.Semana);
-            }).filter(Boolean)));
-            if (weeks.length > 1) {
-                throw new Error("La carga semanal debe contener una sola semana por archivo.");
-            }
-            var payload = {
-                PersonalNumber: cleanText(firstRow.PersonalNumber),
-                Semana: cleanText(firstRow.Semana),
-                WeeklyLoadSet: rows.map(function (row) {
-                    var item = {
-                        PersonalNumber: cleanText(row.PersonalNumber),
-                        Semana: ""
-                    };
-                    WEEKLY_DAY_FIELDS.forEach(function (field) {
-                        item[field] = cleanText(row[field]);
-                    });
-                    item.StatusRequest = "";
-                    item.Message = "";
-                    return item;
-                })
-            };
-            Diagnostics.upload("WEEKLY-PAYLOAD-BUILT", payload);
-            return payload;
+        _buildWeeklyPayloads: function (rows) {
+            var semana = requestWeekCode(new Date());
+            var rowsByUser = {};
+            var userOrder = [];
+
+            rows.forEach(function (row) {
+                var personalNumber = cleanText(row.PersonalNumber);
+
+                if (!Object.prototype.hasOwnProperty.call(rowsByUser, personalNumber)) {
+                    rowsByUser[personalNumber] = [];
+                    userOrder.push(personalNumber);
+                }
+                rowsByUser[personalNumber].push(row);
+            });
+
+            var payloads = userOrder.map(function (personalNumber) {
+                return {
+                    PersonalNumber: personalNumber,
+                    Semana: semana,
+                    ToWeekUpload: rowsByUser[personalNumber].map(function (row) {
+                        var item = {
+                            PersonalNumber: cleanText(row.PersonalNumber),
+                            Semana: semana
+                        };
+                        WEEKLY_DAY_FIELDS.forEach(function (field) {
+                            item[field] = cleanText(row[field]);
+                        });
+                        item.StatusRequest = "";
+                        item.Message = "";
+                        return item;
+                    })
+                };
+            });
+            Diagnostics.upload("WEEKLY-PAYLOADS-BUILT", {
+                semana: semana,
+                headers: payloads.length,
+                payloads: payloads
+            });
+            return payloads;
         },
 
         _validateUploadPayload: function (payload) {
-            if (Array.isArray(payload && payload.WeeklyLoadSet)) {
+            if (Array.isArray(payload)) {
+                if (!payload.length) {
+                    throw new Error("El Excel no contiene usuarios para la carga semanal.");
+                }
+                payload.forEach(function (weeklyPayload) {
+                    this._validateWeeklyPayload(weeklyPayload);
+                }, this);
+                return payload;
+            }
+            if (Array.isArray(payload && payload.ToWeekUpload)) {
                 return this._validateWeeklyPayload(payload);
             }
             var operation = cleanText(payload && payload.Operation) || "CREATE";
@@ -592,14 +659,20 @@ sap.ui.define([
                 throw new Error("Falta PersonalNumber en la cabecera semanal.");
             }
             if (!/^\d{6}$/.test(cleanText(payload.Semana))) {
-                throw new Error("Semana debe usar el formato AAAASS, por ejemplo 202646.");
+                throw new Error("Semana debe usar el formato AAAASS, por ejemplo 202647.");
             }
-            if (!Array.isArray(payload.WeeklyLoadSet) || !payload.WeeklyLoadSet.length) {
+            if (!Array.isArray(payload.ToWeekUpload) || !payload.ToWeekUpload.length) {
                 throw new Error("El Excel no contiene posiciones para la carga semanal.");
             }
-            payload.WeeklyLoadSet.forEach(function (item, index) {
+            payload.ToWeekUpload.forEach(function (item, index) {
                 if (!cleanText(item.PersonalNumber)) {
                     throw new Error("Fila " + (index + 2) + ": falta Número de personal.");
+                }
+                if (cleanText(item.PersonalNumber) !== cleanText(payload.PersonalNumber)) {
+                    throw new Error("La posición semanal no pertenece a la nómina de su cabecera.");
+                }
+                if (cleanText(item.Semana) !== cleanText(payload.Semana)) {
+                    throw new Error("Fila " + (index + 2) + ": la semana calculada no coincide con la cabecera.");
                 }
                 if (!WEEKLY_DAY_FIELDS.some(function (field) {
                     return cleanText(item[field]);
@@ -608,8 +681,9 @@ sap.ui.define([
                 }
             });
             Diagnostics.upload("WEEKLY-VALIDATED", {
+                personalNumber: payload.PersonalNumber,
                 semana: payload.Semana,
-                count: payload.WeeklyLoadSet.length
+                count: payload.ToWeekUpload.length
             });
             return payload;
         },
@@ -617,7 +691,14 @@ sap.ui.define([
         onSubmitEmployeeUpload: function () {
             var model = this.getModel("view");
             var payload;
-            try { payload = this._validateUploadPayload(JSON.parse(model.getProperty("/uploadJson") || "{}")); }
+            var operation = model.getProperty("/uploadOperation");
+            try {
+                payload = operation === "WEEKLY"
+                    ? this._buildPayload(model.getProperty("/uploadRows") || [], operation)
+                    : JSON.parse(model.getProperty("/uploadJson") || "{}");
+                payload = this._validateUploadPayload(payload);
+                model.setProperty("/uploadJson", JSON.stringify(payload, null, 2));
+            }
             catch (error) { MessageBox.error("No se puede enviar la carga. " + error.message); return; }
             this._sendPayload(payload, false);
         },
@@ -627,18 +708,53 @@ sap.ui.define([
             var entitySet = cleanText(model.getProperty("/uploadEntitySet")) || "EmployeesUploadSet";
             var activeBusyPath = busyPath || (editing ? "/editBusy" : "/uploadBusy");
             var activeDialogId = dialogId || (editing ? "employeeEditDialog" : "employeeUploadDialog");
+            var weeklyPayloads = Array.isArray(payload) ? payload : [];
+            var requests;
             model.setProperty(activeBusyPath, true);
             Diagnostics.upload("POST", { entitySet: entitySet, payload: payload });
-            this._attendanceApi.uploadEmployees(payload, entitySet).then(function (response) {
-                Diagnostics.upload("RESPONSE", response);
+
+            if (weeklyPayloads.length) {
+                requests = weeklyPayloads.map(function (weeklyPayload) {
+                    return this._attendanceApi.uploadEmployees(
+                        weeklyPayload,
+                        entitySet
+                    ).catch(function (error) {
+                        error.personalNumber = weeklyPayload.PersonalNumber;
+                        throw error;
+                    });
+                }, this);
+            } else {
+                requests = [this._attendanceApi.uploadEmployees(payload, entitySet)];
+            }
+
+            Promise.all(requests).then(function (responses) {
+                Diagnostics.upload("RESPONSE", responses);
                 this.byId(activeDialogId).close();
-                var total = Array.isArray(payload.WeeklyLoadSet)
-                    ? payload.WeeklyLoadSet.length
+                var total = weeklyPayloads.length
+                    ? weeklyPayloads.reduce(function (result, weeklyPayload) {
+                        return result + weeklyPayload.ToWeekUpload.length;
+                    }, 0)
                     : payload.ToEmployeesUpload.length;
-                MessageBox.success(total + " registro(s) enviados a SAP.", { details: JSON.stringify(response, null, 2) });
+                var successText = weeklyPayloads.length
+                    ? weeklyPayloads.length + " cabecera(s) y " + total +
+                        " posición(es) enviadas a SAP."
+                    : total + " registro(s) enviados a SAP.";
+                MessageBox.success(successText, {
+                    details: JSON.stringify(
+                        responses.length === 1 ? responses[0] : responses,
+                        null,
+                        2
+                    )
+                });
             }.bind(this)).catch(function (error) {
                 Diagnostics.error("EMPLOYEE-UPLOAD", error, { entitySet: entitySet, payload: payload, responseBody: error.responseBody });
-                MessageBox.error("SAP rechazó la carga de usuarios.", { details: [error.message, error.responseBody].filter(Boolean).join("\n\n") });
+                MessageBox.error("SAP rechazó la carga de usuarios.", {
+                    details: [
+                        error.personalNumber ? "Nómina: " + error.personalNumber : "",
+                        error.message,
+                        error.responseBody
+                    ].filter(Boolean).join("\n\n")
+                });
             }).finally(function () { model.setProperty(activeBusyPath, false); });
         },
 

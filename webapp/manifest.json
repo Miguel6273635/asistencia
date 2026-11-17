@@ -108,6 +108,11 @@
           "target": "centers"
         },
         {
+          "pattern": "center/{centerId}",
+          "name": "center",
+          "target": "center"
+        },
+        {
           "pattern": "records/{employeeId}",
           "name": "records",
           "target": "records"
@@ -176,6 +181,10 @@
         "centers": {
           "viewId": "centers",
           "viewName": "Centers"
+        },
+        "center": {
+          "viewId": "center",
+          "viewName": "Center"
         },
         "records": {
           "viewId": "records",
