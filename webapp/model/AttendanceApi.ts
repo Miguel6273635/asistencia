@@ -519,6 +519,14 @@
 /* global Promise */
 /* global Promise */
 
+/* global Promise */
+
+/* global Promise */
+
+/* global Promise */
+/* global Promise */
+/* global Promise */
+
 export type AttendanceEntitySet =
     | "ZoneSummarySet"
     | "CriticalIndicatorsSet"
@@ -632,6 +640,26 @@ export interface EmployeeUploadPayload {
     Operation: string;
     ProcessingMode: string;
     ToEmployeesUpload: EmployeeUploadItem[];
+}
+
+export interface WeeklyLoadItem {
+    PersonalNumber: string;
+    Semana: string;
+    Lunes: string;
+    Martes: string;
+    Miercoles: string;
+    Jueves: string;
+    Viernes: string;
+    Sabado: string;
+    Domingo: string;
+    StatusRequest: string;
+    Message: string;
+}
+
+export interface WeeklyLoadPayload {
+    PersonalNumber: string;
+    Semana: string;
+    WeeklyLoadSet: WeeklyLoadItem[];
 }
 
 export interface ProcessingJustificationPayload {
@@ -924,7 +952,7 @@ export default class AttendanceApi {
 
         // Break temporal solicitado para inspeccionar el POST antes de enviarlo.
         // Con DevTools abierto, continuar con F8 para ejecutar la petición.
-      
+        debugger;
 
         return this.postEntity("ProcessingDelaysSet", payload, "FOURTH-LATE-DECISION")
             .then((response) => {
@@ -934,7 +962,7 @@ export default class AttendanceApi {
                 console.groupEnd();
 
                 // Segunda pausa para inspeccionar la respuesta exitosa de SAP.
-            
+                debugger;
 
                 const status = String(response.StatusRequest ?? "").trim().toUpperCase();
                 if (status && status !== "OK") {
@@ -954,7 +982,7 @@ export default class AttendanceApi {
                 console.groupEnd();
 
                 // Tercera pausa para inspeccionar el body que SAP devolvió con error.
-           
+                debugger;
                 throw error;
             });
     }
@@ -999,7 +1027,7 @@ export default class AttendanceApi {
     }
 
     public async uploadEmployees(
-        payload: EmployeeUploadPayload,
+        payload: EmployeeUploadPayload | WeeklyLoadPayload,
         entitySet = "EmployeesUploadSet"
     ): Promise<ODataRow> {
         if (!/^[A-Za-z0-9_]+$/.test(entitySet)) {

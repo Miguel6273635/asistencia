@@ -244,6 +244,21 @@
 
                                     </vbm:Spots>
 
+                                    <!-- MARCACIÓN SELECCIONADA (P10/P15/P25/P20) -->
+                                    <vbm:Spots
+                                        visible="{map>/hasSelectedAttendanceEventLocation}">
+
+                                        <vbm:items>
+                                            <vbm:Spot
+                                                key="selected-attendance-event"
+                                                position="{map>/selectedAttendanceEvent/position}"
+                                                tooltip="{map>/selectedAttendanceEvent/mapTooltip}"
+                                                type="{map>/selectedAttendanceEvent/spotType}"
+                                                text="{map>/selectedAttendanceEvent/registerType}" />
+                                        </vbm:items>
+
+                                    </vbm:Spots>
+
                                 </vbm:vos>
                             </vbm:GeoMap>
                         </content>
@@ -418,44 +433,60 @@
                                                 class="mapSelectedPersonEventsDate" />
                                         </HBox>
 
-                                        <FlexBox
-                                            wrap="Wrap"
+                                        <List
                                             items="{map>/selectedPerson/attendanceEvents}"
+                                            showSeparators="None"
                                             class="mapSelectedPersonEventsGrid">
-                                            <VBox class="mapSelectedPersonEventCard">
-                                                <HBox
+                                            <CustomListItem
+                                                type="Active"
+                                                press=".onAttendanceEventPress"
+                                                tooltip="{= ${map>hasCoordinates} ? 'Mostrar esta ubicación en el mapa' : 'SAP no envió coordenadas para esta marcación'}"
+                                                highlight="{= ${map>registerType} === ${map>/selectedAttendanceEvent/registerType} ? 'Information' : 'None' }"
+                                                class="mapSelectedPersonEventCard">
+                                                <VBox
                                                     width="100%"
-                                                    alignItems="Center"
-                                                    class="mapSelectedPersonEventIdentity">
-                                                    <core:Icon src="{map>icon}" />
-                                                    <VBox>
-                                                        <Text
-                                                            text="{= ${map>label} + ' · ' + ${map>registerType}}"
-                                                            class="mapSelectedPersonEventName" />
-                                                        <Text
-                                                            text="{map>dateTimeText}"
-                                                            class="mapSelectedPersonEventTime" />
-                                                    </VBox>
-                                                </HBox>
+                                                    class="mapSelectedPersonEventCardContent">
+                                                    <HBox
+                                                        width="100%"
+                                                        alignItems="Center"
+                                                        class="mapSelectedPersonEventIdentity">
+                                                        <core:Icon src="{map>icon}" />
+                                                        <VBox>
+                                                            <Text
+                                                                text="{= ${map>label} + ' · ' + ${map>registerType}}"
+                                                                class="mapSelectedPersonEventName" />
+                                                            <Text
+                                                                text="{map>dateTimeText}"
+                                                                class="mapSelectedPersonEventTime" />
+                                                        </VBox>
+                                                    </HBox>
 
-                                                <ObjectStatus
-                                                    text="{map>geoStatusText}"
-                                                    state="{map>geoState}"
-                                                    icon="{map>geoIcon}"
-                                                    class="mapSelectedPersonEventStatus" />
+                                                    <ObjectStatus
+                                                        text="{map>geoStatusText}"
+                                                        state="{map>geoState}"
+                                                        icon="{map>geoIcon}"
+                                                        class="mapSelectedPersonEventStatus" />
 
-                                                <Text
-                                                    text="{map>coordinatesText}"
-                                                    visible="{map>hasCoordinates}"
-                                                    wrapping="true"
-                                                    class="mapSelectedPersonEventMeta" />
+                                                    <Text
+                                                        text="{map>coordinatesText}"
+                                                        visible="{map>hasCoordinates}"
+                                                        wrapping="true"
+                                                        class="mapSelectedPersonEventMeta" />
 
-                                                <Text
-                                                    text="{map>channelText}"
-                                                    visible="{= !!${map>channelText}}"
-                                                    class="mapSelectedPersonEventMeta" />
-                                            </VBox>
-                                        </FlexBox>
+                                                    <Text
+                                                        text="{map>channelText}"
+                                                        visible="{= !!${map>channelText}}"
+                                                        class="mapSelectedPersonEventMeta" />
+
+                                                    <ObjectStatus
+                                                        text="Ubicación mostrada en el mapa"
+                                                        state="Information"
+                                                        icon="sap-icon://map-2"
+                                                        visible="{= ${map>registerType} === ${map>/selectedAttendanceEvent/registerType}}"
+                                                        class="mapSelectedPersonEventSelection" />
+                                                </VBox>
+                                            </CustomListItem>
+                                        </List>
                                     </VBox>
 
                                     <FlexBox

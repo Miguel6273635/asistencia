@@ -1,0 +1,34 @@
+# yaml-language-server: $schema=https://sap.github.io/ui5-tooling/schema/ui5.yaml.json
+
+specVersion: "4.0"
+metadata:
+  name: com.mitsu.checkin
+type: application
+framework:
+  name: OpenUI5
+  version: "1.136.1"
+  libraries:
+    - name: sap.ui.core
+    - name: sap.m
+    - name: sap.f
+    - name: sap.tnt
+    - name: sap.ui.layout
+server:
+  customMiddleware:
+    - name: fiori-tools-proxy
+      afterMiddleware: compression
+      configuration:
+        ignoreCertErrors: false
+        backend:
+          - path: /sap
+            destination: onPremECC_QAS_APP
+        ui5:
+          path:
+            - /resources
+            - /test-resources
+          url: https://ui5.sap.com
+builder:
+  resources:
+    excludes:
+      - /test/**
+      - /localService/**
