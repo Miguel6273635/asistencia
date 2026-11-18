@@ -1,0 +1,183 @@
+<mvc:View
+    controllerName="com.mitsu.monitorasistencia.controller.NoAttendance"
+    xmlns:mvc="sap.ui.core.mvc"
+    xmlns:core="sap.ui.core"
+    xmlns="sap.m">
+    <Page
+        showHeader="false"
+        busy="{noAttendance>/busy}"
+        busyIndicatorDelay="0"
+        class="monitorPage noAttendancePage">
+        <content>
+            <VBox class="pageContainer compactPage">
+                <Breadcrumbs
+                    currentLocationText="Inasistencias"
+                    class="sapUiTinyMarginBottom">
+                    <Link text="Resumen" press=".onBack" />
+                </Breadcrumbs>
+
+                <HBox
+                    justifyContent="SpaceBetween"
+                    alignItems="Center"
+                    wrap="Wrap"
+                    class="reviewPageHeading">
+                    <VBox>
+                        <Title
+                            text="Empleados sin asistencia"
+                            level="H1"
+                            class="pageTitle" />
+                        <Text
+                            text="Personas sin ninguna marcación registrada en el periodo seleccionado."
+                            class="pageSubtitle" />
+                    </VBox>
+                    <ObjectStatus
+                        text="{noAttendance>/periodLabel}"
+                        state="Information"
+                        inverted="true" />
+                </HBox>
+
+                <MessageStrip
+                    text="{noAttendance>/error}"
+                    type="Error"
+                    showIcon="true"
+                    visible="{= !!${noAttendance>/error}}"
+                    class="sapUiSmallMarginTop" />
+
+                <HBox wrap="Wrap" class="reviewKpiRow noAttendanceKpiRow">
+                    <VBox class="reviewKpiCard">
+                        <Text text="Empleados evaluados" />
+                        <ObjectNumber
+                            number="{noAttendance>/employeeTotal}"
+                            state="Information" />
+                        <Text text="Personal recibido de EmployeeSet" />
+                    </VBox>
+                    <VBox class="reviewKpiCard reviewKpiResolved">
+                        <Text text="Con alguna marcación" />
+                        <ObjectNumber
+                            number="{noAttendance>/withAttendanceCount}"
+                            state="Success" />
+                        <Text text="Presentes en AttendanceHistorySet" />
+                    </VBox>
+                    <VBox class="reviewKpiCard reviewKpiPending">
+                        <Text text="Sin asistencia" />
+                        <ObjectNumber
+                            number="{noAttendance>/noAttendanceCount}"
+                            state="Error" />
+                        <Text text="Sin ninguna marcación en el periodo" />
+                    </VBox>
+                </HBox>
+
+                <Panel class="dashboardPanel reviewTablePanel noAttendanceTablePanel">
+                    <headerToolbar>
+                        <OverflowToolbar>
+                            <Title text="Personal sin marcaciones" />
+                            <ToolbarSpacer />
+                            <SearchField
+                                width="22rem"
+                                placeholder="Buscar por nómina, nombre, correo o centro"
+                                liveChange=".onSearch" />
+                            <Button
+                                text="Actualizar"
+                                icon="sap-icon://refresh"
+                                type="Emphasized"
+                                press=".onRefresh" />
+                        </OverflowToolbar>
+                    </headerToolbar>
+                    <content>
+                        <Table
+                            items="{noAttendance>/filteredRows}"
+                            growing="true"
+                            growingThreshold="50"
+                            growingScrollToLoad="true"
+                            sticky="ColumnHeaders"
+                            noDataText="Todos los empleados tienen al menos una marcación en el periodo"
+                            class="reviewTable noAttendanceTable">
+                            <columns>
+                                <Column width="16rem">
+                                    <Text text="Colaborador" />
+                                </Column>
+                                <Column
+                                    width="8rem"
+                                    minScreenWidth="Tablet"
+                                    demandPopin="true">
+                                    <Text text="Núm. empleado" />
+                                </Column>
+                                <Column
+                                    width="15rem"
+                                    minScreenWidth="Desktop"
+                                    demandPopin="true">
+                                    <Text text="Correo" />
+                                </Column>
+                                <Column
+                                    width="13rem"
+                                    minScreenWidth="Tablet"
+                                    demandPopin="true">
+                                    <Text text="Centro" />
+                                </Column>
+                                <Column
+                                    width="9rem"
+                                    minScreenWidth="Desktop"
+                                    demandPopin="true">
+                                    <Text text="Zona" />
+                                </Column>
+                                <Column
+                                    width="14rem"
+                                    minScreenWidth="Desktop"
+                                    demandPopin="true">
+                                    <Text text="Horario" />
+                                </Column>
+                                <Column width="10rem">
+                                    <Text text="Estado" />
+                                </Column>
+                            </columns>
+                            <items>
+                                <ColumnListItem highlight="Error">
+                                    <cells>
+                                        <HBox alignItems="Center">
+                                            <Avatar
+                                                initials="{noAttendance>initials}"
+                                                displayShape="Circle"
+                                                displaySize="XS"
+                                                class="sapUiTinyMarginEnd" />
+                                            <VBox>
+                                                <Text
+                                                    text="{noAttendance>name}"
+                                                    wrapping="true"
+                                                    class="mapPersonName" />
+                                                <Text
+                                                    text="{noAttendance>position}"
+                                                    visible="{= !!${noAttendance>position}}"
+                                                    class="zoneMeta" />
+                                            </VBox>
+                                        </HBox>
+                                        <Text text="{noAttendance>personalNumber}" />
+                                        <Text
+                                            text="{noAttendance>email}"
+                                            wrapping="true" />
+                                        <VBox>
+                                            <Text
+                                                text="{noAttendance>center}"
+                                                wrapping="true" />
+                                            <Text
+                                                text="{noAttendance>centerCode}"
+                                                class="zoneMeta" />
+                                        </VBox>
+                                        <Text text="{noAttendance>zone}" />
+                                        <Text
+                                            text="{noAttendance>schedule}"
+                                            wrapping="true" />
+                                        <ObjectStatus
+                                            text="{noAttendance>attendanceStatus}"
+                                            state="Error"
+                                            icon="sap-icon://employee-rejections"
+                                            inverted="true" />
+                                    </cells>
+                                </ColumnListItem>
+                            </items>
+                        </Table>
+                    </content>
+                </Panel>
+            </VBox>
+        </content>
+    </Page>
+</mvc:View>
