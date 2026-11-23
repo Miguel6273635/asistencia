@@ -55,6 +55,9 @@ sap.ui.define([], function () {
 
     if (employeeRelation.blocked) {
       reason = "No puedes registrar asistencia. Estatus laboral: " + employeeRelation.description + ".";
+    } else if (unionized && (employeeRelation.homeOffice || employeeRelation.businessTrip)) {
+      reason = "El personal sindicalizado solo registra asistencia presencial (entrada y salida). " +
+        "SAP indica " + employeeRelation.description + "; solicita la revisión del estatus a Recursos Humanos.";
     } else if (!active) {
       reason = "Empleado no activo: " + String(current.statusDescription || raw.DescriptionStatus || status || "sin estatus") + ".";
     } else if (!confidence && !unionized) {
@@ -82,9 +85,83 @@ sap.ui.define([], function () {
   function allowedModalities(employee) {
     var policy = classifyEmployee(employee);
     if (!policy.enabled) { return []; }
+    if (policy.unionized) { return ["PR"]; }
     if (policy.relation.homeOffice) { return ["HO"]; }
     if (policy.relation.businessTrip) { return ["VN"]; }
     return policy.confidence ? ["PR", "HO", "VN"] : ["PR"];
+  }
+
+  function clockSeconds(value) {
+    var match = String(value || "").trim().match(/^(\d{1,2}):([0-5]\d)(?::([0-5]\d))?$/);
+    var hour;
+    if (!match) { return null; }
+    hour = Number(match[1]);
+    if (hour > 23) { return null; }
+    return hour * 3600 + Number(match[2]) * 60 + Number(match[3] || 0);
+  }
+
+  function formatClock(seconds) {
+    if (!Number.isFinite(seconds)) { return "--:--"; }
+    return pad(Math.floor(seconds / 3600)) + ":" + pad(Math.floor((seconds % 3600) / 60));
+  }
+
+  /**
+   * TimeFoodSchedule define la ventana autorizada por SAP.
+   * TimeFood es solamente una duración de referencia; nunca limita P25.
+   */
+  function foodSchedule(employee) {
+    var current = employee || {};
+    var raw = current.raw || {};
+    var scheduleValue = String(current.timeFoodSchedule || raw.TimeFoodSchedule || "").trim();
+    var durationValue = String(current.timeFood || raw.TimeFood || "").trim();
+    var range = scheduleValue.match(/^(\d{1,2}:[0-5]\d(?::[0-5]\d)?)\s*[-–—]\s*(\d{1,2}:[0-5]\d(?::[0-5]\d)?)$/);
+    var startSeconds;
+    var endSeconds;
+    var duration;
+    var hours;
+    var minutes;
+    var durationMinutes = null;
+
+    if (!scheduleValue) {
+      return { valid: false, reason: "SAP no devolvió TimeFoodSchedule para este empleado." };
+    }
+    if (!range) {
+      return { valid: false, reason: "TimeFoodSchedule no tiene el formato HH:MM:SS - HH:MM:SS." };
+    }
+    startSeconds = clockSeconds(range[1]);
+    endSeconds = clockSeconds(range[2]);
+    if (startSeconds === null || endSeconds === null || endSeconds <= startSeconds) {
+      return { valid: false, reason: "El horario final de comida debe ser posterior al inicial." };
+    }
+
+    duration = durationValue.match(/^(\d{1,3})\s*[- ]\s*hrs?\s*\/\s*(\d{1,2})\s*[- ]\s*mins?$/i);
+    if (duration) {
+      hours = Number(duration[1]);
+      minutes = Number(duration[2]);
+      if (minutes <= 59 && hours * 60 + minutes > 0 && hours * 60 + minutes <= 24 * 60) {
+        durationMinutes = hours * 60 + minutes;
+      }
+    }
+
+    return {
+      valid: true,
+      startSeconds: startSeconds,
+      endSeconds: endSeconds,
+      startText: formatClock(startSeconds),
+      endText: formatClock(endSeconds),
+      description: formatClock(startSeconds) + " a " + formatClock(endSeconds),
+      durationMinutes: durationMinutes,
+      durationText: durationMinutes === null ? "No especificado" :
+        (Math.floor(durationMinutes / 60) > 0
+          ? Math.floor(durationMinutes / 60) + " h" + (durationMinutes % 60 ? " " + (durationMinutes % 60) + " min" : "")
+          : durationMinutes + " min")
+    };
+  }
+
+  function allowsMealEvents(employee, typeSession) {
+    var policy = classifyEmployee(employee);
+    var session = normalize(typeSession);
+    return policy.enabled && policy.confidence && (session === "PR" || session === "HO");
   }
 
   function pad(value) {
@@ -193,6 +270,8 @@ sap.ui.define([], function () {
   return {
     classifyEmployee: classifyEmployee,
     allowedModalities: allowedModalities,
+    foodSchedule: foodSchedule,
+    allowsMealEvents: allowsMealEvents,
     shiftBounds: shiftBounds,
     startOfWeek: startOfWeek,
     endOfWeek: endOfWeek,

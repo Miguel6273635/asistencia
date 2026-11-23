@@ -65,7 +65,7 @@ sap.ui.define([
         "Lunes", "Martes", "Miercoles", "Jueves", "Viernes", "Sabado",
         "Domingo"
     ];
-    var WEEKLY_ITEM_FIELDS = ["PersonalNumber"].concat(
+    var WEEKLY_ITEM_FIELDS = ["PersonalNumber", "Semana"].concat(
         WEEKLY_DAY_FIELDS
     );
     var UPLOAD_CONFIGURATION = {
@@ -87,8 +87,8 @@ sap.ui.define([
         },
         WEEKLY: {
             title: "Carga semanal de usuarios",
-            description: "La carga semanal genera una cabecera independiente por usuario. La semana ISO se calcula automáticamente con la fecha de la petición.",
-            fieldsText: "Nómina · Lunes · Martes · Miércoles · Jueves · Viernes · Sábado · Domingo",
+            description: "La carga semanal genera una cabecera independiente por usuario. Solo PersonalNumber es obligatorio; Semana y los estatus diarios pueden quedar vacíos.",
+            fieldsText: "PersonalNumber · Semana · Lunes · Martes · Miércoles · Jueves · Viernes · Sábado · Domingo",
             placeholder: "Selecciona el Excel con la nómina y los valores diarios",
             sendText: "Enviar carga semanal",
             entitySet: "WeeklyLoadHeadSet"
@@ -183,8 +183,8 @@ sap.ui.define([
         onInit: function () {
             this.setModel(new JSONModel({
                 allEmployees: [], employees: [], search: "", status: "all", scheduleId: "",
-                uploadEntitySet: "EmployeesUploadSet", uploadOperation: "CREATE",
-                uploadProcessingMode: "PARTIAL", uploadBusy: false, uploadFileName: "",
+                uploadEntitySet: "EmployeeUploadRequestSet", uploadOperation: "CREATE",
+                uploadProcessingMode: "", uploadBusy: false, uploadFileName: "",
                 uploadRows: [], uploadRowCount: 0, uploadJson: "", editBusy: false,
                 weeklySingleBusy: false,
                 uploadDialogTitle: UPLOAD_CONFIGURATION.CREATE.title,
@@ -397,7 +397,9 @@ sap.ui.define([
                 }
                 return mappedField;
             });
-            var expectedFields = this._fieldsForOperation(operation);
+            var expectedFields = this._fieldsForOperation(operation).filter(function (field) {
+                return operation !== "WEEKLY" || field !== "Semana";
+            });
             var missingHeaders = expectedFields.filter(function (field) {
                 return mappedHeaders.indexOf(field) < 0;
             });
@@ -512,13 +514,7 @@ sap.ui.define([
                             operation
                         );
                         var payload = this._buildPayload(rows, operation);
-                        if (operation === "CREATE") {
-                            this._validateEmployeeCreateHeaderPayloads(payload);
-                        } else if (operation === "UPDATE") {
-                            this._validateEmployeeHeaderPayloads(payload);
-                        } else {
-                            this._validateUploadPayload(payload);
-                        }
+                        this._validateUploadPayload(payload);
                         model.setProperty("/uploadFileName", file.name);
                         model.setProperty("/uploadRows", rows);
                         model.setProperty("/uploadRowCount", rows.length);
@@ -555,14 +551,8 @@ sap.ui.define([
         },
 
         _buildPayload: function (rows, operation) {
-            if (operation === "CREATE") {
-                return this._buildEmployeeCreateHeaderPayloads(rows);
-            }
             if (operation === "WEEKLY") {
                 return this._buildWeeklyPayloads(rows);
-            }
-            if (operation === "UPDATE") {
-                return this._buildEmployeeHeaderPayloads(rows, operation);
             }
             var requestId = this._requestId();
             var fields = this._fieldsForOperation(operation);
@@ -573,66 +563,14 @@ sap.ui.define([
                 });
                 return item;
             });
-            var payload = { RequestId: requestId, Operation: operation || "CREATE", ProcessingMode: "PARTIAL", ToEmployeesUpload: items };
+            var payload = {
+                RequestId: requestId,
+                Operation: operation || "CREATE",
+                ProcessingMode: "",
+                ToEmployeesUpload: items
+            };
             Diagnostics.upload("PAYLOAD-BUILT", payload);
             return payload;
-        },
-
-        _buildEmployeeCreateHeaderPayloads: function (rows) {
-            var requestId = this._requestId();
-            var fields = this._fieldsForOperation("CREATE");
-            var payloads = rows.map(function (row, index) {
-                var item = {
-                    RequestId: requestId,
-                    ItemNo: pad(index + 1, 5)
-                };
-
-                fields.forEach(function (field) {
-                    item[field] = cleanText(row[field]);
-                });
-                return {
-                    RequestId: requestId,
-                    Operation: "CREATE",
-                    ProcessingMode: "PARTIAL",
-                    ToEmployeesUpload: [item]
-                };
-            });
-
-            Diagnostics.upload("EMPLOYEE-CREATE-HEADERS-BUILT", {
-                requestId: requestId,
-                headers: payloads.length,
-                payloads: payloads
-            });
-            return payloads;
-        },
-
-        _buildEmployeeHeaderPayloads: function (rows, operation) {
-            var requestId = this._requestId();
-            var fields = this._fieldsForOperation(operation);
-            var payloads = rows.map(function (row, index) {
-                var item = {
-                    RequestId: requestId,
-                    ItemNo: pad(index + 1, 5)
-                };
-
-                fields.forEach(function (field) {
-                    item[field] = cleanText(row[field]);
-                });
-                return {
-                    RequestId: requestId,
-                    Operation: operation,
-                    ProcessingMode: "",
-                    ToEmployeesUpload: [item]
-                };
-            });
-
-            Diagnostics.upload("EMPLOYEE-HEADERS-BUILT", {
-                requestId: requestId,
-                operation: operation,
-                headers: payloads.length,
-                payloads: payloads
-            });
-            return payloads;
         },
 
         _buildWeeklyPayloads: function (rows) {
@@ -692,9 +630,15 @@ sap.ui.define([
             var operation = cleanText(payload && payload.Operation) || "CREATE";
             var requiredFields = this._requiredFieldsForOperation(operation);
 
-            ["RequestId", "Operation", "ProcessingMode"].forEach(function (field) {
+            ["RequestId", "Operation"].forEach(function (field) {
                 if (!cleanText(payload && payload[field])) { throw new Error("Falta el campo de cabecera " + field + "."); }
             });
+            if (!Object.prototype.hasOwnProperty.call(payload, "ProcessingMode")) {
+                throw new Error("Falta el campo de cabecera ProcessingMode.");
+            }
+            if (payload.ProcessingMode !== "") {
+                throw new Error("ProcessingMode debe enviarse vacío.");
+            }
             if (!Array.isArray(payload.ToEmployeesUpload) || !payload.ToEmployeesUpload.length) {
                 throw new Error("El Excel no contiene empleados para procesar.");
             }
@@ -743,11 +687,6 @@ sap.ui.define([
                 if (cleanText(item.Semana) !== cleanText(payload.Semana)) {
                     throw new Error("Fila " + (index + 2) + ": la semana calculada no coincide con la cabecera.");
                 }
-                if (!WEEKLY_DAY_FIELDS.some(function (field) {
-                    return cleanText(item[field]);
-                })) {
-                    throw new Error("Fila " + (index + 2) + ": captura al menos un estatus entre lunes y domingo.");
-                }
             });
             Diagnostics.upload("WEEKLY-VALIDATED", {
                 personalNumber: payload.PersonalNumber,
@@ -755,122 +694,6 @@ sap.ui.define([
                 count: payload.ToWeekUpload.length
             });
             return payload;
-        },
-
-        _validateEmployeeCreateHeaderPayloads: function (payloads) {
-            if (!Array.isArray(payloads) || !payloads.length) {
-                throw new Error("El Excel no contiene usuarios para crear.");
-            }
-            var requestId = cleanText(payloads[0].RequestId);
-            var requiredFields = this._requiredFieldsForOperation("CREATE");
-
-            payloads.forEach(function (header, index) {
-                var items = header.ToEmployeesUpload;
-                var expectedItemNo = pad(index + 1, 5);
-                var item;
-
-                if (!requestId || cleanText(header.RequestId) !== requestId) {
-                    throw new Error("Todas las cabeceras deben compartir el mismo RequestId.");
-                }
-                if (cleanText(header.Operation) !== "CREATE") {
-                    throw new Error("La operación de creación debe ser CREATE.");
-                }
-                if (cleanText(header.ProcessingMode) !== "PARTIAL") {
-                    throw new Error("ProcessingMode debe ser PARTIAL para la creación.");
-                }
-                if (!Array.isArray(items) || items.length !== 1) {
-                    throw new Error(
-                        "Cada cabecera de creación debe contener exactamente un usuario."
-                    );
-                }
-                item = items[0];
-                if (cleanText(item.RequestId) !== requestId) {
-                    throw new Error("El RequestId del usuario no coincide con su cabecera.");
-                }
-                if (cleanText(item.ItemNo) !== expectedItemNo) {
-                    throw new Error(
-                        "El ItemNo esperado para la fila " + (index + 2) +
-                        " es " + expectedItemNo + "."
-                    );
-                }
-                requiredFields.forEach(function (field) {
-                    if (!cleanText(item[field])) {
-                        throw new Error(
-                            "Fila " + (index + 2) + ": falta " +
-                            (FIELD_LABELS[field] || field) + "."
-                        );
-                    }
-                });
-                if (!/^\d{8}$/.test(item.HireDate)) {
-                    throw new Error("Fila " + (index + 2) + ": HireDate debe usar AAAAMMDD.");
-                }
-                if (cleanText(item.BirthDate) && !/^\d{8}$/.test(item.BirthDate)) {
-                    throw new Error(
-                        "Fila " + (index + 2) +
-                        ": BirthDate debe usar AAAAMMDD o quedar vacío."
-                    );
-                }
-                if (!/^\S+@\S+\.\S+$/.test(item.Email)) {
-                    throw new Error("Fila " + (index + 2) + ": correo inválido.");
-                }
-            });
-            Diagnostics.upload("EMPLOYEE-CREATE-HEADERS-VALIDATED", {
-                requestId: requestId,
-                headers: payloads.length
-            });
-            return payloads;
-        },
-
-        _validateEmployeeHeaderPayloads: function (payloads) {
-            if (!Array.isArray(payloads) || !payloads.length) {
-                throw new Error("El Excel no contiene usuarios para modificar.");
-            }
-            var requestId = cleanText(payloads[0].RequestId);
-            var requiredFields = this._requiredFieldsForOperation("UPDATE");
-
-            payloads.forEach(function (header, index) {
-                var items = header.ToEmployeesUpload;
-                var expectedItemNo = pad(index + 1, 5);
-                var item;
-
-                if (!requestId || cleanText(header.RequestId) !== requestId) {
-                    throw new Error("Todas las cabeceras deben compartir el mismo RequestId.");
-                }
-                if (cleanText(header.Operation) !== "UPDATE") {
-                    throw new Error("La operación de modificación debe ser UPDATE.");
-                }
-                if (!Object.prototype.hasOwnProperty.call(header, "ProcessingMode")) {
-                    throw new Error("Falta ProcessingMode en la cabecera de modificación.");
-                }
-                if (!Array.isArray(items) || items.length !== 1) {
-                    throw new Error(
-                        "Cada cabecera de modificación debe contener exactamente un usuario."
-                    );
-                }
-                item = items[0];
-                if (cleanText(item.RequestId) !== requestId) {
-                    throw new Error("El RequestId del usuario no coincide con su cabecera.");
-                }
-                if (cleanText(item.ItemNo) !== expectedItemNo) {
-                    throw new Error(
-                        "El ItemNo esperado para la fila " + (index + 2) +
-                        " es " + expectedItemNo + "."
-                    );
-                }
-                requiredFields.forEach(function (field) {
-                    if (!cleanText(item[field])) {
-                        throw new Error(
-                            "Fila " + (index + 2) + ": falta " +
-                            (FIELD_LABELS[field] || field) + "."
-                        );
-                    }
-                });
-            });
-            Diagnostics.upload("EMPLOYEE-HEADERS-VALIDATED", {
-                requestId: requestId,
-                headers: payloads.length
-            });
-            return payloads;
         },
 
         onSubmitEmployeeUpload: function () {
@@ -881,128 +704,16 @@ sap.ui.define([
                 payload = operation === "WEEKLY"
                     ? this._buildPayload(model.getProperty("/uploadRows") || [], operation)
                     : JSON.parse(model.getProperty("/uploadJson") || "{}");
-                if (operation === "CREATE") {
-                    payload = this._validateEmployeeCreateHeaderPayloads(payload);
-                } else if (operation === "UPDATE") {
-                    payload = this._validateEmployeeHeaderPayloads(payload);
-                } else {
-                    payload = this._validateUploadPayload(payload);
-                }
+                payload = this._validateUploadPayload(payload);
                 model.setProperty("/uploadJson", JSON.stringify(payload, null, 2));
             }
             catch (error) { MessageBox.error("No se puede enviar la carga. " + error.message); return; }
-            if (operation === "CREATE") {
-                this._sendEmployeeCreateHeaderPayloads(payload);
-            } else if (operation === "UPDATE") {
-                this._sendEmployeeHeaderPayloads(payload, false);
-            } else {
-                this._sendPayload(payload, false);
-            }
-        },
-
-        _sendEmployeeCreateHeaderPayloads: function (payloads) {
-            var model = this.getModel("view");
-            var entitySet = cleanText(model.getProperty("/uploadEntitySet")) ||
-                "EmployeeUploadRequestSet";
-            var requests = payloads.map(function (header) {
-                var item = header.ToEmployeesUpload[0] || {};
-
-                return this._attendanceApi.uploadEmployees(header, entitySet)
-                    .catch(function (error) {
-                        error.personnelNumber = item.PersonnelNumber;
-                        throw error;
-                    });
-            }, this);
-
-            model.setProperty("/uploadBusy", true);
-            Diagnostics.upload("EMPLOYEE-CREATE-HEADERS-POST", {
-                entitySet: entitySet,
-                payloads: payloads
-            });
-            Promise.all(requests).then(function (responses) {
-                Diagnostics.upload("EMPLOYEE-CREATE-HEADERS-RESPONSE", responses);
-                this.byId("employeeUploadDialog").close();
-                MessageBox.success(
-                    payloads.length + " cabecera(s) de creación enviadas a SAP.",
-                    {
-                        details: JSON.stringify(
-                            responses.length === 1 ? responses[0] : responses,
-                            null,
-                            2
-                        )
-                    }
-                );
-            }.bind(this)).catch(function (error) {
-                Diagnostics.error("EMPLOYEE-CREATE-HEADERS-UPLOAD", error, {
-                    entitySet: entitySet,
-                    responseBody: error.responseBody
-                });
-                MessageBox.error("SAP rechazó la creación de usuarios.", {
-                    details: [
-                        error.personnelNumber ? "Nómina: " + error.personnelNumber : "",
-                        error.message,
-                        error.responseBody
-                    ].filter(Boolean).join("\n\n")
-                });
-            }).finally(function () {
-                model.setProperty("/uploadBusy", false);
-            });
-        },
-
-        _sendEmployeeHeaderPayloads: function (payloads, editing) {
-            var model = this.getModel("view");
-            var entitySet = cleanText(model.getProperty("/uploadEntitySet")) ||
-                "EmployeeUploadRequestSet";
-            var busyPath = editing ? "/editBusy" : "/uploadBusy";
-            var dialogId = editing ? "employeeEditDialog" : "employeeUploadDialog";
-            var requests = payloads.map(function (header) {
-                var item = header.ToEmployeesUpload[0] || {};
-
-                return this._attendanceApi.uploadEmployees(header, entitySet)
-                    .catch(function (error) {
-                        error.personnelNumber = item.PersonnelNumber;
-                        throw error;
-                    });
-            }, this);
-
-            model.setProperty(busyPath, true);
-            Diagnostics.upload("EMPLOYEE-HEADERS-POST", {
-                entitySet: entitySet,
-                payloads: payloads
-            });
-            Promise.all(requests).then(function (responses) {
-                Diagnostics.upload("EMPLOYEE-HEADERS-RESPONSE", responses);
-                this.byId(dialogId).close();
-                MessageBox.success(
-                    payloads.length + " cabecera(s) de modificación enviadas a SAP.",
-                    {
-                        details: JSON.stringify(
-                            responses.length === 1 ? responses[0] : responses,
-                            null,
-                            2
-                        )
-                    }
-                );
-            }.bind(this)).catch(function (error) {
-                Diagnostics.error("EMPLOYEE-HEADERS-UPLOAD", error, {
-                    entitySet: entitySet,
-                    responseBody: error.responseBody
-                });
-                MessageBox.error("SAP rechazó la modificación de usuarios.", {
-                    details: [
-                        error.personnelNumber ? "Nómina: " + error.personnelNumber : "",
-                        error.message,
-                        error.responseBody
-                    ].filter(Boolean).join("\n\n")
-                });
-            }).finally(function () {
-                model.setProperty(busyPath, false);
-            });
+            this._sendPayload(payload, false);
         },
 
         _sendPayload: function (payload, editing, dialogId, busyPath) {
             var model = this.getModel("view");
-            var entitySet = cleanText(model.getProperty("/uploadEntitySet")) || "EmployeesUploadSet";
+            var entitySet = cleanText(model.getProperty("/uploadEntitySet")) || "EmployeeUploadRequestSet";
             var activeBusyPath = busyPath || (editing ? "/editBusy" : "/uploadBusy");
             var activeDialogId = dialogId || (editing ? "employeeEditDialog" : "employeeUploadDialog");
             var weeklyPayloads = Array.isArray(payload) ? payload : [];
@@ -1075,10 +786,7 @@ sap.ui.define([
             item.Schedule = item.Schedule || cleanText(source.scheduleCode);
             item.Email = item.Email || cleanText(source.email);
             this.getModel("view").setProperty("/editEmployee", item);
-            this.getModel("view").setProperty(
-                "/uploadEntitySet",
-                "EmployeeUploadRequestSet"
-            );
+            this.getModel("view").setProperty("/uploadEntitySet", "EmployeeUploadRequestSet");
             Diagnostics.upload("EDIT-OPENED", item);
             this.byId("employeeEditDialog").open();
         },
@@ -1086,9 +794,9 @@ sap.ui.define([
         onSubmitEmployeeEdit: function () {
             var item = Object.assign({}, this.getModel("view").getProperty("/editEmployee"));
             var payload = this._buildPayload([item], "UPDATE");
-            try { this._validateEmployeeHeaderPayloads(payload); }
+            try { this._validateUploadPayload(payload); }
             catch (error) { MessageBox.error("No se puede actualizar el empleado. " + error.message); return; }
-            this._sendEmployeeHeaderPayloads(payload, true);
+            this._sendPayload(payload, true);
         },
 
         onCloseEmployeeEdit: function () {
@@ -1141,7 +849,7 @@ sap.ui.define([
                 ResidenceType: "PROPIA",
                 Schedule: "Z01",
                 Email: "USUARIO.EJEMPLO@MELCO.COM.MX",
-                Semana: "202646",
+                Semana: "",
                 Lunes: "Home Office",
                 Martes: "Vacaciones",
                 Miercoles: "Sancionado",
@@ -1162,6 +870,9 @@ sap.ui.define([
                 : "CREATE";
             var fields = this._fieldsForOperation(normalizedOperation);
             var matrix = [fields.map(function (field) {
+                if (normalizedOperation === "WEEKLY" && field === "PersonalNumber") {
+                    return "PersonalNumber";
+                }
                 return FIELD_LABELS[field] || field;
             })];
             var fileNames = {

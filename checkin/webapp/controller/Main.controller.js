@@ -431,7 +431,8 @@ sap.ui.define([
         currentEmployee.relationJob = employee.relationJob || "";
         currentEmployee.relationJobDescription = employee.relationJobDescription || "";
         ["status", "statusDescription", "groupPerson", "groupPersonDescription",
-          "authorisedRegister", "typeSession", "dayStatus", "dateFrom", "dateTo"].forEach(function (property) {
+          "authorisedRegister", "typeSession", "dayStatus", "dateFrom", "dateTo",
+          "timeFoodSchedule", "timeFood"].forEach(function (property) {
           currentEmployee[property] = employee[property] || "";
         });
         attendanceModel.setProperty("/employee", currentEmployee);
@@ -476,12 +477,16 @@ sap.ui.define([
           start: detailRange && detailRange.start || normalizeClock(schedule && schedule.workStart || employee.workStart),
           end: detailRange && detailRange.end || normalizeClock(schedule && schedule.workEnd || employee.workEnd),
           mealStart: normalizeClock(schedule && schedule.mealStart || employee.mealStart),
-          mealEnd: normalizeClock(schedule && schedule.mealEnd || employee.mealEnd)
+          mealEnd: normalizeClock(schedule && schedule.mealEnd || employee.mealEnd),
+          timeFoodSchedule: schedule && schedule.timeFoodSchedule || employee.timeFoodSchedule || "",
+          timeFood: schedule && schedule.timeFood || employee.timeFood || ""
         };
         attendanceModel.setProperty("/schedule", resolved);
         if (resolved.name) { attendanceModel.setProperty("/employee/schedule", resolved.name); }
         if (resolved.code) { attendanceModel.setProperty("/employee/scheduleCode", resolved.code); }
         if (resolved.detail) { attendanceModel.setProperty("/employee/scheduleDetail", resolved.detail); }
+        if (resolved.timeFoodSchedule) { attendanceModel.setProperty("/employee/timeFoodSchedule", resolved.timeFoodSchedule); }
+        if (resolved.timeFood) { attendanceModel.setProperty("/employee/timeFood", resolved.timeFood); }
         Diagnostics.info("SCHEDULE", "Horario aplicable al día actual", resolved);
         this._evaluateAttendanceContext();
         return resolved;
@@ -765,19 +770,19 @@ sap.ui.define([
       var model = this.getView().getModel("attendance");
       if (!model) { return; }
 
-      var MEAL_WINDOW_START = 12 * 60;
-      var MEAL_WINDOW_END = 14 * 60 + 30;
       var current = now || new Date();
-      var currentMinutes = current.getHours() * 60 + current.getMinutes();
+      var currentSeconds = current.getHours() * 3600 + current.getMinutes() * 60 + current.getSeconds();
       var schedule = model.getProperty("/schedule") || {};
       var employee = model.getProperty("/employee") || {};
       var policy = AttendancePolicy.classifyEmployee(employee);
+      var mealSchedule = AttendancePolicy.foodSchedule(employee);
       var shift = AttendancePolicy.shiftBounds(schedule, current);
       var hasEntry = model.getProperty("/today/entry") && model.getProperty("/today/entry") !== "—";
       var hasMealStart = model.getProperty("/today/mealStart") && model.getProperty("/today/mealStart") !== "—";
       var hasMealEnd = model.getProperty("/today/mealEnd") && model.getProperty("/today/mealEnd") !== "—";
       var hasExit = model.getProperty("/today/exit") && model.getProperty("/today/exit") !== "—";
-      var isWithinMealWindow = currentMinutes >= MEAL_WINDOW_START && currentMinutes <= MEAL_WINDOW_END;
+      var isWithinMealWindow = mealSchedule.valid &&
+        currentSeconds >= mealSchedule.startSeconds && currentSeconds <= mealSchedule.endSeconds;
       var assignedTypeSession = relationJobSessionCode(employee);
       var historyTravel = Boolean(model.getProperty("/today/isTravel"));
       var historyHomeOffice = Boolean(model.getProperty("/today/isHomeOffice"));
@@ -824,7 +829,7 @@ sap.ui.define([
         sessionDateTo = todayDate;
       }
 
-      var hasMealEvents = policy.confidence && typeSession === "PR";
+      var hasMealEvents = AttendancePolicy.allowsMealEvents(employee, typeSession);
       var nextAction = "CHECK_IN";
       if (hasEntry) {
         if (hasExit || attendanceBlocked || typeSession === "VN") {
@@ -852,8 +857,10 @@ sap.ui.define([
       var homeOfficeQuotaBlocked = isHomeOffice && !hasEntry && Boolean(model.getProperty("/today/homeOfficeUsedThisWeek"));
       var canCheckOut = typeSession !== "VN" && hasEntry && !hasExit && !attendanceBlocked;
       var isEarlyExit = canCheckOut && shift.valid && current.getTime() < shift.end.getTime();
-      var mealStartAllowed = hasMealEvents && isWithinMealWindow && !attendanceBlocked;
-      var mealEndAllowed = hasMealEvents && isWithinMealWindow && !attendanceBlocked;
+      var mealStartAllowed = hasMealEvents && mealSchedule.valid && isWithinMealWindow &&
+        !attendanceBlocked && hasEntry && !hasExit && !hasMealStart;
+      var mealEndAllowed = hasMealEvents && mealSchedule.valid && isWithinMealWindow &&
+        !attendanceBlocked && hasEntry && !hasExit && hasMealStart && !hasMealEnd;
       var isCheckInAllowed = shift.valid && current.getTime() >= shift.opens.getTime() &&
         current.getTime() < shift.end.getTime() && !attendanceBlocked && !homeOfficeQuotaBlocked &&
         (delaysLoaded || !isLateNow);
@@ -889,9 +896,6 @@ sap.ui.define([
       } else if (homeOfficeQuotaBlocked) {
         message = "Ya utilizaste Home Office esta semana. Selecciona otra modalidad.";
         messageType = "Error";
-      } else if (typeSession === "HO") {
-        message = "Home Office vigente. Solo puedes registrar Entrada y Salida; no se solicitará ubicación GPS.";
-        messageType = "Information";
       } else if (policy.unionized) {
         message = "Personal sindicalizado: únicamente se registran Entrada y Salida presencial.";
         messageType = "Information";
@@ -901,14 +905,22 @@ sap.ui.define([
       } else if (isLateNow && nextAction === "CHECK_IN") {
         message = "La tolerancia terminó 10 minutos después del inicio. Esta entrada se considera retardo.";
         messageType = "Warning";
-      } else if (hasEntry && hasMealEvents && currentMinutes < MEAL_WINDOW_START) {
-        message = "La comida se habilitará de 12:00 a 14:30. Por ahora puedes registrar la salida.";
+      } else if (hasEntry && hasMealEvents && !mealSchedule.valid) {
+        message = mealSchedule.reason + " Puedes continuar con Entrada y Salida, pero P15 y P25 permanecerán deshabilitados.";
+        messageType = "Warning";
+      } else if (hasEntry && hasMealEvents && currentSeconds < mealSchedule.startSeconds) {
+        message = "La comida se habilitará de " + mealSchedule.description + ". Por ahora puedes registrar la salida.";
         messageType = "Information";
-      } else if (hasEntry && hasMealEvents && currentMinutes > MEAL_WINDOW_END && (!hasMealStart || !hasMealEnd)) {
-        message = "La ventana de comida terminó a las 14:30. Solo puedes registrar la salida.";
+      } else if (hasEntry && hasMealEvents && currentSeconds > mealSchedule.endSeconds && (!hasMealStart || !hasMealEnd)) {
+        message = "La ventana de comida terminó a las " + mealSchedule.endText + ". Solo puedes registrar la salida.";
         messageType = "Warning";
       } else if (hasEntry && hasMealEvents && isWithinMealWindow && (nextAction === "MEAL_START" || nextAction === "MEAL_END")) {
-        message = "Horario de comida disponible de 12:00 a 14:30, sin duración mínima o máxima entre P15 y P25.";
+        message = "Horario de comida disponible de " + mealSchedule.description +
+          ". Tiempo asignado: " + mealSchedule.durationText +
+          ". La marcación usa la hora actual del dispositivo.";
+        messageType = "Information";
+      } else if (typeSession === "HO") {
+        message = "Home Office vigente. Registra Entrada, Inicio de comida, Fin de comida y Salida; no se solicitará ubicación GPS.";
         messageType = "Information";
       } else if (isEarlyExit) {
         message = "Salida temprana: el horario termina a las " + schedule.end + ". Confirma antes de registrar.";
@@ -939,6 +951,9 @@ sap.ui.define([
       model.setProperty("/today/isWithinMealWindow", isWithinMealWindow);
       model.setProperty("/today/mealStartAllowed", mealStartAllowed);
       model.setProperty("/today/mealEndAllowed", mealEndAllowed);
+      model.setProperty("/today/isMealScheduleValid", mealSchedule.valid);
+      model.setProperty("/today/mealScheduleText", mealSchedule.valid ? mealSchedule.description : "");
+      model.setProperty("/today/mealDurationText", mealSchedule.valid ? mealSchedule.durationText : "");
       model.setProperty("/today/checkInText", isLateNow ? "Registrar entrada tarde" : "Registrar entrada");
       model.setProperty("/today/checkOutText", isEarlyExit ? "Salida temprana" : "Registrar salida");
       model.setProperty("/today/isRelationBlocked", policy.relation.blocked);
@@ -962,9 +977,6 @@ sap.ui.define([
       }
       var typeSession = String(model.getProperty("/today/typeSession") || "").trim().toUpperCase();
       if (typeSession === "VN") {
-        return false;
-      }
-      if (typeSession === "HO" && action !== "CHECK_IN" && action !== "CHECK_OUT") {
         return false;
       }
       if (action === "CHECK_IN" && !model.getProperty("/today/isCheckInAllowed")) { return false; }
@@ -2074,7 +2086,6 @@ sap.ui.define([
         var idle = !this._markRequestInProgress;
         var typeSession = String(model.getProperty("/today/typeSession") || "").trim().toUpperCase();
         var isTravel = typeSession === "VN";
-        var isHomeOffice = typeSession === "HO";
         this.byId("businessTripAction").setEnabled(idle && isTravel &&
           !model.getProperty("/today/businessTripRegistered") &&
           Boolean(model.getProperty("/today/isCheckInAllowed")) &&
@@ -2089,13 +2100,11 @@ sap.ui.define([
           var value = model.getProperty("/today/" + step.field);
           var completed = value && value !== "—";
           var active = action === step.action;
-          var isHomeOfficeMeal = isHomeOffice && (step.action === "MEAL_START" || step.action === "MEAL_END");
           control.toggleStyleClass("complete", completed);
           control.toggleStyleClass("active", active);
           control.getItems()[3].setText(
             isTravel ? "No requerido" :
-              (isHomeOfficeMeal ? "No aplica" :
-                (completed ? "Registrada" : (active ? "Siguiente" : "Pendiente")))
+              (completed ? "Registrada" : (active ? "Siguiente" : "Pendiente"))
           );
           if (step.connector) {
             this.byId(step.connector).toggleStyleClass("completeConnector", completed);

@@ -54,13 +54,14 @@
                         </ComboBox>
                     </VBox>
                     <VBox class="filterField">
-                        <Label text="Estatus laboral" />
-                        <Select width="13rem" selectedKey="{view>/laborStatus}" change=".onFilterChange" items="{view>/laborStatusOptions}">
+                        <Label text="Estatus del día" />
+                        <Select id="dayStatusFilter" width="13rem" selectedKey="{view>/dayStatusFilter}" change=".onFilterChange" beforeOpen=".onDayStatusFilterBeforeOpen" items="{view>/dayStatusOptions}" class="notranslate">
                             <core:Item key="{view>key}" text="{view>text}" />
                         </Select>
                     </VBox>
                     <ToolbarSpacer />
                     <Button text="Aplicar filtros" icon="sap-icon://filter" type="Emphasized" press=".onApplyFilters" />
+                    <Button text="Limpiar filtros" icon="sap-icon://reset" type="Transparent" press=".onClearFilters" />
                     <Button text="Exportar" icon="sap-icon://download" press=".onExport" />
                 </OverflowToolbar>
 
@@ -87,14 +88,14 @@
                     </CustomListItem>
                 </List>
 
-                <List id="recordStatusFilterList" mode="SingleSelectMaster" includeItemInSelection="true" rememberSelections="false" showSeparators="None" selectionChange=".onRecordFilterSelectionChange" items="{view>/statusCards}" class="recordsStatusRow recordsFilterList recordsStatusFilterList sapUiTinyMarginTop">
+                <List id="recordStatusFilterList" mode="SingleSelectMaster" includeItemInSelection="true" rememberSelections="false" showSeparators="None" selectionChange=".onRecordFilterSelectionChange" updateFinished=".onNoTranslateContentRendered" items="{view>/statusCards}" class="recordsStatusRow recordsFilterList recordsStatusFilterList sapUiTinyMarginTop">
                     <items>
                         <CustomListItem type="Active" selected="{= ${view>/recordFilter} === ${view>filterKey} }" tooltip="{= 'Filtrar por ' + ${view>status}}" class="recordsStatusCard">
                             <customData><core:CustomData key="recordFilter" value="{view>filterKey}" /></customData>
                             <HBox alignItems="Center" width="100%">
                                 <core:Icon src="{view>icon}" color="{view>color}" class="recordsStatusIcon" />
                                 <VBox width="100%" class="recordsStatusContent">
-                                    <HBox justifyContent="SpaceBetween" alignItems="Center"><Text text="{view>status}" class="recordsStatusTitle" /><Text text="{= ${view>count} + ' de ' + ${view>/stats/total} + ' · ' + ${view>percentage}}" class="recordsStatusMetric" /></HBox>
+                                    <HBox justifyContent="SpaceBetween" alignItems="Center"><Text text="{path:'view>status', formatter:'.formatter.dayStatusText'}" class="recordsStatusTitle notranslate" /><Text text="{= ${view>count} + ' de ' + ${view>/stats/total} + ' · ' + ${view>percentage}}" class="recordsStatusMetric" /></HBox>
                                     <Text text="{view>description}" class="recordsStatusDescription" />
                                 </VBox>
                             </HBox>
@@ -104,18 +105,22 @@
 
                 <Panel headerText="Registros de asistencia" class="dashboardPanel recordsTablePanel recordsTablePanelExpanded sapUiSmallMarginTop">
                     <content>
-                        <Table id="recordsTable" items="{view>/pageRecords}" mode="SingleSelectMaster" includeItemInSelection="true" rememberSelections="false" selectionChange=".onRecordSelectionChange" class="recordsTable" noDataText="No existen registros para los filtros seleccionados">
+                        <Table id="recordsTable" items="{view>/pageRecords}" mode="SingleSelectMaster" includeItemInSelection="true" rememberSelections="false" selectionChange=".onRecordSelectionChange" updateFinished=".onNoTranslateContentRendered" class="recordsTable" noDataText="No existen registros para los filtros seleccionados">
                             <columns>
                                 <Column width="7rem"><Text text="Fecha" /></Column>
                                 <Column width="15rem" minScreenWidth="Tablet" demandPopin="true"><Text text="Colaborador" /></Column>
                                 <Column width="11rem" minScreenWidth="Desktop" demandPopin="true"><Text text="Centro" /></Column>
                                 <Column width="13rem" minScreenWidth="Tablet" demandPopin="true"><Text text="Horario asignado" /></Column>
                                 <Column width="6rem" hAlign="Center"><Text text="Entrada" /></Column>
+                                <Column width="12rem" minScreenWidth="Desktop" demandPopin="true"><Text text="Geo entrada" /></Column>
+                                <Column width="7rem" hAlign="Center"><Text text="Inicio comida" /></Column>
+                                <Column width="12rem" minScreenWidth="Desktop" demandPopin="true"><Text text="Geo inicio comida" /></Column>
+                                <Column width="7rem" hAlign="Center"><Text text="Fin comida" /></Column>
+                                <Column width="12rem" minScreenWidth="Desktop" demandPopin="true"><Text text="Geo fin comida" /></Column>
                                 <Column width="6rem" hAlign="Center"><Text text="Salida" /></Column>
-                                <Column width="10rem" hAlign="Center" minScreenWidth="Desktop" demandPopin="true"><Text text="Comida" /></Column>
-                                <Column width="11rem" minScreenWidth="Desktop" demandPopin="true"><Text text="Estatus laboral" /></Column>
+                                <Column width="12rem" minScreenWidth="Desktop" demandPopin="true"><Text text="Geo salida" /></Column>
+                                <Column width="11rem" minScreenWidth="Desktop" demandPopin="true"><Text text="Tipo de personal" /></Column>
                                 <Column width="9rem"><Text text="Estatus del día" /></Column>
-                                <Column width="12rem" minScreenWidth="Tablet" demandPopin="true"><Text text="GeoStatus" /></Column>
                             </columns>
                             <items>
                                 <ColumnListItem type="Active" selected="{= ${view>id} === ${view>/selectedRecord/id} }" highlight="{path:'view>dayStatus', formatter:'.formatter.statusState'}">
@@ -125,11 +130,15 @@
                                         <Text text="{view>center}" />
                                         <ObjectIdentifier title="{view>scheduleName}" text="{view>shift}" tooltip="{view>scheduleDescription}" />
                                         <Text text="{view>entry}" />
+                                        <ObjectStatus text="{view>entryGeoStatusText}" state="{view>entryGeoStatusState}" tooltip="{view>entryGeoStatusTooltip}" class="recordGeoCell" />
+                                        <Text text="{view>mealCheckOut}" class="recordMealCell" />
+                                        <ObjectStatus text="{view>mealStartGeoStatusText}" state="{view>mealStartGeoStatusState}" tooltip="{view>mealStartGeoStatusTooltip}" class="recordGeoCell" />
+                                        <Text text="{view>mealCheckIn}" class="recordMealCell" />
+                                        <ObjectStatus text="{view>mealEndGeoStatusText}" state="{view>mealEndGeoStatusState}" tooltip="{view>mealEndGeoStatusTooltip}" class="recordGeoCell" />
                                         <Text text="{view>exit}" />
-                                        <Text text="{view>mealRange}" class="recordMealCell" />
-                                        <ObjectStatus text="{view>laborStatus}" state="{view>laborStatusState}" />
-                                        <ObjectStatus text="{view>dayStatus}" state="{path:'view>dayStatus', formatter:'.formatter.statusState'}" tooltip="{= 'DayStatus: ' + (${view>dayStatusRaw} || 'Sin dato')}" />
-                                        <ObjectStatus text="{view>geofenceStatus}" state="{view>geofenceState}" tooltip="{= 'GeoStatus: ' + (${view>geoStatus} || 'Sin dato')}" />
+                                        <ObjectStatus text="{view>exitGeoStatusText}" state="{view>exitGeoStatusState}" tooltip="{view>exitGeoStatusTooltip}" class="recordGeoCell" />
+                                        <ObjectStatus text="{view>personTypeDescription}" state="{view>groupPersonState}" tooltip="GroupPersonDescription" />
+                                        <ObjectStatus text="{path:'view>dayStatusDescription', formatter:'.formatter.dayStatusText'}" state="{path:'view>dayStatusDescription', formatter:'.formatter.statusState'}" tooltip="{= 'DayStatus: ' + (${view>dayStatusRaw} || 'Sin dato')}" class="notranslate" />
                                     </cells>
                                 </ColumnListItem>
                             </items>
@@ -154,6 +163,7 @@
                 draggable="true"
                 resizable="true"
                 stretchOnPhone="true"
+                afterOpen=".onNoTranslateContentRendered"
                 afterClose=".onDetailAfterClose"
                 class="recordDetailDialog">
                 <content>
@@ -167,7 +177,7 @@
                                     <HBox alignItems="Center" class="recordMetaLine"><core:Icon src="sap-icon://building" /><Text text="{view>/selectedRecord/center}" wrapping="true" /></HBox>
                                 </VBox>
                             </HBox>
-                            <ObjectStatus text="{view>/selectedRecord/dayStatus}" state="{path:'view>/selectedRecord/dayStatus', formatter:'.formatter.statusState'}" class="detailStatusPill" />
+                            <ObjectStatus text="{path:'view>/selectedRecord/dayStatus', formatter:'.formatter.dayStatusText'}" state="{path:'view>/selectedRecord/dayStatus', formatter:'.formatter.statusState'}" class="detailStatusPill notranslate" />
                         </HBox>
 
                         <VBox class="recordDetailSection recordScheduleSection">
@@ -177,8 +187,9 @@
                                 <VBox class="detailInfoCard"><Label text="Horario asignado" /><Text text="{view>/selectedRecord/scheduleName}" class="detailPrimaryValue" wrapping="true" /></VBox>
                                 <VBox class="detailInfoCard"><Label text="Turno operativo" /><Text text="{view>/selectedRecord/shift}" class="detailPrimaryValue" wrapping="true" /></VBox>
                                 <VBox class="detailInfoCard detailInfoCardWide"><Label text="Horario del día" /><Text text="{view>/selectedRecord/scheduled}" class="detailPrimaryValue" wrapping="true" /></VBox>
-                                <VBox class="detailInfoCard"><Label text="Estatus laboral" /><ObjectStatus text="{view>/selectedRecord/laborStatus}" state="{view>/selectedRecord/laborStatusState}" /></VBox>
-                                <VBox class="detailInfoCard"><Label text="Estatus del día" /><ObjectStatus text="{view>/selectedRecord/dayStatus}" state="{path:'view>/selectedRecord/dayStatus', formatter:'.formatter.statusState'}" /></VBox>
+                                <VBox class="detailInfoCard"><Label text="Tipo de personal" /><ObjectStatus text="{view>/selectedRecord/personTypeDescription}" state="{view>/selectedRecord/groupPersonState}" /></VBox>
+                                <VBox class="detailInfoCard"><Label text="Estatus laboral" /><ObjectStatus text="{view>/selectedRecord/employmentStatusDescription}" state="{view>/selectedRecord/laborStatusState}" class="notranslate" /></VBox>
+                                <VBox class="detailInfoCard"><Label text="Estatus del día" /><ObjectStatus text="{path:'view>/selectedRecord/dayStatusDescription', formatter:'.formatter.dayStatusText'}" state="{path:'view>/selectedRecord/dayStatusDescription', formatter:'.formatter.statusState'}" class="notranslate" /></VBox>
                             </FlexBox>
                             <HBox alignItems="Start" class="weeklyRuleCard"><core:Icon src="sap-icon://calendar" /><VBox><Label text="Regla semanal" /><Text text="{view>/selectedRecord/scheduleDescription}" wrapping="true" /></VBox></HBox>
                         </VBox>
@@ -186,12 +197,11 @@
                         <VBox class="recordDetailSection">
                             <HBox alignItems="Center" class="detailSectionHeading"><core:Icon src="sap-icon://time-entry-request" /><Title text="Registros de marcación" level="H4" class="detailSectionTitle" /></HBox>
                             <FlexBox wrap="Wrap" class="markingGrid">
-                                <VBox alignItems="Center" class="markingCard markingEntry"><core:Icon src="sap-icon://log" /><Label text="Entrada" /><Text text="{view>/selectedRecord/entry}" /></VBox>
-                                <VBox alignItems="Center" class="markingCard markingExit"><core:Icon src="sap-icon://log" /><Label text="Salida" /><Text text="{view>/selectedRecord/exit}" /></VBox>
+                                <VBox alignItems="Center" class="markingCard markingEntry"><core:Icon src="sap-icon://log" /><Label text="Entrada" /><Text text="{view>/selectedRecord/entry}" /><ObjectStatus text="{view>/selectedRecord/entryGeoStatusText}" state="{view>/selectedRecord/entryGeoStatusState}" tooltip="{view>/selectedRecord/entryGeoStatusTooltip}" class="markingGeoStatus" /></VBox>
+                                <VBox alignItems="Center" class="markingCard markingExit"><core:Icon src="sap-icon://log" /><Label text="Salida" /><Text text="{view>/selectedRecord/exit}" /><ObjectStatus text="{view>/selectedRecord/exitGeoStatusText}" state="{view>/selectedRecord/exitGeoStatusState}" tooltip="{view>/selectedRecord/exitGeoStatusTooltip}" class="markingGeoStatus" /></VBox>
                                 <VBox alignItems="Center" class="markingCard markingHours"><core:Icon src="sap-icon://history" /><Label text="Horas registradas" /><Text text="{view>/selectedRecord/hours}" /></VBox>
-                                <VBox alignItems="Center" class="markingCard markingMealOut"><core:Icon src="sap-icon://meal" /><Label text="Inicio de comida" /><Text text="{view>/selectedRecord/mealCheckOut}" /></VBox>
-                                <VBox alignItems="Center" class="markingCard markingMealIn"><core:Icon src="sap-icon://meal" /><Label text="Fin de comida" /><Text text="{view>/selectedRecord/mealCheckIn}" /></VBox>
-                                <VBox alignItems="Center" class="markingCard markingZone"><core:Icon src="sap-icon://map-2" /><Label text="GeoStatus" /><ObjectStatus text="{view>/selectedRecord/geofenceStatus}" state="{view>/selectedRecord/geofenceState}" /><Text text="{= 'GeoStatus: ' + (${view>/selectedRecord/geoStatus} || 'Sin dato') + ' · Distancia: ' + ${view>/selectedRecord/distanceLabel}}" wrapping="true" class="markingZoneMeta" /></VBox>
+                                <VBox alignItems="Center" class="markingCard markingMealOut"><core:Icon src="sap-icon://meal" /><Label text="Inicio de comida" /><Text text="{view>/selectedRecord/mealCheckOut}" /><ObjectStatus text="{view>/selectedRecord/mealStartGeoStatusText}" state="{view>/selectedRecord/mealStartGeoStatusState}" tooltip="{view>/selectedRecord/mealStartGeoStatusTooltip}" class="markingGeoStatus" /></VBox>
+                                <VBox alignItems="Center" class="markingCard markingMealIn"><core:Icon src="sap-icon://meal" /><Label text="Fin de comida" /><Text text="{view>/selectedRecord/mealCheckIn}" /><ObjectStatus text="{view>/selectedRecord/mealEndGeoStatusText}" state="{view>/selectedRecord/mealEndGeoStatusState}" tooltip="{view>/selectedRecord/mealEndGeoStatusTooltip}" class="markingGeoStatus" /></VBox>
                             </FlexBox>
                         </VBox>
 
@@ -204,7 +214,7 @@
                             <HBox alignItems="Center" class="detailSectionHeading"><core:Icon src="sap-icon://history" /><Title text="Historial de estatus" level="H4" class="detailSectionTitle" /></HBox>
                             <HBox alignItems="Center" justifyContent="SpaceBetween" wrap="Wrap" class="historyCard">
                                 <HBox alignItems="Center"><core:Icon src="sap-icon://date-time" class="historyEventIcon" /><VBox><Text text="{view>/selectedRecord/historyDate}" class="historyDate" /><Text text="Actualizado por Administrador" class="historyAuthor" /></VBox></HBox>
-                                <ObjectStatus text="{view>/selectedRecord/dayStatus}" state="{path:'view>/selectedRecord/dayStatus', formatter:'.formatter.statusState'}" class="detailStatusPill" />
+                                <ObjectStatus text="{path:'view>/selectedRecord/dayStatus', formatter:'.formatter.dayStatusText'}" state="{path:'view>/selectedRecord/dayStatus', formatter:'.formatter.statusState'}" class="detailStatusPill notranslate" />
                             </HBox>
                         </VBox>
                     </VBox>

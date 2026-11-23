@@ -20,6 +20,8 @@
     "authorisedRegister": "",
     "relationJob": "",
     "relationJobDescription": "",
+    "timeFoodSchedule": "",
+    "timeFood": "",
     "dayStatus": "",
     "typeSession": "",
     "dateFrom": "",
@@ -44,6 +46,8 @@
     "isEarlyExit": false,
     "canCheckOut": false,
     "isTravel": false,
+    "businessTripRegistered": false,
+    "workModalityLocked": false,
     "isHomeOffice": false,
     "typeSession": "",
     "workModalityText": "Pendiente",
@@ -61,6 +65,9 @@
     "isWithinMealWindow": false,
     "mealStartAllowed": true,
     "mealEndAllowed": true,
+    "isMealScheduleValid": false,
+    "mealScheduleText": "",
+    "mealDurationText": "",
     "checkInText": "Registrar entrada",
     "checkOutText": "Registrar salida",
     "isRelationBlocked": false,
@@ -113,7 +120,9 @@
     "start": "",
     "end": "",
     "mealStart": "",
-    "mealEnd": ""
+    "mealEnd": "",
+    "timeFoodSchedule": "",
+    "timeFood": ""
   },
   "history": []
 }

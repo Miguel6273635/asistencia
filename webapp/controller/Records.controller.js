@@ -10,6 +10,46 @@ sap.ui.define([
 ], function (BaseController, formatter, AttendanceApi, MonitorData, periodHelper, JSONModel, MessageToast, Spreadsheet) {
     "use strict";
 
+    function markingGeoStatus(sCode, sDescription, vDistance, bHasMark, bLocationOptional) {
+        var sRawCode = String(sCode || "").trim();
+        var sRawDescription = String(sDescription || "").trim();
+        var sCombined = (sRawCode + " " + sRawDescription).toUpperCase();
+        var bOutside = /(^|\s)(OUT|OUTSIDE)(\s|$)|FUERA(?:\s+DE)?\s+(?:RANGO|ZONA|GEOCERCA)/.test(sCombined);
+        var bInside = /(^|\s)IN(?:SIDE)?(\s|$)|DENTRO(?:\s+DE)?\s+(?:DEL\s+RANGO|RANGO|ZONA|GEOCERCA)/.test(sCombined);
+        var bHasDistance = typeof vDistance === "number" && Number.isFinite(vDistance);
+        var bOutsideByDistance = !bOutside && !bInside && bHasDistance && vDistance > 2;
+        var sDistance = bHasDistance ? vDistance.toFixed(1) + " m" : "Sin dato";
+        var sText;
+        var sState;
+
+        if (!bHasMark) {
+            return {
+                text: "Sin marcación",
+                state: "None",
+                tooltip: "No existe una marcación para consultar su GeoStatus"
+            };
+        }
+        if (bOutside || bOutsideByDistance) {
+            sText = sRawDescription || "Registro fuera de rango";
+            sState = "Error";
+        } else if (bInside || bHasDistance) {
+            sText = sRawDescription || "Registro dentro del rango";
+            sState = "Success";
+        } else if (bLocationOptional) {
+            sText = "No aplica";
+            sState = "Information";
+        } else {
+            sText = sRawDescription || "Sin información de zona";
+            sState = "None";
+        }
+
+        return {
+            text: sText,
+            state: sState,
+            tooltip: "GeoStatus: " + (sRawCode || "Sin dato") + " · Distancia: " + sDistance
+        };
+    }
+
     return BaseController.extend("com.mitsu.monitorasistencia.controller.Records", {
         formatter: formatter,
 
@@ -36,11 +76,11 @@ sap.ui.define([
                 records: [],
                 pageRecords: [],
                 centerOptions: [{ key: "all", text: "Todos" }],
-                laborStatusOptions: [{ key: "all", text: "Todos" }],
+                dayStatusOptions: [{ key: "all", text: "Todos" }],
                 selectedRecord: {},
                 center: "all",
                 scheduleId: "",
-                laborStatus: "all",
+                dayStatusFilter: "all",
                 recordFilter: "all",
                 periodType: "month",
                 referenceDate: sToday,
@@ -75,6 +115,104 @@ sap.ui.define([
             this.getRouter().getRoute("records").attachPatternMatched(this._onRouteMatched, this);
         },
 
+        onAfterRendering: function () {
+            this._protectNonTranslatableText();
+        },
+
+        onExit: function () {
+            if (this._dayStatusTranslationObserver) {
+                this._dayStatusTranslationObserver.disconnect();
+                this._dayStatusTranslationObserver = null;
+            }
+        },
+
+        onNoTranslateContentRendered: function () {
+            this._protectNonTranslatableText();
+        },
+
+        onDayStatusFilterBeforeOpen: function (oEvent) {
+            var oSelect = oEvent.getSource();
+            var oPicker = oSelect.getAggregation("_picker");
+
+            this._protectDayStatusPickerText(oSelect);
+
+            if (!oPicker || this._dayStatusPicker === oPicker) {
+                return;
+            }
+            this._dayStatusPicker = oPicker;
+            oPicker.addStyleClass("notranslate");
+            oPicker.addEventDelegate({
+                onAfterRendering: function () {
+                    var oPickerDomRef = oPicker.getDomRef();
+                    if (oPickerDomRef) {
+                        oPickerDomRef.setAttribute("translate", "no");
+                    }
+                }
+            });
+        },
+
+        _protectDayStatusPickerText: function (oSelect) {
+            var oStaticArea = document.getElementById("sap-ui-static");
+            var oHomeOfficeItem = oSelect.getItems().find(function (oItem) {
+                return oItem.getKey() === "HOME OFFICE";
+            });
+            var sHomeOfficeItemId = oHomeOfficeItem && oHomeOfficeItem.getId();
+            var fnRestoreHomeOffice;
+
+            if (!oStaticArea || !sHomeOfficeItemId) {
+                return;
+            }
+            oStaticArea.classList.add("notranslate");
+            oStaticArea.setAttribute("translate", "no");
+            fnRestoreHomeOffice = function () {
+                var oItemDomRef = document.getElementById(sHomeOfficeItemId);
+                if (!oItemDomRef) {
+                    return;
+                }
+                oItemDomRef.classList.add("notranslate");
+                oItemDomRef.setAttribute("translate", "no");
+                [oItemDomRef].concat(
+                    Array.prototype.slice.call(oItemDomRef.querySelectorAll("*"))
+                ).forEach(function (oElement) {
+                    if (!oElement.children.length &&
+                        String(oElement.textContent || "").trim().toUpperCase() === "OFICINA CENTRAL") {
+                        oElement.textContent = "HOME OFFICE";
+                        oElement.classList.add("notranslate");
+                        oElement.setAttribute("translate", "no");
+                    }
+                });
+            };
+            fnRestoreHomeOffice();
+            if (!this._dayStatusTranslationObserver) {
+                this._dayStatusTranslationObserver = new MutationObserver(fnRestoreHomeOffice);
+                this._dayStatusTranslationObserver.observe(oStaticArea, {
+                    childList: true,
+                    characterData: true,
+                    subtree: true
+                });
+            }
+        },
+
+        _protectNonTranslatableText: function () {
+            var aRoots = [];
+            var oViewDomRef = this.getView() && this.getView().getDomRef();
+            var oDetailDialog = this.byId("recordDetailDialog");
+            var oDialogDomRef = oDetailDialog && oDetailDialog.getDomRef();
+
+            if (oViewDomRef) {
+                aRoots.push(oViewDomRef);
+            }
+            if (oDialogDomRef) {
+                aRoots.push(oDialogDomRef);
+            }
+
+            aRoots.forEach(function (oRoot) {
+                Array.prototype.forEach.call(oRoot.querySelectorAll(".notranslate"), function (oElement) {
+                    oElement.setAttribute("translate", "no");
+                });
+            });
+        },
+
         _onRouteMatched: function (oEvent) {
             this._employeeId = oEvent.getParameter("arguments").employeeId || "all";
             this.getModel("attendance").dataLoaded().then(this._loadRecords.bind(this));
@@ -91,30 +229,6 @@ sap.ui.define([
             var oAttendanceModel = this.getModel("attendance");
             var aEmployees = oAttendanceModel.getProperty("/employees") || [];
             var aSchedules = oAttendanceModel.getProperty("/schedules") || [];
-            var aLaborStatusOptions = oAttendanceModel.getProperty("/laborStatusCatalog") ||
-                [{ key: "all", text: "Todos" }];
-            var mLaborStatusOptions = aLaborStatusOptions.reduce(function (mResult, oOption) {
-                if (oOption && oOption.key) {
-                    mResult[oOption.key] = oOption;
-                }
-                return mResult;
-            }, { all: { key: "all", text: "Todos" } });
-            aEmployees.forEach(function (oItem) {
-                var sCode = String(oItem.relationJob || "").trim();
-                if (sCode && !mLaborStatusOptions[sCode]) {
-                    mLaborStatusOptions[sCode] = {
-                        key: sCode,
-                        text: oItem.relationJobDescription || sCode
-                    };
-                }
-            });
-            aLaborStatusOptions = Object.keys(mLaborStatusOptions).map(function (sKey) {
-                return mLaborStatusOptions[sKey];
-            }).sort(function (oLeft, oRight) {
-                if (oLeft.key === "all") { return -1; }
-                if (oRight.key === "all") { return 1; }
-                return String(oLeft.key).localeCompare(String(oRight.key), "es", { numeric: true });
-            });
             var oEmployee = aEmployees.find(function (oItem) { return oItem.id === this._employeeId; }.bind(this));
             var mEmployees = aEmployees.reduce(function (mResult, oItem) {
                 mResult[oItem.id] = oItem;
@@ -128,7 +242,11 @@ sap.ui.define([
                 var oRecordEmployee = mEmployees[oRecord.employeeId] || {};
                 var oSchedule = mSchedules[oRecordEmployee.scheduleId] || {};
                 var sDayStatus = this._formatDayStatus(oRecord.dayStatus, oRecord.status);
-                var aLocationOptionalStatuses = ["Viaje de trabajo", "Vacaciones", "Paternidad", "Home office"];
+                var sLaborStatusCode = oRecord.relationJob || "";
+                var sLaborStatus = oRecord.relationJobDescription || "Sin estatus laboral";
+                var sGroupPerson = oRecord.groupPerson || "";
+                var sGroupPersonDescription = oRecord.groupPersonDescription || "Sin tipo de personal";
+                var aLocationOptionalStatuses = ["Viaje de trabajo", "Vacaciones", "Paternidad", "HOME OFFICE"];
                 var bLocationOptional = aLocationOptionalStatuses.indexOf(sDayStatus) !== -1;
                 var bHasDistance = typeof oRecord.distanceMeters === "number";
                 var sGeoStatus = String(oRecord.geoStatus || "").toUpperCase();
@@ -145,16 +263,50 @@ sap.ui.define([
                     (bHasDistance || bBackendInside ? "Success" : (bLocationOptional ? "Information" : "None"));
                 var sDistanceLabel = bHasDistance ? oRecord.distanceMeters.toFixed(1) + " m" :
                     (bLocationOptional ? "No aplica" : "Sin dato");
+                var oEntryGeo = markingGeoStatus(
+                    oRecord.entryGeoStatus,
+                    oRecord.entryGeoStatusDescription,
+                    oRecord.entryDistanceMeters,
+                    oRecord.entry && oRecord.entry !== "—",
+                    bLocationOptional
+                );
+                var oMealStartGeo = markingGeoStatus(
+                    oRecord.mealStartGeoStatus,
+                    oRecord.mealStartGeoStatusDescription,
+                    oRecord.mealStartDistanceMeters,
+                    oRecord.mealCheckOut && oRecord.mealCheckOut !== "—",
+                    bLocationOptional
+                );
+                var oMealEndGeo = markingGeoStatus(
+                    oRecord.mealEndGeoStatus,
+                    oRecord.mealEndGeoStatusDescription,
+                    oRecord.mealEndDistanceMeters,
+                    oRecord.mealCheckIn && oRecord.mealCheckIn !== "—",
+                    bLocationOptional
+                );
+                var oExitGeo = markingGeoStatus(
+                    oRecord.exitGeoStatus,
+                    oRecord.exitGeoStatusDescription,
+                    oRecord.exitDistanceMeters,
+                    oRecord.exit && oRecord.exit !== "—",
+                    bLocationOptional
+                );
 
                 return Object.assign({}, oRecord, {
                     dayStatus: sDayStatus,
                     dayStatusRaw: oRecord.dayStatus || "",
-                    laborStatusCode: oRecordEmployee.relationJob || "",
-                    laborStatus: oRecordEmployee.relationJobDescription || "Sin estatus laboral",
+                    laborStatusCode: sLaborStatusCode,
+                    laborStatus: sLaborStatus,
+                    employmentStatusDescription: sLaborStatus,
                     laborStatusState: this._getLaborStatusState(
-                        oRecordEmployee.relationJob,
-                        oRecordEmployee.relationJobDescription
+                        sLaborStatusCode,
+                        sLaborStatus
                     ),
+                    groupPerson: sGroupPerson,
+                    groupPersonDescription: sGroupPersonDescription,
+                    personTypeDescription: sGroupPersonDescription,
+                    groupPersonState: this._getGroupPersonState(sGroupPersonDescription),
+                    dayStatusDescription: sDayStatus,
                     employeeNumber: oRecordEmployee.number || oRecord.employeeId,
                     initials: oRecordEmployee.initials || this._getInitials(oRecord.employee),
                     role: oRecordEmployee.role || "Colaborador",
@@ -169,7 +321,20 @@ sap.ui.define([
                     mealCheckOut: oRecord.mealCheckOut || "—",
                     mealCheckIn: oRecord.mealCheckIn || "—",
                     mealRange: (oRecord.mealCheckOut || "—") + " – " + (oRecord.mealCheckIn || "—"),
+                    entryGeoStatusText: oEntryGeo.text,
+                    entryGeoStatusState: oEntryGeo.state,
+                    entryGeoStatusTooltip: oEntryGeo.tooltip,
+                    mealStartGeoStatusText: oMealStartGeo.text,
+                    mealStartGeoStatusState: oMealStartGeo.state,
+                    mealStartGeoStatusTooltip: oMealStartGeo.tooltip,
+                    mealEndGeoStatusText: oMealEndGeo.text,
+                    mealEndGeoStatusState: oMealEndGeo.state,
+                    mealEndGeoStatusTooltip: oMealEndGeo.tooltip,
+                    exitGeoStatusText: oExitGeo.text,
+                    exitGeoStatusState: oExitGeo.state,
+                    exitGeoStatusTooltip: oExitGeo.tooltip,
                     geofenceStatus: sGeofenceStatus,
+                    geoStatusDescriptionText: sGeofenceStatus,
                     geofenceState: sGeofenceState,
                     distanceLabel: sDistanceLabel,
                     historyDate: oRecord.date + " " + (oRecord.entry === "—" ? "08:30" : oRecord.entry)
@@ -178,6 +343,22 @@ sap.ui.define([
             var aFilteredByEmployee = this._employeeId === "all" ? aEnrichedRecords : aEnrichedRecords.filter(function (oRecord) {
                 return oRecord.employeeId === this._employeeId;
             }.bind(this));
+            var mDayStatusOptions = {
+                all: { key: "all", text: "Todos" }
+            };
+            aFilteredByEmployee.forEach(function (oRecord) {
+                var sStatus = String(oRecord.dayStatusDescription || "").trim();
+                if (sStatus && !mDayStatusOptions[sStatus]) {
+                    mDayStatusOptions[sStatus] = { key: sStatus, text: sStatus };
+                }
+            });
+            var aDayStatusOptions = Object.keys(mDayStatusOptions).map(function (sKey) {
+                return mDayStatusOptions[sKey];
+            }).sort(function (oLeft, oRight) {
+                if (oLeft.key === "all") { return -1; }
+                if (oRight.key === "all") { return 1; }
+                return oLeft.text.localeCompare(oRight.text, "es");
+            });
             var oViewModel = this.getModel("view");
             var mCenterOptions = {};
             aEnrichedRecords.forEach(function (oRecord) {
@@ -200,14 +381,14 @@ sap.ui.define([
             oViewModel.setProperty("/employee", oEmployee || {});
             oViewModel.setProperty("/title", oEmployee ? "Historial de asistencia: " + oEmployee.name : "Registros de asistencia");
             oViewModel.setProperty("/allRecords", aFilteredByEmployee);
-            oViewModel.setProperty("/laborStatusOptions", aLaborStatusOptions);
+            oViewModel.setProperty("/dayStatusOptions", aDayStatusOptions);
             if (bResetFilters || (oViewModel.getProperty("/centerOptions") || []).length <= 1) {
                 oViewModel.setProperty("/centerOptions", [{ key: "all", text: "Todos" }].concat(aCenterOptions));
             }
             if (bResetFilters) {
                 oViewModel.setProperty("/center", "all");
                 oViewModel.setProperty("/scheduleId", "");
-                oViewModel.setProperty("/laborStatus", "all");
+                oViewModel.setProperty("/dayStatusFilter", "all");
                 oViewModel.setProperty("/recordFilter", "all");
             }
             this._updatePeriodRange();
@@ -221,7 +402,7 @@ sap.ui.define([
             var oViewModel = this.getModel("view");
             var sCenter = oViewModel.getProperty("/center");
             var sScheduleId = oViewModel.getProperty("/scheduleId");
-            var sLaborStatus = oViewModel.getProperty("/laborStatus");
+            var sDayStatusFilter = oViewModel.getProperty("/dayStatusFilter");
             var sRecordFilter = oViewModel.getProperty("/recordFilter") || "all";
             var oPeriodStart = oViewModel.getProperty("/periodStart");
             var oPeriodEnd = oViewModel.getProperty("/periodEnd");
@@ -230,7 +411,7 @@ sap.ui.define([
                 var oRecordDate = this._parseDisplayDate(oRecord.date);
                 return (sCenter === "all" || oRecord.centerCode === sCenter || oRecord.center === sCenter) &&
                     (!sScheduleId || oRecord.scheduleId === sScheduleId) &&
-                    (sLaborStatus === "all" || oRecord.laborStatusCode === sLaborStatus) &&
+                    (sDayStatusFilter === "all" || this._recordMatchesStatus(oRecord, sDayStatusFilter)) &&
                     (!oRecordDate || !oPeriodStart || !oPeriodEnd || (oRecordDate >= oPeriodStart && oRecordDate <= oPeriodEnd));
             }.bind(this));
             var aFilteredRecords = aScopedRecords.filter(function (oRecord) {
@@ -266,7 +447,7 @@ sap.ui.define([
             console.info({
                 center: sCenter,
                 scheduleId: sScheduleId,
-                laborStatus: sLaborStatus,
+                dayStatusFilter: sDayStatusFilter,
                 recordFilter: sRecordFilter,
                 periodStart: oPeriodStart,
                 periodEnd: oPeriodEnd,
@@ -280,8 +461,14 @@ sap.ui.define([
 
         _countStatus: function (aRecords, sStatus) {
             return aRecords.filter(function (oRecord) {
-                return oRecord.dayStatus === sStatus;
-            }).length;
+                return this._recordMatchesStatus(oRecord, sStatus);
+            }.bind(this)).length;
+        },
+
+        _recordMatchesStatus: function (oRecord, sStatus) {
+            var sNormalizedStatus = this._formatDayStatus(sStatus, sStatus);
+            var sDayStatus = this._formatDayStatus(oRecord.dayStatus, oRecord.status);
+            return sDayStatus === sNormalizedStatus;
         },
 
         _matchesRecordFilter: function (oRecord, sRecordFilter) {
@@ -291,35 +478,40 @@ sap.ui.define([
             if (sRecordFilter === "Fuera de zona") {
                 return oRecord.geofenceState === "Error" || oRecord.isOutOfZone;
             }
-            if (sRecordFilter === "Oficina central") {
-                return oRecord.dayStatus === "Oficina central" || oRecord.dayStatus === "Home office";
-            }
-            if (sRecordFilter === "Home office") {
-                return oRecord.dayStatus === "Home office" || oRecord.dayStatus === "Oficina central";
-            }
-            return oRecord.dayStatus === sRecordFilter;
+            return this._recordMatchesStatus(oRecord, sRecordFilter);
         },
 
         _formatDayStatus: function (sDayStatus, sFallbackStatus) {
             var sRaw = String(sDayStatus || "").trim().toUpperCase();
+            var sFallbackRaw = String(sFallbackStatus || "").trim().toUpperCase();
             var mStatuses = {
                 "PRESENTE": "Presente",
                 "RETARDO": "Retardo",
                 "AUSENTE": "Ausente",
                 "INCOMPLETO": "Incompleto",
-                "HOME OFFIC": "Home office",
-                "HOME OFFICE": "Home office",
+                "OFICINA CENTRAL": "HOME OFFICE",
+                "HOME OFFIC": "HOME OFFICE",
+                "HOME OFFICE": "HOME OFFICE",
                 "VACACIONES": "Vacaciones",
                 "PATERNIDAD": "Paternidad",
                 "VIAJE DE NEGOCI": "Viaje de trabajo",
                 "VIAJE DE NEGOCIO": "Viaje de trabajo"
             };
 
+            if (/^VIAJE/.test(sRaw)) {
+                return "Viaje de trabajo";
+            }
             if (mStatuses[sRaw]) {
                 return mStatuses[sRaw];
             }
             if (sRaw) {
                 return sRaw.charAt(0) + sRaw.slice(1).toLowerCase();
+            }
+            if (mStatuses[sFallbackRaw]) {
+                return mStatuses[sFallbackRaw];
+            }
+            if (/^VIAJE/.test(sFallbackRaw)) {
+                return "Viaje de trabajo";
             }
             return sFallbackStatus === "Fuera de zona" ? "Sin estatus del día" :
                 (sFallbackStatus || "Sin estatus del día");
@@ -337,6 +529,14 @@ sap.ui.define([
                 return "Success";
             }
             if (/02|HOME|04|VIAJE/.test(sValue)) {
+                return "Information";
+            }
+            return "None";
+        },
+
+        _getGroupPersonState: function (sDescription) {
+            var sValue = String(sDescription || "").trim().toUpperCase();
+            if (/SINDICAL|CONFIANZA/.test(sValue)) {
                 return "Information";
             }
             return "None";
@@ -485,7 +685,7 @@ sap.ui.define([
                     color: "#188918"
                 },
                 {
-                    status: "Home office",
+                    status: "HOME OFFICE",
                     description: "Jornada remota autorizada",
                     icon: "sap-icon://home",
                     color: "#07838f"
@@ -605,6 +805,30 @@ sap.ui.define([
             }.bind(this));
         },
 
+        onClearFilters: function () {
+            var oToday = new Date();
+            var oViewModel = this.getModel("view");
+            var sToday = oToday.getFullYear() + "-" +
+                String(oToday.getMonth() + 1).padStart(2, "0") + "-" +
+                String(oToday.getDate()).padStart(2, "0");
+
+            oViewModel.setProperty("/periodType", "month");
+            oViewModel.setProperty("/referenceDate", sToday);
+            oViewModel.setProperty("/selectedMonth", String(oToday.getMonth() + 1).padStart(2, "0"));
+            oViewModel.setProperty("/selectedYear", String(oToday.getFullYear()));
+            oViewModel.setProperty("/center", "all");
+            oViewModel.setProperty("/scheduleId", "");
+            oViewModel.setProperty("/dayStatusFilter", "all");
+            oViewModel.setProperty("/recordFilter", "all");
+            oViewModel.setProperty("/currentPage", 1);
+
+            this._updatePeriodRange();
+            this._applyFilters();
+            this._reloadRecordsForPeriod().then(function () {
+                MessageToast.show("Filtros limpiados. Mostrando " + oViewModel.getProperty("/periodLabel"));
+            });
+        },
+
         onRecordSelectionChange: function (oEvent) {
             var oListItem = oEvent.getParameter("listItem");
             if (oListItem) {
@@ -668,12 +892,15 @@ sap.ui.define([
                 { label: "Horario", property: "scheduleName", width: 18 },
                 { label: "Jornada asignada", property: "scheduled", width: 28 },
                 { label: "Entrada", property: "entry", width: 10 },
+                { label: "GeoStatus entrada", property: "entryGeoStatusText", width: 24 },
                 { label: "Inicio de comida", property: "mealCheckOut", width: 16 },
+                { label: "GeoStatus inicio comida", property: "mealStartGeoStatusText", width: 24 },
                 { label: "Fin de comida", property: "mealCheckIn", width: 16 },
+                { label: "GeoStatus fin comida", property: "mealEndGeoStatusText", width: 24 },
                 { label: "Salida", property: "exit", width: 10 },
-                { label: "Estatus laboral", property: "laborStatus", width: 22 },
-                { label: "Estatus del día", property: "dayStatus", width: 18 },
-                { label: "GeoStatus", property: "geofenceStatus", width: 24 },
+                { label: "GeoStatus salida", property: "exitGeoStatusText", width: 24 },
+                { label: "Tipo de personal", property: "personTypeDescription", width: 20 },
+                { label: "Estatus del día", property: "dayStatusDescription", width: 18 },
                 { label: "Observaciones", property: "observation", width: 36 }
             ];
             var sPeriod = String(oViewModel.getProperty("/periodLabel") || "periodo")

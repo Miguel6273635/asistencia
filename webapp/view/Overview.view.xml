@@ -99,17 +99,18 @@
                                         <viz.data:measures>
                                             <viz.data:MeasureDefinition name="Ausencias" value="{view>absentRate}" />
                                             <viz.data:MeasureDefinition name="Retardos" value="{view>lateRate}" />
+                                            <viz.data:MeasureDefinition name="Fuera de zona" value="{view>outsideRate}" />
                                         </viz.data:measures>
                                     </viz.data:FlattenedDataset>
                                 </viz:dataset>
                                 <viz:feeds>
-                                    <viz.feeds:FeedItem uid="valueAxis" type="Measure" values="Ausencias,Retardos" />
+                                    <viz.feeds:FeedItem uid="valueAxis" type="Measure" values="Ausencias,Retardos,Fuera de zona" />
                                     <viz.feeds:FeedItem uid="categoryAxis" type="Dimension" values="Zona" />
                                 </viz:feeds>
                             </viz:VizFrame>
                             <HBox alignItems="Center" class="chartHint">
                                 <core:Icon src="sap-icon://hint" class="sapUiTinyMarginEnd" />
-                                <Text text="Cada barra suma retardos y ausencias; su longitud total representa la ineficiencia de la zona." />
+                                <Text text="Cada barra suma retardos, ausencias y registros fuera de zona; su longitud total representa la ineficiencia de la zona." />
                             </HBox>
                         </content>
                     </Panel>

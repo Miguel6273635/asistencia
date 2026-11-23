@@ -133,7 +133,7 @@ export interface WeeklyLoadItem {
 export interface WeeklyLoadPayload {
     PersonalNumber: string;
     Semana: string;
-    ToWeekpload: WeeklyLoadItem[];
+    ToWeekUpload: WeeklyLoadItem[];
 }
 
 export interface ProcessingJustificationPayload {

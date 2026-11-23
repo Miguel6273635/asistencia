@@ -1156,6 +1156,22 @@ body > div,
     white-space: nowrap;
 }
 
+.recordsPage .recordsTable .recordGeoCell .sapMObjStatusText {
+    white-space: normal;
+    line-height: 1.15;
+}
+
+.recordDetailDialog .markingGeoStatus {
+    max-width: 100%;
+    margin-top: 0.3rem;
+    text-align: center;
+}
+
+.recordDetailDialog .markingGeoStatus .sapMObjStatusText {
+    white-space: normal;
+    line-height: 1.15;
+}
+
 .recordsPage .recordsTable .sapMLIBSelected {
     background: rgba(10, 110, 209, 0.07) !important;
 }

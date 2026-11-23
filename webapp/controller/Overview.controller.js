@@ -325,7 +325,8 @@ sap.ui.define([
                     zoneId: oZone.zoneId,
                     zone: oZone.zone,
                     lateRate: oZone.total ? Number((oZone.late * 100 / oZone.total).toFixed(1)) : 0,
-                    absentRate: oZone.total ? Number((oZone.absent * 100 / oZone.total).toFixed(1)) : 0
+                    absentRate: oZone.total ? Number((oZone.absent * 100 / oZone.total).toFixed(1)) : 0,
+                    outsideRate: oZone.total ? Number((oZone.outside * 100 / oZone.total).toFixed(1)) : 0
                 };
             }));
             this.getModel("view").setProperty("/incidentTrend", this._buildTrend(aRecords, oPeriod));
@@ -397,7 +398,8 @@ sap.ui.define([
                     zoneId: oZone.zoneId,
                     zone: oZone.zone,
                     lateRate: oZone.lateRate !== undefined ? Number(oZone.lateRate) : (iTotal ? Number(oZone.late || 0) * 100 / iTotal : 0),
-                    absentRate: oZone.absentRate !== undefined ? Number(oZone.absentRate) : (iTotal ? Number(oZone.absent || 0) * 100 / iTotal : 0)
+                    absentRate: oZone.absentRate !== undefined ? Number(oZone.absentRate) : (iTotal ? Number(oZone.absent || 0) * 100 / iTotal : 0),
+                    outsideRate: oZone.outsideRate !== undefined ? Number(oZone.outsideRate) : (iTotal ? Number(oZone.outside || 0) * 100 / iTotal : 0)
                 };
             });
         },
@@ -611,7 +613,10 @@ sap.ui.define([
             var aZoneInefficiency = this.getModel("view").getProperty("/zoneInefficiency") || [];
             var aIncidentTrend = this.getModel("view").getProperty("/incidentTrend") || [];
             var nMaximumInefficiency = aZoneInefficiency.reduce(function (nMaximum, oZone) {
-                return Math.max(nMaximum, Number(oZone.absentRate || 0) + Number(oZone.lateRate || 0));
+                return Math.max(nMaximum,
+                    Number(oZone.absentRate || 0) +
+                    Number(oZone.lateRate || 0) +
+                    Number(oZone.outsideRate || 0));
             }, 0);
             var nInefficiencyAxisMaximum = Math.max(20, Math.ceil((nMaximumInefficiency + 0.1) / 5) * 5);
             var nMaximumIncident = aIncidentTrend.reduce(function (nMaximum, oDay) {
@@ -633,7 +638,7 @@ sap.ui.define([
                         label: { style: { color: "#233548", fontSize: "11px" } }
                     },
                     plotArea: {
-                        colorPalette: ["#C00000", "#E9730C"],
+                        colorPalette: ["#C00000", "#E9730C", "#7858D7"],
                         drawingEffect: "normal",
                         dataLabel: {
                             visible: true,

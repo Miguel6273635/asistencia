@@ -19,6 +19,12 @@ function number(value: unknown): number {
     return Number.isFinite(parsed) ? parsed : 0;
 }
 
+function nullableNumber(value: unknown): number | null {
+    const raw = text(value);
+    const parsed = Number(raw.replace(",", "."));
+    return raw !== "" && Number.isFinite(parsed) ? parsed : null;
+}
+
 function bool(value: unknown): boolean {
     return value === true || text(value).toLowerCase() === "true" || text(value) === "X";
 }
@@ -201,6 +207,17 @@ const REGISTER_TIME_FIELDS: Record<string, string> = {
     P20: "P20Time"
 };
 
+const REGISTER_GEO_FIELDS: Record<string, {
+    status: string;
+    description: string;
+    distance: string;
+}> = {
+    P10: { status: "P10GeoStatus", description: "P10GeoStatusDescripcion", distance: "P10DistanceMeters" },
+    P15: { status: "P15GeoStatus", description: "P15GeoStatusDescripcion", distance: "P15DistanceMeters" },
+    P25: { status: "P25GeoStatus", description: "P25GeoStatusDescripcion", distance: "P25DistanceMeters" },
+    P20: { status: "P20GeoStatus", description: "P20GeoStatusDescripcion", distance: "P20DistanceMeters" }
+};
+
 function firstNonEmpty(rows: ODataRow[], field: string): unknown {
     const row = rows.find((candidate) => text(candidate[field]) !== "");
     return row ? row[field] : "";
@@ -230,6 +247,26 @@ function consolidatedDayStatus(rows: ODataRow[]): string {
         statuses.find(Boolean) || "";
 }
 
+function registerGeoRow(rows: ODataRow[], registerType: string): ODataRow | undefined {
+    const matchingRows = rows.filter((row) => text(row.RegisterType).toUpperCase() === registerType);
+    const rowWithGeo = matchingRows.find((row) => text(
+        row.GeoStatus || row.GeoStatusDescripcion || row.GeoStatusDescription || row.LocationStatus
+    ) !== "");
+
+    if (rowWithGeo || matchingRows[0]) {
+        return rowWithGeo || matchingRows[0];
+    }
+
+    // Respaldo para respuestas antiguas sin RegisterType: solamente es seguro
+    // asociar el GeoStatus cuando la fila contiene una única marcación.
+    return rows.find((row) => {
+        const markedTypes = Object.entries(REGISTER_TIME_FIELDS).filter(([, field]) =>
+            usableTime(row[field]) !== "—"
+        );
+        return markedTypes.length === 1 && markedTypes[0][0] === registerType;
+    });
+}
+
 /**
  * AttendanceHistorySet devuelve una fila por marcación (P10, P15, P25 y P20).
  * La pantalla de Registros representa jornadas, por lo que todas las filas del
@@ -250,18 +287,29 @@ function consolidateAttendanceHistory(rows: ODataRow[]): ODataRow[] {
     });
 
     return Array.from(groups.values()).map<ODataRow>((group) => {
-        if (group.length === 1) { return group[0]; }
-
         const merged: Record<string, unknown> = { ...group[0] };
 
         Object.entries(REGISTER_TIME_FIELDS).forEach(([registerType, field]) => {
             merged[field] = firstUsableTime(group, field, registerType);
         });
 
+        Object.entries(REGISTER_GEO_FIELDS).forEach(([registerType, fields]) => {
+            const eventRow = registerGeoRow(group, registerType);
+            merged[fields.status] = eventRow ? text(eventRow.GeoStatus) : "";
+            merged[fields.description] = eventRow ? text(
+                eventRow.GeoStatusDescripcion || eventRow.GeoStatusDescription || eventRow.LocationStatus
+            ) : "";
+            merged[fields.distance] = eventRow ? firstNonEmpty(
+                [eventRow],
+                "DistanceMeters"
+            ) : "";
+        });
+
         [
             "FullName", "Email", "CenterOffice", "CenterCode", "Zone",
             "Schedule", "ScheduleDescription", "ScheduleDetail", "NetHours",
-            "DistanceMeters", "StatusReq", "Justification", "JustificationText"
+            "DistanceMeters", "StatusReq", "Justification", "JustificationText",
+            "RelationJob", "RelationJobDescription", "GroupPerson", "GroupPersonDescription"
         ].forEach((field) => {
             merged[field] = firstNonEmpty(group, field);
         });
@@ -331,10 +379,26 @@ function mapRecords(rows: ODataRow[], schedules: Record<string, unknown>[]): Rec
             mealCheckOut: usableTime(row.P15Time),
             mealCheckIn: usableTime(row.P25Time),
             exit: usableTime(row.P20Time),
+            entryGeoStatus: text(row.P10GeoStatus),
+            entryGeoStatusDescription: text(row.P10GeoStatusDescripcion),
+            entryDistanceMeters: nullableNumber(row.P10DistanceMeters),
+            mealStartGeoStatus: text(row.P15GeoStatus),
+            mealStartGeoStatusDescription: text(row.P15GeoStatusDescripcion),
+            mealStartDistanceMeters: nullableNumber(row.P15DistanceMeters),
+            mealEndGeoStatus: text(row.P25GeoStatus),
+            mealEndGeoStatusDescription: text(row.P25GeoStatusDescripcion),
+            mealEndDistanceMeters: nullableNumber(row.P25DistanceMeters),
+            exitGeoStatus: text(row.P20GeoStatus),
+            exitGeoStatusDescription: text(row.P20GeoStatusDescripcion),
+            exitDistanceMeters: nullableNumber(row.P20DistanceMeters),
             hours: text(row.NetHours) || "0:00",
             distanceMeters: distance ? number(distance) : null,
             status: attendanceStatus(row),
             dayStatus: text(row.DayStatus),
+            relationJob: text(row.RelationJob),
+            relationJobDescription: text(row.RelationJobDescription),
+            groupPerson: text(row.GroupPerson),
+            groupPersonDescription: text(row.GroupPersonDescription),
             isLate: bool(row.IsLate),
             isAbsent: bool(row.IsAbsent),
             isIncomplete: bool(row.IsIncomplete),
@@ -384,6 +448,8 @@ function mapEmployees(rows: ODataRow[], history: ODataRow[]): Record<string, unk
             status: text(row.DescriptionStatus),
             relationJob: text(row.RelationJob),
             relationJobDescription: text(row.RelationJobDescription),
+            groupPerson: text(row.GroupPerson),
+            groupPersonDescription: text(row.GroupPersonDescription),
             active: text(row.Status) !== "0",
             email: text(row.Email),
             lastUpdate: text(row.LastUpdate),
@@ -416,7 +482,7 @@ function mapEmployees(rows: ODataRow[], history: ODataRow[]): Record<string, unk
         } else {
             [
                 "email", "role", "lastUpdate", "scheduleDescription",
-                "relationJob", "relationJobDescription"
+                "relationJob", "relationJobDescription", "groupPerson", "groupPersonDescription"
             ].forEach((property) => {
                 if (!text(existing[property]) && text(candidate[property])) { existing[property] = candidate[property]; }
             });
@@ -430,6 +496,10 @@ function mapEmployees(rows: ODataRow[], history: ODataRow[]): Record<string, unk
             if (!existing.center) { existing.center = text(row.CenterOffice); }
             if (existing.zoneId === "sin-zona") { existing.zoneId = operationalZoneId(row.Zone); }
             if (existing.scheduleId === "schedule-sin-zona") { existing.scheduleId = `schedule-${slug(row.Schedule)}`; }
+            if (!existing.groupPerson) { existing.groupPerson = text(row.GroupPerson); }
+            if (!existing.groupPersonDescription) {
+                existing.groupPersonDescription = text(row.GroupPersonDescription);
+            }
             return;
         }
         employees.set(personalNumber, {
@@ -446,6 +516,8 @@ function mapEmployees(rows: ODataRow[], history: ODataRow[]): Record<string, unk
             scheduleName: text(row.Schedule),
             role: "Colaborador",
             status: "Activo",
+            groupPerson: text(row.GroupPerson),
+            groupPersonDescription: text(row.GroupPersonDescription),
             active: true,
             HireDate: text(row.HireDate),
             Position: text(row.Position),
@@ -774,7 +846,8 @@ function mapOverview(zoneRows: ODataRow[], indicators: ODataRow[], centerRows: O
             riskText: riskInfo.text,
             state: riskInfo.state,
             lateRate: evaluated ? late * 100 / evaluated : 0,
-            absentRate: evaluated ? absent * 100 / evaluated : 0
+            absentRate: evaluated ? absent * 100 / evaluated : 0,
+            outsideRate: evaluated ? outside * 100 / evaluated : 0
         };
     });
     const indicator = (name: string, detail?: string): ODataRow | undefined => indicators.find((row) =>
@@ -804,7 +877,13 @@ function mapOverview(zoneRows: ODataRow[], indicators: ODataRow[], centerRows: O
     }).filter((row) => row.total > 0).sort((a, b) => number(b.inefficiency) - number(a.inefficiency));
     return {
         zoneSummaries: zones,
-        zoneInefficiency: zones.map((zone) => ({ zoneId: zone.zoneId, zone: zone.zone, lateRate: zone.lateRate, absentRate: zone.absentRate })),
+        zoneInefficiency: zones.map((zone) => ({
+            zoneId: zone.zoneId,
+            zone: zone.zone,
+            lateRate: zone.lateRate,
+            absentRate: zone.absentRate,
+            outsideRate: zone.outsideRate
+        })),
         incidentTrend: trendRows.map((row) => ({
             day: displayDate(row.TrendDate).slice(0, 5),
             late: number(row.LateCount),
