@@ -206,7 +206,7 @@
                             </VBox>
                             <VBox>
                                 <Label text="Destino SAP (EntitySet)" required="true" />
-                                <Input width="18rem" value="{view>/uploadEntitySet}" placeholder="EmployeesUploadSet" />
+                                <Input width="18rem" value="{view>/uploadEntitySet}" placeholder="EmployeeUploadRequestSet" />
                             </VBox>
                         </HBox>
                         <Label text="Archivo Excel (.xlsx o .xls)" required="true" class="sapUiSmallMarginTop" />
@@ -224,7 +224,7 @@
                 <content>
                     <VBox class="sapUiMediumMargin userDialogContent">
                         <MessageStrip
-                            text="Captura la nómina y al menos un valor diario. Se genera una cabecera por usuario y se envía a WeeklyLoadHeadSet con la semana ISO calculada automáticamente."
+                            text="Captura la nómina y selecciona del catálogo los estatus que correspondan a cada día. Los días sin estatus pueden permanecer vacíos."
                             type="Information"
                             showIcon="true" />
                         <f:SimpleForm editable="true" layout="ColumnLayout" columnsXL="2" columnsL="2" columnsM="2" class="sapUiSmallMarginTop">
@@ -233,19 +233,33 @@
                             <Label text="Semana automática" />
                             <Input value="{view>/weeklySingle/Semana}" editable="false" />
                             <Label text="Lunes" />
-                            <Input value="{view>/weeklySingle/Lunes}" placeholder="Home Office" />
+                            <Select selectedKey="{view>/weeklySingle/Lunes}" forceSelection="false" items="{attendance>/sapRelationLaboralCatalog}">
+                                <core:Item key="{attendance>RelationDescription}" text="{attendance>RelationDescription}" />
+                            </Select>
                             <Label text="Martes" />
-                            <Input value="{view>/weeklySingle/Martes}" placeholder="Vacaciones" />
+                            <Select selectedKey="{view>/weeklySingle/Martes}" forceSelection="false" items="{attendance>/sapRelationLaboralCatalog}">
+                                <core:Item key="{attendance>RelationDescription}" text="{attendance>RelationDescription}" />
+                            </Select>
                             <Label text="Miércoles" />
-                            <Input value="{view>/weeklySingle/Miercoles}" placeholder="Sancionado" />
+                            <Select selectedKey="{view>/weeklySingle/Miercoles}" forceSelection="false" items="{attendance>/sapRelationLaboralCatalog}">
+                                <core:Item key="{attendance>RelationDescription}" text="{attendance>RelationDescription}" />
+                            </Select>
                             <Label text="Jueves" />
-                            <Input value="{view>/weeklySingle/Jueves}" placeholder="Viaje de negocios" />
+                            <Select selectedKey="{view>/weeklySingle/Jueves}" forceSelection="false" items="{attendance>/sapRelationLaboralCatalog}">
+                                <core:Item key="{attendance>RelationDescription}" text="{attendance>RelationDescription}" />
+                            </Select>
                             <Label text="Viernes" />
-                            <Input value="{view>/weeklySingle/Viernes}" placeholder="Viaje de negocios" />
+                            <Select selectedKey="{view>/weeklySingle/Viernes}" forceSelection="false" items="{attendance>/sapRelationLaboralCatalog}">
+                                <core:Item key="{attendance>RelationDescription}" text="{attendance>RelationDescription}" />
+                            </Select>
                             <Label text="Sábado" />
-                            <Input value="{view>/weeklySingle/Sabado}" placeholder="Incapacidad" />
+                            <Select selectedKey="{view>/weeklySingle/Sabado}" forceSelection="false" items="{attendance>/sapRelationLaboralCatalog}">
+                                <core:Item key="{attendance>RelationDescription}" text="{attendance>RelationDescription}" />
+                            </Select>
                             <Label text="Domingo" />
-                            <Input value="{view>/weeklySingle/Domingo}" placeholder="Cumpleaños" />
+                            <Select selectedKey="{view>/weeklySingle/Domingo}" forceSelection="false" items="{attendance>/sapRelationLaboralCatalog}">
+                                <core:Item key="{attendance>RelationDescription}" text="{attendance>RelationDescription}" />
+                            </Select>
                         </f:SimpleForm>
                     </VBox>
                 </content>

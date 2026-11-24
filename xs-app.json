@@ -6,7 +6,7 @@
     {
       "source": "^/sap/(.*)$",
       "target": "/sap/$1",
-      "destination": "onPremECC_QAS_APP",
+      "destination": "onPremECC_QAS",
       "authenticationType": "xsuaa",
       "csrfProtection": false
     },

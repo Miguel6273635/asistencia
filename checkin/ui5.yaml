@@ -19,7 +19,8 @@ server:
         ignoreCertErrors: false
         backend:
           - path: /sap
-            destination: onPremECC_QAS_APP
+          #  destination: onPremECC_PRO
+            destination: onPremECC_QAS
         ui5:
           path:
             - /resources
