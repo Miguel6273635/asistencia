@@ -1,5 +1,4 @@
 # yaml-language-server: $schema=https://sap.github.io/ui5-tooling/schema/ui5.yaml.json
-
 specVersion: "4.0"
 metadata:
   name: com.mitsu.monitorasistencia.monitorasistencia
@@ -11,6 +10,7 @@ framework:
     - name: sap.m
     - name: sap.ui.core
     - name: sap.ushell
+    - name: sap.ui.export
     - name: themelib_sap_horizon
 server:
   customMiddleware:
@@ -29,7 +29,15 @@ server:
       afterMiddleware: compression
       configuration:
         ignoreCertErrors: false # If set to true, certificate errors will be ignored. E.g. self-signed certificates will be accepted
+        backend:
+          - path: /sap
+            destination: onPremECC_QAS
+    - name: ui5-tooling-transpile-middleware
+      afterMiddleware: compression
 builder:
+  customTasks:
+    - name: ui5-tooling-transpile-task
+      afterTask: replaceVersion
   resources:
     excludes:
       - /test/**

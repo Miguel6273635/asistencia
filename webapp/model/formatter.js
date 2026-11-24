@@ -1,7 +1,24 @@
 sap.ui.define([], function () {
     "use strict";
 
+    function dayStatusText(sStatus) {
+        var sNormalized = String(sStatus || "").trim().toUpperCase();
+
+        if (
+            ["OFICINA CENTRAL", "HOME OFFIC", "HOME OFFICE"]
+                .indexOf(sNormalized) >= 0
+        ) {
+            return "HOME OFFICE";
+        }
+ if (/^VIAJE/.test(sNormalized)) {
+            return "Viaje de trabajo";
+        }
+        return sStatus || "Sin estatus del día";
+    }
+
     return {
+        dayStatusText: dayStatusText,
+
         statusState: function (sStatus) {
             var mStates = {
                 Presente: "Success",
@@ -14,10 +31,12 @@ sap.ui.define([], function () {
                 Vacaciones: "Success",
                 Paternidad: "Information",
                 "Home office": "Information",
+                "HOME OFFICE": "Information",
                 Inactivo: "None",
                 Incompleto: "Information"
             };
-            return mStates[sStatus] || "None";
+
+            return mStates[dayStatusText(sStatus)] || "None";
         },
 
         activeText: function (bActive) {
@@ -32,9 +51,11 @@ sap.ui.define([], function () {
             if (fValue >= 90) {
                 return "Success";
             }
+
             if (fValue >= 80) {
                 return "Warning";
             }
+
             return "Error";
         }
     };

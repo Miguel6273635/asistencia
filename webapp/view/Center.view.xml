@@ -93,16 +93,17 @@
                                             <viz.data:MeasureDefinition name="Presentes (%)" value="{view>presentPercentage}" />
                                             <viz.data:MeasureDefinition name="Retardos (%)" value="{view>latePercentage}" />
                                             <viz.data:MeasureDefinition name="Ausencias (%)" value="{view>absentPercentage}" />
+                                            <viz.data:MeasureDefinition name="Fuera de zona (%)" value="{view>outsidePercentage}" />
                                             <viz.data:MeasureDefinition name="Otros estatus (%)" value="{view>otherPercentage}" />
                                         </viz.data:measures>
                                     </viz.data:FlattenedDataset>
                                 </viz:dataset>
                                 <viz:feeds>
-                                    <viz.feeds:FeedItem uid="valueAxis" type="Measure" values="Presentes (%),Retardos (%),Ausencias (%),Otros estatus (%)" />
+                                    <viz.feeds:FeedItem uid="valueAxis" type="Measure" values="Presentes (%),Retardos (%),Ausencias (%),Fuera de zona (%),Otros estatus (%)" />
                                     <viz.feeds:FeedItem uid="categoryAxis" type="Dimension" values="Horario" />
                                 </viz:feeds>
                             </viz:VizFrame>
-                            <HBox alignItems="Center" class="chartHint"><core:Icon src="sap-icon://hint" class="sapUiTinyMarginEnd" /><Text text="Cada barra suma 100% y usa como base todos los registros del horario dentro del periodo filtrado." /></HBox>
+                            <HBox alignItems="Center" class="chartHint"><core:Icon src="sap-icon://hint" class="sapUiTinyMarginEnd" /><Text text="Cada barra suma 100%. Fuera de zona se muestra por separado; Otros estatus agrupa Incompleto, Viaje de trabajo, Vacaciones, Paternidad y Home office." wrapping="true" /></HBox>
                         </content>
                     </Panel>
                     <Panel headerText="Tendencia diaria de incidencias" class="dashboardPanel centerTrendPanel">

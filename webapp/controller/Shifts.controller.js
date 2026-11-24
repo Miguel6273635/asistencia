@@ -13,7 +13,7 @@ sap.ui.define([
         onInit: function () {
             this.setModel(new JSONModel({
                 granularity: "week",
-                referenceDate: "2026-08-31",
+                referenceDate: periodHelper.toKey(new Date()),
                 periodLabel: "",
                 allSchedules: [],
                 schedules: [],
@@ -21,6 +21,7 @@ sap.ui.define([
                 typeStats: [],
                 search: "",
                 scheduleType: "all",
+                focusedScheduleId: "",
                 stats: {
                     active: 0,
                     coverage: "0.0",
@@ -62,6 +63,7 @@ sap.ui.define([
                 mSchedules[oDynamicSchedule.id] = oDynamicSchedule;
                 return oDynamicSchedule;
             });
+            var sFocusedScheduleId = oAttendanceModel.getProperty("/focusedScheduleId") || "";
 
             aEmployees.forEach(function (oEmployee) { mEmployees[oEmployee.id] = oEmployee; });
             aPeriodRecords = periodHelper.filterRecords(aFacts, oPeriod).map(function (oRecord) {
@@ -82,8 +84,21 @@ sap.ui.define([
             });
 
             oViewModel.setProperty("/periodLabel", oPeriod.label);
+            oViewModel.setProperty("/focusedScheduleId", sFocusedScheduleId);
             oViewModel.setProperty("/allSchedules", aSchedules);
             this._calculateStats(aSchedules);
+            var oSapSummary = oAttendanceModel.getProperty("/scheduleSummary");
+            if (oAttendanceModel.getProperty("/serviceState/live") && oSapSummary && !aPeriodRecords.length) {
+                oViewModel.setProperty("/stats", {
+                    active: oSapSummary.active,
+                    coverage: Number(oSapSummary.coverage || 0).toFixed(1),
+                    coverageDescription: oSapSummary.present + " presentes / " + oSapSummary.evaluated + " jornadas evaluadas",
+                    assigned: oSapSummary.evaluated,
+                    absent: oSapSummary.absent,
+                    absentPercentage: Number(oSapSummary.absencePct || 0).toFixed(1),
+                    absentDescription: oSapSummary.absent + " ausencias / " + oSapSummary.evaluated + " jornadas evaluadas"
+                });
+            }
             this._buildSupportingData(aSchedules);
             this._applyScheduleFilters();
         },
@@ -123,6 +138,13 @@ sap.ui.define([
 
             this.getModel("view").setProperty("/riskSchedules", aRiskSchedules);
             this.getModel("view").setProperty("/typeStats", aTypeStats);
+            console.groupCollapsed("[Monitor][FILTERS][Horarios][PERIOD]");
+            console.info("[Monitor][Horarios] Catálogos preparados", {
+                schedules: aSchedules.length,
+                activeSchedules: aActive.length,
+                scheduleTypes: aTypes.length
+            });
+            console.groupEnd();
         },
 
         _applyScheduleFilters: function () {
@@ -135,6 +157,9 @@ sap.ui.define([
                 var sHaystack = [oSchedule.code, oSchedule.name, oSchedule.description, oSchedule.type].join(" ").toLowerCase();
                 return bType && (!sSearch || sHaystack.indexOf(sSearch) !== -1);
             });
+            console.groupCollapsed("[Monitor][FILTERS][Horarios][CATALOG]");
+            console.info({ search: sSearch, scheduleType: sType, sourceRows: aSchedules.length, resultRows: aFiltered.length });
+            console.groupEnd();
 
             oViewModel.setProperty("/schedules", aFiltered);
         },
@@ -180,18 +205,7 @@ sap.ui.define([
         },
 
         onOpenShiftDialog: function () {
-            this.byId("shiftName").setValue("");
-            this.byId("shiftType").setSelectedKey("Diurno");
-            this.byId("primaryDays").setSelectedKeys([]);
-            this.byId("shiftStart").setValue("");
-            this.byId("shiftEnd").setValue("");
-            this.byId("secondaryDays").setSelectedKeys([]);
-            this.byId("secondaryStart").setValue("");
-            this.byId("secondaryEnd").setValue("");
-            this.byId("tertiaryDays").setSelectedKeys([]);
-            this.byId("tertiaryStart").setValue("");
-            this.byId("tertiaryEnd").setValue("");
-            this.byId("shiftDialog").open();
+            MessageToast.show("CatalogScheduleSet está disponible sólo para consulta; SAP aún no expone el alta de horarios.");
         },
 
         onCloseShiftDialog: function () {
@@ -199,77 +213,7 @@ sap.ui.define([
         },
 
         onSaveShift: function () {
-            var sName = this.byId("shiftName").getValue().trim();
-            var sType = this.byId("shiftType").getSelectedKey();
-            var aPrimaryDays = this.byId("primaryDays").getSelectedKeys();
-            var sStart = this.byId("shiftStart").getValue();
-            var sEnd = this.byId("shiftEnd").getValue();
-            var aSecondaryDays = this.byId("secondaryDays").getSelectedKeys();
-            var sSecondaryStart = this.byId("secondaryStart").getValue();
-            var sSecondaryEnd = this.byId("secondaryEnd").getValue();
-            var aTertiaryDays = this.byId("tertiaryDays").getSelectedKeys();
-            var sTertiaryStart = this.byId("tertiaryStart").getValue();
-            var sTertiaryEnd = this.byId("tertiaryEnd").getValue();
-
-            if (!sName || !aPrimaryDays.length || !sStart || !sEnd) {
-                MessageToast.show("Captura nombre, días y horas de la regla principal");
-                return;
-            }
-            if (aSecondaryDays.length && (!sSecondaryStart || !sSecondaryEnd)) {
-                MessageToast.show("Completa las horas de la regla especial");
-                return;
-            }
-            if (aTertiaryDays.length && (!sTertiaryStart || !sTertiaryEnd)) {
-                MessageToast.show("Completa las horas de la tercera regla");
-                return;
-            }
-
-            var aAllDays = aPrimaryDays.concat(aSecondaryDays, aTertiaryDays);
-            var bHasRepeatedDays = aAllDays.some(function (sDay, iIndex) {
-                return aAllDays.indexOf(sDay) !== iIndex;
-            });
-            if (bHasRepeatedDays) {
-                MessageToast.show("Un día no puede aparecer en más de una regla");
-                return;
-            }
-
-            var aRules = [this._createRule(aPrimaryDays, sStart, sEnd)];
-            if (aSecondaryDays.length) {
-                aRules.push(this._createRule(aSecondaryDays, sSecondaryStart, sSecondaryEnd));
-            }
-            if (aTertiaryDays.length) {
-                aRules.push(this._createRule(aTertiaryDays, sTertiaryStart, sTertiaryEnd));
-            }
-
-            var oModel = this.getModel("attendance");
-            var aSchedules = oModel.getProperty("/schedules") || [];
-            var iNumber = aSchedules.reduce(function (iMax, oSchedule) {
-                var iCurrent = parseInt(String(oSchedule.code || "").replace(/\D/g, ""), 10) || 0;
-                return Math.max(iMax, iCurrent);
-            }, 0) + 1;
-            var sCode = "H" + String(iNumber).padStart(2, "0");
-            var sDescription = aRules.map(function (oRule) {
-                return this._formatDays(oRule.days) + " " + oRule.start + "–" + oRule.end + (oRule.endNextDay ? " (+1)" : "");
-            }.bind(this)).join(" · ");
-
-            aSchedules.push({
-                id: "horario-" + String(iNumber).padStart(2, "0"),
-                code: sCode,
-                name: sName,
-                type: sType,
-                shortDescription: sDescription,
-                description: sDescription,
-                assigned: 0,
-                present: 0,
-                absent: 0,
-                coverage: 0,
-                active: true,
-                rules: aRules
-            });
-            oModel.refresh(true);
-            this._loadSchedules();
-            this.onCloseShiftDialog();
-            MessageToast.show("Horario creado");
+            MessageToast.show("No se enviaron cambios: falta el endpoint de mantenimiento de horarios en SAP.");
         },
 
         _createRule: function (aDays, sStart, sEnd) {
